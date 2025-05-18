@@ -1,4 +1,8 @@
-import { type CommandInteraction, SlashCommandBuilder } from 'discord.js'
+import {
+  type CommandInteraction,
+  MessageFlags,
+  SlashCommandBuilder,
+} from 'discord.js'
 
 export const data = new SlashCommandBuilder()
   .setName('talk')
@@ -13,8 +17,21 @@ export async function execute(interaction: CommandInteraction) {
   }
 
   if (interaction.channel.isSendable()) {
-    // @ts-ignore
-    const message = interaction.options.getString('message')
-    return interaction.channel.send(message)
+    try {
+      // @ts-ignore
+      const message = interaction.options.getString('message')
+      await interaction.channel.send(message)
+
+      await interaction.reply({
+        content: 'Message successfully sent via the bot.',
+        flags: MessageFlags.Ephemeral,
+      })
+      await interaction.deleteReply()
+    } catch (error) {
+      return interaction.reply({
+        content: 'There was a problem while sending the message via the bot.',
+        flags: MessageFlags.Ephemeral,
+      })
+    }
   }
 }

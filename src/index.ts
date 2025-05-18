@@ -31,7 +31,10 @@ client.on(Events.MessageCreate, async interaction => {
 })
 
 client.on(Events.InteractionCreate, async interaction => {
+  // Abort early if this interaction is not the result of a chat command
   if (!interaction.isChatInputCommand()) return
+
+  // Abort if this interaction is coming from a bot, as this shouldn’t happen
   if (interaction.user.bot) return
 
   // Prevent the production bot from answering in the test server, and the test
@@ -57,3 +60,5 @@ client.on(Events.InteractionCreate, async interaction => {
     }
   }
 })
+
+client.on('error', error => console.error(error))
