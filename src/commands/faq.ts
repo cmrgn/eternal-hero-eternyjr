@@ -49,7 +49,13 @@ export async function execute(interaction: CommandInteraction) {
   await interaction.deferReply()
 
   const threads = await getThreads(interaction)
-  const fuse = new Fuse(threads, { includeScore: true, keys: ['name'] })
+  const fuse = new Fuse(threads, {
+    includeScore: true,
+    ignoreDiacritics: true,
+    keys: ['name'],
+    minMatchCharLength: 3,
+    threshold: 0.3,
+  })
 
   // @ts-ignore
   const input = interaction.options.getString('input')
@@ -64,6 +70,14 @@ export async function execute(interaction: CommandInteraction) {
       `Your search for “${input}” yielded no results. Try a more generic term, or reach out to Kitty if you think this is a mistake.`
     )
   } else {
+    console.log({
+      input,
+      results: results.map(result => ({
+        name: result.item.name,
+        score: result.score,
+      })),
+    })
+
     embed
       .setDescription(
         `Your search for “${input}” yielded the following results:`
