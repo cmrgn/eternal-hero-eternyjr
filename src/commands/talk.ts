@@ -1,5 +1,5 @@
 import {
-  type CommandInteraction,
+  type ChatInputCommandInteraction,
   MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js'
@@ -11,15 +11,14 @@ export const data = new SlashCommandBuilder()
   )
   .setDescription('Say something via the bot')
 
-export async function execute(interaction: CommandInteraction) {
+export async function execute(interaction: ChatInputCommandInteraction) {
   if (!interaction.channel) {
     throw new Error('Could not retrieve channel.')
   }
 
   if (interaction.channel.isSendable()) {
     try {
-      // @ts-ignore
-      const message = interaction.options.getString('message')
+      const message = interaction.options.getString('message') ?? ''
       await interaction.channel.send(message)
 
       await interaction.reply({

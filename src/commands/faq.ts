@@ -1,5 +1,6 @@
 import {
   type AnyThreadChannel,
+  type ChatInputCommandInteraction,
   type CommandInteraction,
   EmbedBuilder,
   type ForumChannel,
@@ -41,7 +42,7 @@ const getThreads = async (interaction: CommandInteraction) => {
   return cache.get('__threads') as AnyThreadChannel[]
 }
 
-export async function execute(interaction: CommandInteraction) {
+export async function execute(interaction: ChatInputCommandInteraction) {
   if (!interaction.guild) {
     throw new Error('Could not retrieve guild.')
   }
@@ -57,8 +58,7 @@ export async function execute(interaction: CommandInteraction) {
     threshold: 0.5,
   })
 
-  // @ts-ignore
-  const keyword = interaction.options.getString('keyword')
+  const keyword = interaction.options.getString('keyword') ?? ''
   const results = fuse.search(keyword)
   const embed = new EmbedBuilder()
     .setTitle('FAQ search')
