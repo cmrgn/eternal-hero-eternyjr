@@ -5,7 +5,7 @@ import {
   SlashCommandBuilder,
 } from 'discord.js'
 
-const RULES = {
+export const RULES = {
   'Rule 1.1: No bullying':
     'No hate speech, bullying or discrimination of any kind.',
   'Rule 1.2: No judging': 'No judging other members for who they are.',

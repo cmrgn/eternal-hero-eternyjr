@@ -1,0 +1,59 @@
+import {
+  type AutocompleteInteraction,
+  type ChatInputCommandInteraction,
+  type GuildMember,
+  InteractionContextType,
+  MessageFlags,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+} from 'discord.js'
+export { autocomplete } from './rule'
+
+export const data = new SlashCommandBuilder()
+  .setName('timeout')
+  .addUserOption(option =>
+    option.setName('user').setDescription('User to time out').setRequired(true)
+  )
+  .addIntegerOption(option =>
+    option
+      .setName('duration')
+      .setDescription('Timeout duration')
+      .setMinValue(1)
+      .setRequired(true)
+  )
+  .addStringOption(option =>
+    option
+      .setName('violation')
+      .setDescription('Rule violation')
+      .setRequired(true)
+      .setAutocomplete(true)
+  )
+  .setDescription('Say something via the bot')
+  .setContexts(InteractionContextType.Guild)
+
+export async function execute(interaction: ChatInputCommandInteraction) {
+  const rule = interaction.options.getString('violation') ?? ''
+  const member = interaction.options.getMember('user') as GuildMember
+  const duration = interaction.options.getInteger('duration') ?? 1
+
+  if (!interaction.guild) throw new Error('Cannot retrieve guild.')
+  if (!member) throw new Error('Cannot retrieve member.')
+
+  // Time out the user
+  await member.timeout(duration * 60 * 1_000, `Violating rule ${rule}`)
+
+  // biome-ignore lint/style/noNonNullAssertion: <explanation>
+  const channels = interaction.guild!.channels
+  const moderation = channels.cache.find(
+    channel => channel.name === '🔨│moderation'
+  )
+
+  const [number, label] = rule.split(': ')
+  const message = `<@${member.id}> was timed out for ${duration} minute${duration === 1 ? '' : 's'} for violating ${number.toLocaleLowerCase()} (${label}).`
+
+  // Announce the timeout
+  if (moderation?.isSendable()) await moderation.send(message)
+
+  // Confirm the timeout action was taken
+  return interaction.reply({ content: message, flags: MessageFlags.Ephemeral })
+}
