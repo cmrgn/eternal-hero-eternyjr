@@ -1,6 +1,7 @@
 import {
   type ChatInputCommandInteraction,
   EmbedBuilder,
+  MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js'
 import Fuse from 'fuse.js'
@@ -124,5 +125,5 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }
     )
 
-  return interaction.reply({ embeds: [embed] })
+  return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral })
 }
