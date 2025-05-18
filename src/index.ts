@@ -21,7 +21,6 @@ client.on(Events.MessageCreate, discordLinking)
 
 client.on(Events.InteractionCreate, async interaction => {
   // Abort early if this interaction is not the result of a chat command
-  if (!interaction.isChatInputCommand()) return
 
   // Abort if this interaction is coming from a bot, as this shouldn’t happen
   if (interaction.user.bot) return
@@ -31,21 +30,30 @@ client.on(Events.InteractionCreate, async interaction => {
   if (IS_PROD && interaction.guildId === TEST_SERVER_ID) return
   if (IS_DEV && interaction.guildId !== TEST_SERVER_ID) return
 
-  try {
-    const command = interaction.client.commands.get(interaction.commandName)
-    if (command) await command.execute(interaction)
-  } catch (error) {
-    console.error(error)
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({
-        content: 'There was an error while executing this command.',
-        flags: MessageFlags.Ephemeral,
-      })
-    } else {
-      await interaction.reply({
-        content: 'There was an error while executing this command.',
-        flags: MessageFlags.Ephemeral,
-      })
+  if (interaction.isChatInputCommand()) {
+    try {
+      const command = interaction.client.commands.get(interaction.commandName)
+      if (command) await command.execute(interaction)
+    } catch (error) {
+      console.error(error)
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({
+          content: 'There was an error while executing this command.',
+          flags: MessageFlags.Ephemeral,
+        })
+      } else {
+        await interaction.reply({
+          content: 'There was an error while executing this command.',
+          flags: MessageFlags.Ephemeral,
+        })
+      }
+    }
+  } else if (interaction.isAutocomplete()) {
+    try {
+      const command = interaction.client.commands.get(interaction.commandName)
+      if (command?.autocomplete) await command.autocomplete(interaction)
+    } catch (error) {
+      console.error(error)
     }
   }
 })

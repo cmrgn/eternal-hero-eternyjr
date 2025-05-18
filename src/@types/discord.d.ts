@@ -5,6 +5,9 @@ type Command = {
   execute: (
     interaction: CommandInteraction
   ) => Promise<InteractionResponse<boolean>>
+  autocomplete?: (
+    interaction: AutocompleteInteraction
+  ) => Promise<InteractionResponse<boolean>>
 }
 
 declare module 'discord.js' {
