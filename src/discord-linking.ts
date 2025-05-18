@@ -1,7 +1,7 @@
 import type { Message, OmitPartialGroupDMChannel } from 'discord.js'
 import { IS_DEV, IS_PROD, TEST_SERVER_ID } from './config'
 
-const REGULAR_EXPRESSION = /^[A-Za-z0-9]{20,}/
+const REGULAR_EXPRESSION = /^[A-Za-z0-9]{20,}$/
 const CHANNEL_NAME = '🔗│discord-linking'
 
 const RESPONSES = {
