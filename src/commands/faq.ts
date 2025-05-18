@@ -62,6 +62,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const results = fuse.search(keyword)
   const embed = new EmbedBuilder()
     .setTitle('FAQ search')
+    .setColor('#E95C4E')
     .setThumbnail('https://ehmb.netlify.app/eh_icon.png')
     .setTimestamp()
 
