@@ -14,7 +14,7 @@ export const data = new SlashCommandBuilder()
   .setName('faq')
   .addStringOption(option =>
     option
-      .setName('input')
+      .setName('keyword')
       .setDescription('The search keyword')
       .setRequired(true)
   )
@@ -54,12 +54,12 @@ export async function execute(interaction: CommandInteraction) {
     ignoreDiacritics: true,
     keys: ['name'],
     minMatchCharLength: 3,
-    threshold: 0.3,
+    threshold: 0.5,
   })
 
   // @ts-ignore
-  const input = interaction.options.getString('input')
-  const results = fuse.search(input)
+  const keyword = interaction.options.getString('keyword')
+  const results = fuse.search(keyword)
   const embed = new EmbedBuilder()
     .setTitle('FAQ search')
     .setThumbnail('https://ehmb.netlify.app/eh_icon.png')
@@ -67,11 +67,11 @@ export async function execute(interaction: CommandInteraction) {
 
   if (results.length === 0) {
     embed.setDescription(
-      `Your search for “${input}” yielded no results. Try a more generic term, or reach out to Kitty if you think this is a mistake.`
+      `Your search for “${keyword}” yielded no results. Try a more generic term, or reach out to Kitty if you think this is a mistake.`
     )
   } else {
     console.log({
-      input,
+      keyword,
       results: results.map(result => ({
         name: result.item.name,
         score: result.score,
@@ -80,7 +80,7 @@ export async function execute(interaction: CommandInteraction) {
 
     embed
       .setDescription(
-        `Your search for “${input}” yielded the following results:`
+        `Your search for “${keyword}” yielded the following results:`
       )
       .addFields(
         results.map(result => ({
