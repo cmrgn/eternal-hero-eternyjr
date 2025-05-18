@@ -6,7 +6,7 @@ import {
 } from 'discord.js'
 import Fuse from 'fuse.js'
 
-const FAQ_FORUM_NAME = 'faq-guide'
+const FAQ_FORUM_NAME = '❓│faq-guide'
 
 export const data = new SlashCommandBuilder()
   .setName('faq')
