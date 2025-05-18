@@ -1,10 +1,12 @@
 import {
+  type AnyThreadChannel,
   type CommandInteraction,
   EmbedBuilder,
   type ForumChannel,
   SlashCommandBuilder,
 } from 'discord.js'
 import Fuse from 'fuse.js'
+import { LRUCache } from 'lru-cache'
 
 const FAQ_FORUM_NAME = '❓│faq-guide'
 
@@ -18,20 +20,36 @@ export const data = new SlashCommandBuilder()
   )
   .setDescription('Search the FAQ')
 
+const cache = new LRUCache({
+  ttl: 1000 * 60 * 60, // Cache the threads for 1 hour
+  ttlAutopurge: true,
+})
+
+const getThreads = async (interaction: CommandInteraction) => {
+  // biome-ignore lint/style/noNonNullAssertion: <explanation>
+  const channels = interaction.guild!.channels
+  const faq = channels.cache.find(
+    channel => channel.name === FAQ_FORUM_NAME
+  ) as ForumChannel
+
+  if (!cache.has('__threads')) {
+    const threadList = await faq.threads.fetch()
+    const threads = Array.from(threadList.threads.values())
+    cache.set('__threads', threads)
+  }
+
+  return cache.get('__threads') as AnyThreadChannel[]
+}
+
 export async function execute(interaction: CommandInteraction) {
   if (!interaction.guild) {
     throw new Error('Could not retrieve guild.')
   }
 
-  const faq = interaction.guild.channels.cache.find(
-    channel => channel.name === FAQ_FORUM_NAME
-  ) as ForumChannel
-  const threadList = await faq.threads.fetch()
-  const threads = Array.from(threadList.threads.values())
-  const fuse = new Fuse(threads, {
-    includeScore: true,
-    keys: ['name'],
-  })
+  await interaction.deferReply()
+
+  const threads = await getThreads(interaction)
+  const fuse = new Fuse(threads, { includeScore: true, keys: ['name'] })
 
   // @ts-ignore
   const input = interaction.options.getString('input')
@@ -58,5 +76,5 @@ export async function execute(interaction: CommandInteraction) {
       )
   }
 
-  return interaction.reply({ embeds: [embed] })
+  return interaction.editReply({ embeds: [embed] })
 }
