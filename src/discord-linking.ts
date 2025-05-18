@@ -23,6 +23,7 @@ const RESPONSES = {
 
 const ROLES_MAP = {
   'de | Deutsch': 'de',
+  'en | English': 'en',
   'es | Español': 'es',
   'fr | Français': 'fr',
   'it | Italiano': 'it',
@@ -36,6 +37,9 @@ const ROLES_MAP = {
   'vn | Tiền-việt': 'vn',
   '汉语 | Chinese': 'zh',
 }
+
+type I18nRole = keyof typeof ROLES_MAP
+type Language = keyof typeof RESPONSES
 
 export async function discordLinking(
   interaction: OmitPartialGroupDMChannel<Message<boolean>>
@@ -51,17 +55,18 @@ export async function discordLinking(
     const channel = interaction.guild?.channels.cache.find(
       channel => channel.name === CHANNEL_NAME
     )
-
+    const link = channel?.url ?? CHANNEL_NAME
     const roles = interaction.member?.roles.cache
-    const role =
+    const i18nRole =
       roles?.find(role => role.name in ROLES_MAP)?.name ?? 'en | English'
-    const language = ROLES_MAP[role as keyof typeof ROLES_MAP] ?? 'en'
-    const response = RESPONSES[language as keyof typeof RESPONSES]
-
-    console.log(roles, role, language)
+    const languageName = i18nRole.split(' | ')[1].trim()
+    const language = (ROLES_MAP[i18nRole as I18nRole] ?? 'en') as Language
+    const response = RESPONSES[language].replace('%s', link)
 
     return interaction.reply(
-      response.replace('%s', channel?.url ?? CHANNEL_NAME)
+      language === 'en'
+        ? response
+        : `**${languageName}:** ${response}\n\n**English:** ${RESPONSES.en.replace('%s', link)}`
     )
   }
 }

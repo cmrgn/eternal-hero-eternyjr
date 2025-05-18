@@ -34,7 +34,6 @@ client.on(Events.InteractionCreate, async interaction => {
   try {
     const command = interaction.client.commands.get(interaction.commandName)
     if (command) await command.execute(interaction)
-    console.log('Command successfully executed')
   } catch (error) {
     console.error(error)
     if (interaction.replied || interaction.deferred) {
