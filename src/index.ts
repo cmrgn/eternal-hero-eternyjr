@@ -2,6 +2,7 @@ import { Events, MessageFlags } from 'discord.js'
 import { deployCommands } from './deploy-commands'
 import { DISCORD_TOKEN, IS_DEV, IS_PROD, TEST_SERVER_ID } from './config'
 import { client } from './client'
+import { discordLinking } from './discord-linking'
 
 client.login(DISCORD_TOKEN)
 
@@ -16,19 +17,7 @@ client.on(Events.GuildCreate, async guild => {
   await deployCommands({ guildId: guild.id })
 })
 
-client.on(Events.MessageCreate, async interaction => {
-  const content = interaction.content
-
-  if (/^[A-Za-z0-9]{20,}/.test(content)) {
-    const discordLinking = interaction.guild?.channels.cache.find(
-      channel => channel.name === '🔗│discord-linking'
-    )
-
-    return interaction.reply(
-      `It looks like you’re attempting to link your game account to your Discord account. However, you appear to have pasted your game ID instead of the linking command. Please, carefully follow the instructions in ${discordLinking?.url ?? '#discord-linking'}.`
-    )
-  }
-})
+client.on(Events.MessageCreate, discordLinking)
 
 client.on(Events.InteractionCreate, async interaction => {
   // Abort early if this interaction is not the result of a chat command
