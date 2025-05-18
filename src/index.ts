@@ -1,6 +1,6 @@
 import { Events, MessageFlags } from 'discord.js'
 import { deployCommands } from './deploy-commands'
-import { DISCORD_TOKEN, IS_DEV, LOCAL_SERVER_ID } from './config'
+import { DISCORD_TOKEN, IS_DEV, IS_PROD, TEST_SERVER_ID } from './config'
 import { client } from './client'
 
 client.login(DISCORD_TOKEN)
@@ -8,8 +8,8 @@ client.login(DISCORD_TOKEN)
 client.once(Events.ClientReady, async readyClient => {
   console.log(`Discord bot is ready! 🤖 Logged in as ${readyClient.user.tag}`)
 
-  if (IS_DEV && LOCAL_SERVER_ID)
-    await deployCommands({ guildId: LOCAL_SERVER_ID })
+  if (IS_DEV && TEST_SERVER_ID)
+    await deployCommands({ guildId: TEST_SERVER_ID })
 })
 
 client.on(Events.GuildCreate, async guild => {
@@ -33,6 +33,11 @@ client.on(Events.MessageCreate, async interaction => {
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isChatInputCommand()) return
   if (interaction.user.bot) return
+
+  // Prevent the production bot from answering in the test server, and the test
+  // bot from answering in any other server than the test one
+  if (IS_PROD && interaction.guildId === TEST_SERVER_ID) return
+  if (IS_DEV && interaction.guildId !== TEST_SERVER_ID) return
 
   try {
     const command = interaction.client.commands.get(interaction.commandName)
