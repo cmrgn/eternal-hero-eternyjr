@@ -34,15 +34,9 @@ client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isChatInputCommand()) return
   if (interaction.user.bot) return
 
-  const command = interaction.client.commands.get(interaction.commandName)
-
-  if (!command) {
-    console.error(`No command matching ${interaction.commandName} was found.`)
-    return
-  }
-
   try {
-    await command.execute(interaction)
+    const command = interaction.client.commands.get(interaction.commandName)
+    if (command) await command.execute(interaction)
   } catch (error) {
     console.error(error)
     if (interaction.replied || interaction.deferred) {
