@@ -28,7 +28,7 @@ export const data = new SlashCommandBuilder()
       .setRequired(true)
       .setAutocomplete(true)
   )
-  .setDescription('Say something via the bot')
+  .setDescription('Time out a user for violating a rule')
   .setContexts(InteractionContextType.Guild)
 
 export async function execute(interaction: ChatInputCommandInteraction) {
