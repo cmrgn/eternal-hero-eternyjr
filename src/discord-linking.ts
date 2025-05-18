@@ -27,15 +27,15 @@ const ROLES_MAP = {
   'es | Español': 'es',
   'fr | Français': 'fr',
   'it | Italiano': 'it',
-  '한국어 | Korean': 'kr',
-  'ph | Philippine': 'ph',
-  'pl | Polish': 'pl',
+  'kr | 한국어': 'kr',
+  'ph | Filipino': 'ph',
+  'pl | Polski': 'pl',
   'pt-br | Português': 'pt',
   'ru | Русский': 'ru',
   'th | ภาษาไทย': 'th',
   'tr | Türkçe': 'tr',
   'vn | Tiền-việt': 'vn',
-  '汉语 | Chinese': 'zh',
+  'zh | 汉语': 'zh',
 }
 
 type I18nRole = keyof typeof ROLES_MAP
