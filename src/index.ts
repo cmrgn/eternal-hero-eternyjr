@@ -60,5 +60,3 @@ client.on(Events.InteractionCreate, async interaction => {
     }
   }
 })
-
-client.on('error', error => console.error(error))
