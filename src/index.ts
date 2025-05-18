@@ -20,8 +20,6 @@ client.on(Events.GuildCreate, async guild => {
 client.on(Events.MessageCreate, discordLinking)
 
 client.on(Events.InteractionCreate, async interaction => {
-  // Abort early if this interaction is not the result of a chat command
-
   // Abort if this interaction is coming from a bot, as this shouldn’t happen
   if (interaction.user.bot) return
 
@@ -35,17 +33,13 @@ client.on(Events.InteractionCreate, async interaction => {
       const command = interaction.client.commands.get(interaction.commandName)
       if (command) await command.execute(interaction)
     } catch (error) {
+      const message = 'There was an error while executing this command.'
+      const ephemeral = MessageFlags.Ephemeral
       console.error(error)
       if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({
-          content: 'There was an error while executing this command.',
-          flags: MessageFlags.Ephemeral,
-        })
+        await interaction.followUp({ content: message, flags: ephemeral })
       } else {
-        await interaction.reply({
-          content: 'There was an error while executing this command.',
-          flags: MessageFlags.Ephemeral,
-        })
+        await interaction.reply({ content: message, flags: ephemeral })
       }
     }
   } else if (interaction.isAutocomplete()) {

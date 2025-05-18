@@ -52,7 +52,10 @@ export const data = new SlashCommandBuilder()
 export async function autocomplete(interaction: AutocompleteInteraction) {
   const focusedValue = interaction.options.getFocused()
   const choices = Object.keys(RULES)
-  const filtered = choices.filter(choice => choice.startsWith(focusedValue))
+  const filtered = choices.filter(choice =>
+    focusedValue ? choice.includes(focusedValue) : true
+  )
+
   await interaction.respond(
     filtered.map(choice => ({ name: choice, value: choice }))
   )
