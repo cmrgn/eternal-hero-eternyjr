@@ -61,15 +61,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   })
 
   const keyword = interaction.options.getString('keyword') ?? ''
-
-  logger.command(interaction)
-
   const results = fuse.search(keyword)
   const embed = new EmbedBuilder()
     .setTitle('FAQ search')
     .setColor('#ac61ff')
     .setThumbnail('https://ehmb.netlify.app/eh_icon.png')
     .setTimestamp()
+
+  logger.command(interaction, {
+    results: results.map(result => ({
+      name: result.item.name,
+      score: result.score,
+    })),
+  })
 
   if (results.length === 0) {
     embed.setDescription(
