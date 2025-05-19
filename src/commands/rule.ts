@@ -47,7 +47,7 @@ export const data = new SlashCommandBuilder()
   .addUserOption(option =>
     option.setName('user').setDescription('User to mention')
   )
-  .setDescription('Say something via the bot')
+  .setDescription('Print out a server rule')
 
 export async function autocomplete(interaction: AutocompleteInteraction) {
   const focusedValue = interaction.options.getFocused()
