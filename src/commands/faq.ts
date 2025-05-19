@@ -56,7 +56,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     ignoreDiacritics: true,
     keys: ['name'],
     minMatchCharLength: 3,
-    threshold: 0.5,
+    threshold: 0.3,
     ignoreLocation: true,
   })
 
