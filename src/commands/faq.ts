@@ -63,7 +63,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const keyword = interaction.options.getString('keyword') ?? ''
   const results = fuse.search(keyword)
   const embed = new EmbedBuilder()
-    .setTitle('FAQ search')
+    .setTitle(`FAQ search: “${keyword}”`)
     .setColor('#ac61ff')
     .setThumbnail('https://ehmb.netlify.app/eh_icon.png')
     .setTimestamp()
@@ -80,16 +80,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       `Your search for “${keyword}” yielded no results. Try a more generic term, or reach out to Kitty if you think this is a mistake.`
     )
   } else {
-    embed
-      .setDescription(
-        `Your search for “${keyword}” yielded the following results:`
-      )
-      .addFields(
-        results.map(result => ({
-          name: result.item.name,
-          value: result.item.url,
-        }))
-      )
+    embed.addFields(
+      results.map(result => ({
+        name: result.item.name,
+        value: result.item.url,
+      }))
+    )
   }
 
   return interaction.editReply({ embeds: [embed] })
