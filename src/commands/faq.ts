@@ -4,6 +4,7 @@ import {
   type CommandInteraction,
   EmbedBuilder,
   type ForumChannel,
+  MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js'
 import Fuse from 'fuse.js'
@@ -19,6 +20,11 @@ export const data = new SlashCommandBuilder()
       .setName('keyword')
       .setDescription('The search keyword')
       .setRequired(true)
+  )
+  .addBooleanOption(option =>
+    option
+      .setName('visible')
+      .setDescription('Whether it should show for everyone')
   )
   .setDescription('Search the FAQ')
 
@@ -48,7 +54,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     throw new Error('Could not retrieve guild.')
   }
 
-  await interaction.deferReply()
+  const visible = interaction.options.getBoolean('visible') ?? false
+  await interaction.deferReply({
+    flags: visible ? undefined : MessageFlags.Ephemeral,
+  })
 
   const threads = await getThreads(interaction)
   const fuse = new Fuse(threads, {
@@ -90,5 +99,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     )
   }
 
-  return interaction.editReply({ embeds: [embed] })
+  return interaction.editReply({
+    embeds: [embed],
+  })
 }
