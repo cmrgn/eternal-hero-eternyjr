@@ -67,6 +67,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const number = rule.split(': ')[0]
   const message = RULES[rule as keyof typeof RULES]
 
+  console.log(
+    `${interaction.user.username} (${interaction.user.id}) has used \`/rule rule:"${rule}"\`.`
+  )
+
   return interaction.reply(
     `${user ? `<@${user.id}> ` : ''}**${number}:** ${message}`
   )

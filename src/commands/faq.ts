@@ -59,6 +59,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   })
 
   const keyword = interaction.options.getString('keyword') ?? ''
+
+  console.log(
+    `${interaction.user.username} (${interaction.user.id}) has used \`/faq keyword:"${keyword}"\`.`
+  )
+
   const results = fuse.search(keyword)
   const embed = new EmbedBuilder()
     .setTitle('FAQ search')

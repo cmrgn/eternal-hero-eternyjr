@@ -63,6 +63,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const rawDust = interaction.options.getInteger('raw_dust') ?? 0
   const divineEssences = interaction.options.getInteger('divine_essences') ?? 0
 
+  console.log(
+    `${interaction.user.username} (${interaction.user.id}) has used /dust.`
+  )
+
   const legKeysViaBonds = Math.floor(clanBonds / 1500)
   const totalLegKeys = legKeys + legKeysViaBonds
   const divineEssencesViaLegKeys = Math.floor(totalLegKeys / 40) * 4

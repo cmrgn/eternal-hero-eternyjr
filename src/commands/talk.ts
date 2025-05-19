@@ -19,6 +19,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (interaction.channel.isSendable()) {
     try {
       const message = interaction.options.getString('message') ?? ''
+
+      console.log(
+        `${interaction.user.username} (${interaction.user.id}) has used \`/talk message:"${message}"\`.`
+      )
+
       await interaction.channel.send(message)
 
       await interaction.reply({
