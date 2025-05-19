@@ -6,6 +6,7 @@ import {
 } from 'discord.js'
 import Fuse from 'fuse.js'
 import { LRUCache } from 'lru-cache'
+import { logger } from '../logger'
 
 export const data = new SlashCommandBuilder()
   .setName('dust')
@@ -63,9 +64,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const rawDust = interaction.options.getInteger('raw_dust') ?? 0
   const divineEssences = interaction.options.getInteger('divine_essences') ?? 0
 
-  console.log(
-    `${interaction.user.username} (${interaction.user.id}) has used /dust.`
-  )
+  logger.command(interaction)
 
   const legKeysViaBonds = Math.floor(clanBonds / 1500)
   const totalLegKeys = legKeys + legKeysViaBonds

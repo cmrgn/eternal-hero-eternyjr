@@ -8,6 +8,7 @@ import {
 } from 'discord.js'
 import Fuse from 'fuse.js'
 import { LRUCache } from 'lru-cache'
+import { logger } from '../logger'
 
 const FAQ_FORUM_NAME = '❓│faq-guide'
 
@@ -60,9 +61,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const keyword = interaction.options.getString('keyword') ?? ''
 
-  console.log(
-    `${interaction.user.username} (${interaction.user.id}) has used \`/faq keyword:"${keyword}"\`.`
-  )
+  logger.command(interaction)
 
   const results = fuse.search(keyword)
   const embed = new EmbedBuilder()

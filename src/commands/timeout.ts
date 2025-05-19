@@ -7,6 +7,7 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js'
+import { logger } from '../logger'
 export { autocomplete } from './rule'
 
 export const data = new SlashCommandBuilder()
@@ -36,9 +37,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const member = interaction.options.getMember('user') as GuildMember
   const duration = interaction.options.getInteger('duration') ?? 1
 
-  console.log(
-    `${interaction.user.username} (${interaction.user.id}) has used \`/timeout user:"${member.id}" duration:"${duration}" violation:"${rule}"\`.`
-  )
+  logger.command(interaction)
 
   if (!interaction.guild) throw new Error('Cannot retrieve guild.')
   if (!member) throw new Error('Cannot retrieve member.')

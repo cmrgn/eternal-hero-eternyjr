@@ -3,6 +3,7 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js'
+import { logger } from '../logger'
 
 export const data = new SlashCommandBuilder()
   .setName('talk')
@@ -20,9 +21,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     try {
       const message = interaction.options.getString('message') ?? ''
 
-      console.log(
-        `${interaction.user.username} (${interaction.user.id}) has used \`/talk message:"${message}"\`.`
-      )
+      logger.command(interaction)
 
       await interaction.channel.send(message)
 
