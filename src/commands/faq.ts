@@ -80,14 +80,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       `Your search for “${keyword}” yielded no results. Try a more generic term, or reach out to Kitty if you think this is a mistake.`
     )
   } else {
-    console.log({
-      keyword,
-      results: results.map(result => ({
-        name: result.item.name,
-        score: result.score,
-      })),
-    })
-
     embed
       .setDescription(
         `Your search for “${keyword}” yielded the following results:`
