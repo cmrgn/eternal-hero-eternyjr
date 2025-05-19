@@ -57,6 +57,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     keys: ['name'],
     minMatchCharLength: 3,
     threshold: 0.5,
+    ignoreLocation: true,
   })
 
   const keyword = interaction.options.getString('keyword') ?? ''
