@@ -61,7 +61,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   })
 
   const keyword = interaction.options.getString('keyword') ?? ''
-  const results = fuse.search(keyword)
+  const results = fuse
+    .search(keyword)
+    .filter(result => result.score && result.score <= 0.5)
   const embed = new EmbedBuilder()
     .setTitle(`FAQ search: “${keyword}”`)
     .setColor('#ac61ff')
