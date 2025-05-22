@@ -1,7 +1,6 @@
 import type { Message, OmitPartialGroupDMChannel } from 'discord.js'
 import { IS_DEV, IS_PROD, TEST_SERVER_ID } from './config'
 
-const REGULAR_EXPRESSION = /^[A-Za-z0-9]{20,}$/
 const CHANNEL_NAME = '🔗│discord-linking'
 
 const RESPONSES = {
@@ -43,6 +42,14 @@ const ROLES_MAP = {
 type I18nRole = keyof typeof ROLES_MAP
 type Language = keyof typeof RESPONSES
 
+const looksLikePlayerId = (message: string) => {
+  if (message.length < 20) return false
+  if (message.toLocaleLowerCase() === message) return false
+  if (message.toLocaleUpperCase() === message) return false
+
+  return /^[A-Za-z0-9]+$/.test(message)
+}
+
 export async function discordLinking(
   interaction: OmitPartialGroupDMChannel<Message<boolean>>
 ) {
@@ -53,7 +60,7 @@ export async function discordLinking(
 
   const content = interaction.content
 
-  if (REGULAR_EXPRESSION.test(content)) {
+  if (looksLikePlayerId(content)) {
     const channel = interaction.guild?.channels.cache.find(
       channel => channel.name === CHANNEL_NAME
     )
