@@ -41,8 +41,12 @@ const getThreads = async (interaction: CommandInteraction) => {
   ) as ForumChannel
 
   if (!cache.has('__threads')) {
-    const threadList = await faq.threads.fetch()
-    const threads = Array.from(threadList.threads.values())
+    const threadList = await faq.threads.fetchActive()
+    const archivedThreadList = await faq.threads.fetchArchived()
+    const threads = [
+      ...Array.from(threadList.threads.values()),
+      ...Array.from(archivedThreadList.threads.values()),
+    ]
     cache.set('__threads', threads)
   }
 
