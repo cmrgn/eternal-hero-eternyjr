@@ -34,7 +34,7 @@ const ROLES_MAP = {
   'ru | Русский': 'ru',
   'th | ภาษาไทย': 'th',
   'tr | Türkçe': 'tr',
-  'vn | Tiền-việt': 'vn',
+  'vn | Tiếng Việt': 'vn',
   'zh | 汉语': 'zh',
 }
 
