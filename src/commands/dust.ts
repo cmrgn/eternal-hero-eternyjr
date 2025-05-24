@@ -4,8 +4,6 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js'
-import Fuse from 'fuse.js'
-import { LRUCache } from 'lru-cache'
 import { logger } from '../logger'
 
 export const data = new SlashCommandBuilder()
