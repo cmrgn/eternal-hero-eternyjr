@@ -8,7 +8,7 @@ import {
   SlashCommandBuilder,
 } from 'discord.js'
 import Fuse from 'fuse.js'
-import { LRUCache } from 'lru-cache'
+import memoize from 'memoizee'
 import { logger } from '../logger'
 
 const FAQ_FORUM_NAME = '❓│faq-guide'
@@ -28,30 +28,39 @@ export const data = new SlashCommandBuilder()
   )
   .setDescription('Search the FAQ')
 
-const cache = new LRUCache({
-  ttl: 1000 * 60 * 60, // Cache the threads for 1 hour
-  ttlAutopurge: true,
-})
-
-const getThreads = async (interaction: CommandInteraction) => {
+function getThreads(
+  interaction: CommandInteraction
+): Promise<AnyThreadChannel[]> {
   // biome-ignore lint/style/noNonNullAssertion: <explanation>
   const channels = interaction.guild!.channels
   const faq = channels.cache.find(
     channel => channel.name === FAQ_FORUM_NAME
   ) as ForumChannel
 
-  if (!cache.has('__threads')) {
-    const threadList = await faq.threads.fetchActive()
-    const archivedThreadList = await faq.threads.fetchArchived()
-    const threads = [
-      ...Array.from(threadList.threads.values()),
-      ...Array.from(archivedThreadList.threads.values()),
-    ]
-    cache.set('__threads', threads)
-  }
+  return new Promise((resolve, reject) => {
+    Promise.all([faq.threads.fetchActive(), faq.threads.fetchArchived()])
+      .then(([activeThreadRes, archivedThreadRes]) => {
+        const activeThreads = Array.from(activeThreadRes.threads.values())
+        const archivedThreads = Array.from(archivedThreadRes.threads.values())
+        const threads = [...activeThreads, ...archivedThreads]
 
-  return cache.get('__threads') as AnyThreadChannel[]
+        logger.info('FETCH_THREADS', {
+          active: activeThreads.length,
+          archived: archivedThreads.length,
+          total: threads.length,
+        })
+
+        resolve(threads)
+      })
+      .catch(error => reject(error))
+  })
 }
+
+const memoizedGetThreads = memoize(getThreads, {
+  promise: true,
+  maxAge: 60 * 60 * 1000,
+  normalizer: args => args[0].commandId,
+})
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   if (!interaction.guild) {
@@ -63,7 +72,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     flags: visible ? undefined : MessageFlags.Ephemeral,
   })
 
-  const threads = await getThreads(interaction)
+  const threads = await memoizedGetThreads(interaction)
   const fuse = new Fuse(threads, {
     includeScore: true,
     ignoreDiacritics: true,

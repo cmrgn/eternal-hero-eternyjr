@@ -24,4 +24,8 @@ const command = (
   })
 }
 
-export const logger = { command }
+const info = (label: string, extra?: Record<PropertyKey, unknown>) => {
+  console.log(label, extra)
+}
+
+export const logger = { command, info }
