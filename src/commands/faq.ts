@@ -12,6 +12,7 @@ import memoize from 'memoizee'
 import { logger } from '../logger'
 
 const FAQ_FORUM_NAME = '❓│faq-guide'
+const DISCORD_SERVER_ID = '1239215561649426453'
 
 export const data = new SlashCommandBuilder()
   .setName('faq')
@@ -28,35 +29,49 @@ export const data = new SlashCommandBuilder()
   )
   .setDescription('Search the FAQ')
 
-function getThreads(
+async function getFAQ(interaction: CommandInteraction) {
+  // If running on the main Discord server, use the guild object from the inter-
+  // action, otherwise fetch that guild object through the API.
+  const guild =
+    interaction.guildId === DISCORD_SERVER_ID
+      ? // biome-ignore lint/style/noNonNullAssertion: <explanation>
+        interaction.guild!
+      : await interaction.client.guilds.fetch(DISCORD_SERVER_ID)
+  const channels = guild.channels
+  const faq = channels.cache.find(channel => channel.name === FAQ_FORUM_NAME)
+
+  return faq as ForumChannel
+}
+
+async function getThreads(interaction: CommandInteraction) {
+  const faq = await getFAQ(interaction)
+  const [activeThreadRes, archivedThreadRes] = await Promise.all([
+    faq.threads.fetchActive(),
+    faq.threads.fetchArchived(),
+  ])
+
+  const activeThreads = Array.from(activeThreadRes.threads.values())
+  const archivedThreads = Array.from(archivedThreadRes.threads.values())
+  const threads = [...activeThreads, ...archivedThreads]
+
+  logger.info('FETCH_THREADS', {
+    active: activeThreads.length,
+    archived: archivedThreads.length,
+    total: threads.length,
+  })
+
+  return threads
+}
+
+function __getThreads(
   interaction: CommandInteraction
-): Promise<AnyThreadChannel[]> {
-  // biome-ignore lint/style/noNonNullAssertion: <explanation>
-  const channels = interaction.guild!.channels
-  const faq = channels.cache.find(
-    channel => channel.name === FAQ_FORUM_NAME
-  ) as ForumChannel
-
+): ReturnType<typeof getThreads> {
   return new Promise((resolve, reject) => {
-    Promise.all([faq.threads.fetchActive(), faq.threads.fetchArchived()])
-      .then(([activeThreadRes, archivedThreadRes]) => {
-        const activeThreads = Array.from(activeThreadRes.threads.values())
-        const archivedThreads = Array.from(archivedThreadRes.threads.values())
-        const threads = [...activeThreads, ...archivedThreads]
-
-        logger.info('FETCH_THREADS', {
-          active: activeThreads.length,
-          archived: archivedThreads.length,
-          total: threads.length,
-        })
-
-        resolve(threads)
-      })
-      .catch(error => reject(error))
+    getThreads(interaction).then(resolve).catch(reject)
   })
 }
 
-const memoizedGetThreads = memoize(getThreads, {
+const memoizedGetThreads = memoize(__getThreads, {
   promise: true,
   maxAge: 60 * 60 * 1000,
   normalizer: args => args[0].commandId,
