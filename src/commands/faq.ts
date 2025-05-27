@@ -10,6 +10,7 @@ import {
 import Fuse from 'fuse.js'
 import memoize from 'memoizee'
 import { logger } from '../logger'
+import { BOT_COLOR } from '../config'
 
 const FAQ_FORUM_NAME = '❓│faq-guide'
 const DISCORD_SERVER_ID = '1239215561649426453'
@@ -103,7 +104,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .filter(result => result.score && result.score <= 0.5)
   const embed = new EmbedBuilder()
     .setTitle(`FAQ search: “${keyword}”`)
-    .setColor('#ac61ff')
+    .setColor(BOT_COLOR)
     .setThumbnail('https://ehmb.netlify.app/eh_icon.png')
     .setTimestamp()
 

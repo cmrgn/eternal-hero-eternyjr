@@ -1,17 +1,22 @@
+import type { GiveawaysManager } from 'discord-giveaways'
 import type { Collection, SlashCommandOptionsOnlyBuilder } from 'discord.js'
 
 type Command = {
-  data: SlashCommandOptionsOnlyBuilder
+  data: SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder
   execute: (
     interaction: CommandInteraction
-  ) => Promise<InteractionResponse<boolean>>
+  ) => Promise<InteractionResponse<unknown>>
   autocomplete?: (
     interaction: AutocompleteInteraction
-  ) => Promise<InteractionResponse<boolean>>
+  ) => Promise<InteractionResponse<unknown>>
+  onSubmit?: (
+    interaction: AutocompleteInteraction
+  ) => Promise<InteractionResponse<unknown>>
 }
 
 declare module 'discord.js' {
   export interface Client {
     commands: Collection<PropertyKey, Command>
+    giveawaysManager: GiveawaysManager
   }
 }

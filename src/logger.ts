@@ -1,4 +1,9 @@
-import type { ChatInputCommandInteraction } from 'discord.js'
+import type { Giveaway } from 'discord-giveaways'
+import type {
+  ChatInputCommandInteraction,
+  GuildMember,
+  ReactionEmoji,
+} from 'discord.js'
 
 const formatUser = (user: ChatInputCommandInteraction['user']) => ({
   nickname: user.globalName,
@@ -24,8 +29,20 @@ const command = (
   })
 }
 
+const giveaway = (
+  giveaway: Giveaway,
+  action: string,
+  extra?: Record<PropertyKey, unknown>
+) => {
+  console.log('GIVEAWAY', {
+    ...extra,
+    giveaway: { id: giveaway.messageId },
+    action,
+  })
+}
+
 const info = (label: string, extra?: Record<PropertyKey, unknown>) => {
   console.log(label, extra)
 }
 
-export const logger = { command, info }
+export const logger = { command, info, giveaway, utils: { formatUser } }
