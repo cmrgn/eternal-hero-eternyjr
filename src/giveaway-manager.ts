@@ -1,119 +1,42 @@
-import { Octokit } from '@octokit/rest'
-import {
-  type Giveaway,
-  type GiveawayData,
-  GiveawaysManager,
-} from 'discord-giveaways'
+import pg from 'pg'
+import { type GiveawayData, GiveawaysManager } from 'discord-giveaways'
 import type { Client } from 'discord.js'
-import { BOT_COLOR, GITHUB_TOKEN } from './config'
+import { BOT_COLOR, DATABASE_URL } from './config'
 import { logger } from './logger'
 
-const octokit = new Octokit({ auth: GITHUB_TOKEN })
-
-function write(
-  content: string,
-  sha: string,
-  type: 'insertion' | 'edition' | 'deletion'
-) {
-  logger.info('DATABASE_PING', { type })
-
-  return octokit.repos.createOrUpdateFileContents({
-    owner: 'KittySparkles',
-    repo: 'eternal-hero-bot',
-    path: 'storage/giveaways.json',
-    message: `Update the giveaways database file (${type})`,
-    content,
-    sha,
-  })
-}
-
-async function read() {
-  logger.info('DATABASE_PING', { type: 'read' })
-
-  const response = await octokit.repos.getContent({
-    owner: 'KittySparkles',
-    repo: 'eternal-hero-bot',
-    path: 'storage/giveaways.json',
-  })
-
-  if (Array.isArray(response.data) || response.data.type !== 'file') {
-    throw new Error('Found directory where file was expected.')
-  }
-
-  return response.data
-}
-
-const getGiveawaysFromData = (data: Awaited<ReturnType<typeof read>>) => {
-  return decodeJSON(data.content)
-}
-
-function encodeJSON(content: (Giveaway | GiveawayData)[]): string {
-  return Buffer.from(JSON.stringify(content)).toString('base64')
-}
-
-function decodeJSON(encodedContent: string): Giveaway[] {
-  return JSON.parse(Buffer.from(encodedContent, 'base64').toString())
-}
+const pool = new pg.Pool({
+  connectionString: DATABASE_URL,
+  ssl: { rejectUnauthorized: false }, // for Heroku Postgres SSL
+})
 
 export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
   async getAllGiveaways() {
-    try {
-      const data = await read()
-      const giveaways = getGiveawaysFromData(data)
-      return giveaways
-    } catch (error) {
-      const is404 =
-        typeof error === 'object' &&
-        error !== null &&
-        'status' in error &&
-        error.status === 404
+    const { rows } = await pool.query('SELECT data FROM giveaways')
 
-      // This should never happen once the file is committed to the repository,
-      // but just in case it happens, we return an empty array.
-      if (is404) return []
-
-      throw error
-    }
+    return rows.map(row => row.data)
   }
 
-  async saveGiveaway(messageId: string, giveaway: GiveawayData) {
-    const data = await read()
-    const giveaways = getGiveawaysFromData(data)
-
-    const content = encodeJSON([...giveaways, giveaway])
-    await write(content, data.sha, 'insertion')
-
+  async saveGiveaway(messageId: string, giveawayData: GiveawayData) {
+    await pool.query('INSERT INTO giveaways (id, data) VALUES ($1, $2)', [
+      messageId,
+      giveawayData,
+    ])
     return true
   }
 
   async editGiveaway(messageId: string, giveawayData: GiveawayData) {
-    const data = await read()
-    const giveaways = getGiveawaysFromData(data)
-
-    const giveaway = giveaways.find(ga => ga.messageId === messageId)
-    if (!giveaway) throw new Error('Cannot find giveaway for edition.')
-
-    Object.assign(giveaway, giveawayData)
-
-    const content = encodeJSON(giveaways)
-    await write(content, data.sha, 'edition')
-
-    return true
+    const result = await pool.query(
+      'UPDATE giveaways SET data = $1 WHERE id = $2',
+      [giveawayData, messageId]
+    )
+    return result.rowCount ? result.rowCount > 0 : false
   }
 
   async deleteGiveaway(messageId: string) {
-    const data = await read()
-    const giveaways = getGiveawaysFromData(data)
-
-    const index = giveaways.findIndex(ga => ga.messageId === messageId)
-    if (index === -1) throw new Error('Cannot find giveaway for deletion.')
-
-    giveaways.splice(index, 1)
-
-    const content = encodeJSON(giveaways)
-    await write(content, data.sha, 'deletion')
-
-    return true
+    const result = await pool.query('DELETE FROM giveaways WHERE id = $1', [
+      messageId,
+    ])
+    return result.rowCount ? result.rowCount > 0 : false
   }
 }
 
