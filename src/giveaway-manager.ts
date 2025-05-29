@@ -12,7 +12,6 @@ const pool = new pg.Pool({
 export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
   async getAllGiveaways() {
     const { rows } = await pool.query('SELECT data FROM giveaways')
-
     return rows.map(row => row.data)
   }
 

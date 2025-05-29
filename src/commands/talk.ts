@@ -13,28 +13,16 @@ export const data = new SlashCommandBuilder()
   .setDescription('Say something via the bot')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  if (!interaction.channel) {
-    throw new Error('Could not retrieve channel.')
-  }
+  const { channel, options } = interaction
+  const { Ephemeral } = MessageFlags
+  const message = options.getString('message') ?? ''
 
-  if (interaction.channel.isSendable()) {
-    try {
-      const message = interaction.options.getString('message') ?? ''
+  if (!channel) throw new Error('Could not retrieve channel.')
+  if (!channel.isSendable()) throw new Error('Could not send in channel.')
 
-      logger.command(interaction)
+  logger.command(interaction)
 
-      await interaction.channel.send(message)
-
-      await interaction.reply({
-        content: 'Message successfully sent via the bot.',
-        flags: MessageFlags.Ephemeral,
-      })
-      await interaction.deleteReply()
-    } catch (error) {
-      return interaction.reply({
-        content: 'There was a problem while sending the message via the bot.',
-        flags: MessageFlags.Ephemeral,
-      })
-    }
-  }
+  await channel.send(message)
+  await interaction.reply({ content: 'Sent.', flags: Ephemeral })
+  await interaction.deleteReply()
 }

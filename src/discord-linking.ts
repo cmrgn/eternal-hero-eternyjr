@@ -1,5 +1,6 @@
 import type { Message, OmitPartialGroupDMChannel } from 'discord.js'
 import { IS_DEV, IS_PROD, TEST_SERVER_ID } from './config'
+import { shouldIgnoreInteraction } from './utils'
 
 const CHANNEL_NAME = '🔗│discord-linking'
 
@@ -53,10 +54,7 @@ const looksLikePlayerId = (message: string) => {
 export async function discordLinking(
   interaction: OmitPartialGroupDMChannel<Message<boolean>>
 ) {
-  // Prevent the production bot from answering in the test server, and the test
-  // bot from answering in any other server than the test one
-  if (IS_PROD && interaction.guildId === TEST_SERVER_ID) return
-  if (IS_DEV && interaction.guildId !== TEST_SERVER_ID) return
+  if (shouldIgnoreInteraction(interaction)) return
 
   const content = interaction.content
 

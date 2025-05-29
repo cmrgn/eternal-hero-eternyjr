@@ -1,15 +1,6 @@
 import type { Giveaway } from 'discord-giveaways'
-import type {
-  ChatInputCommandInteraction,
-  GuildMember,
-  ReactionEmoji,
-} from 'discord.js'
-
-const formatUser = (user: ChatInputCommandInteraction['user']) => ({
-  nickname: user.globalName,
-  username: user.username,
-  id: user.id,
-})
+import type { ChatInputCommandInteraction } from 'discord.js'
+import { formatUser } from './utils'
 
 const command = (
   interaction: ChatInputCommandInteraction,

@@ -5,6 +5,7 @@ import {
   SlashCommandBuilder,
 } from 'discord.js'
 import { logger } from '../logger'
+import { createEmbed } from '../utils'
 
 export const data = new SlashCommandBuilder()
   .setName('dust')
@@ -34,14 +35,6 @@ export const data = new SlashCommandBuilder()
   )
   .addIntegerOption(option =>
     option
-      .setName('clan_bonds')
-      .setDescription('Amount of clan bonds')
-      .setRequired(true)
-      .setMinValue(0)
-      .setMaxValue(500_000)
-  )
-  .addIntegerOption(option =>
-    option
       .setName('raw_dust')
       .setDescription('Amount of dust')
       .setRequired(true)
@@ -51,6 +44,14 @@ export const data = new SlashCommandBuilder()
       .setName('divine_essences')
       .setDescription('Amount of divine essences')
       .setRequired(true)
+  )
+  .addIntegerOption(option =>
+    option
+      .setName('clan_bonds')
+      .setDescription('Amount of clan bonds')
+      .setRequired(true)
+      .setMinValue(0)
+      .setMaxValue(500_000)
   )
   .setDescription('Estimate the amount of dust you have across resources')
 
@@ -85,10 +86,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     viaDivineEssences
 
   const formatter = new Intl.NumberFormat('en-US')
-  const embed = new EmbedBuilder()
+  const embed = createEmbed()
     .setTitle('Dust calculator')
-    .setThumbnail('https://ehmb.netlify.app/eh_icon.png')
-    .setTimestamp()
     .addFields(
       {
         name: 'Approximated total dust',

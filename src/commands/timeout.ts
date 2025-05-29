@@ -31,6 +31,7 @@ export const data = new SlashCommandBuilder()
   )
   .setDescription('Time out a user for violating a rule')
   .setContexts(InteractionContextType.Guild)
+  .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   const rule = interaction.options.getString('violation') ?? ''

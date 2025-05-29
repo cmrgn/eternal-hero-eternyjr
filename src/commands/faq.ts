@@ -1,16 +1,16 @@
 import {
-  type AnyThreadChannel,
   type ChatInputCommandInteraction,
   type CommandInteraction,
-  EmbedBuilder,
   type ForumChannel,
+  type Guild,
   MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js'
 import Fuse from 'fuse.js'
 import memoize from 'memoizee'
+import ms from 'ms'
 import { logger } from '../logger'
-import { BOT_COLOR } from '../config'
+import { createEmbed } from '../utils'
 
 const FAQ_FORUM_NAME = '❓│faq-guide'
 const DISCORD_SERVER_ID = '1239215561649426453'
@@ -30,22 +30,20 @@ export const data = new SlashCommandBuilder()
   )
   .setDescription('Search the FAQ')
 
-async function getFAQ(interaction: CommandInteraction) {
+async function getFAQForum({ guild, guildId, client }: CommandInteraction) {
   // If running on the main Discord server, use the guild object from the inter-
   // action, otherwise fetch that guild object through the API.
-  const guild =
-    interaction.guildId === DISCORD_SERVER_ID
-      ? // biome-ignore lint/style/noNonNullAssertion: <explanation>
-        interaction.guild!
-      : await interaction.client.guilds.fetch(DISCORD_SERVER_ID)
-  const channels = guild.channels
+  const isMainServer = guildId === DISCORD_SERVER_ID
+  const { channels } = isMainServer
+    ? (guild as Guild)
+    : await client.guilds.fetch(DISCORD_SERVER_ID)
   const faq = channels.cache.find(channel => channel.name === FAQ_FORUM_NAME)
 
   return faq as ForumChannel
 }
 
 async function getThreads(interaction: CommandInteraction) {
-  const faq = await getFAQ(interaction)
+  const faq = await getFAQForum(interaction)
   const [activeThreadRes, archivedThreadRes] = await Promise.all([
     faq.threads.fetchActive(),
     faq.threads.fetchArchived(),
@@ -64,7 +62,7 @@ async function getThreads(interaction: CommandInteraction) {
   return threads
 }
 
-function __getThreads(
+function promisifiedGetThreads(
   interaction: CommandInteraction
 ): ReturnType<typeof getThreads> {
   return new Promise((resolve, reject) => {
@@ -72,16 +70,14 @@ function __getThreads(
   })
 }
 
-const memoizedGetThreads = memoize(__getThreads, {
+const memoizedGetThreads = memoize(promisifiedGetThreads, {
   promise: true,
-  maxAge: 60 * 60 * 1000,
+  maxAge: ms('1 hour'),
   normalizer: args => args[0].commandId,
 })
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  if (!interaction.guild) {
-    throw new Error('Could not retrieve guild.')
-  }
+  if (!interaction.guild) throw new Error('Could not retrieve guild.')
 
   const visible = interaction.options.getBoolean('visible') ?? false
   await interaction.deferReply({
@@ -102,11 +98,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const results = fuse
     .search(keyword)
     .filter(result => result.score && result.score <= 0.5)
-  const embed = new EmbedBuilder()
-    .setTitle(`FAQ search: “${keyword}”`)
-    .setColor(BOT_COLOR)
-    .setThumbnail('https://ehmb.netlify.app/eh_icon.png')
-    .setTimestamp()
+  const embed = createEmbed().setTitle(`FAQ search: “${keyword}”`)
 
   logger.command(interaction, {
     results: results.map(result => ({
@@ -128,7 +120,5 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     )
   }
 
-  return interaction.editReply({
-    embeds: [embed],
-  })
+  return interaction.editReply({ embeds: [embed] })
 }
