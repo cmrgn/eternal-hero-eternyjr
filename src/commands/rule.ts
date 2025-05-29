@@ -1,10 +1,9 @@
 import {
-  type AutocompleteInteraction,
   type ChatInputCommandInteraction,
-  MessageFlags,
+  InteractionContextType,
   SlashCommandBuilder,
 } from 'discord.js'
-import { logger } from '../logger'
+import { logger } from '../utils/logger'
 
 export const RULES = {
   'Rule 1.1: No bullying':
@@ -36,6 +35,11 @@ export const RULES = {
     'No harassing, excessively pinging or taunting the moderators.',
 }
 
+export const RULES_CHOICES = Object.keys(RULES).map(rule => ({
+  name: rule,
+  value: rule,
+}))
+
 export const data = new SlashCommandBuilder()
   .setName('rule')
   .addStringOption(option =>
@@ -43,27 +47,16 @@ export const data = new SlashCommandBuilder()
       .setName('rule')
       .setDescription('Rule to mention')
       .setRequired(true)
-      .setAutocomplete(true)
+      .addChoices(...RULES_CHOICES)
   )
   .addUserOption(option =>
     option.setName('user').setDescription('User to mention')
   )
   .setDescription('Print out a server rule')
-
-export async function autocomplete(interaction: AutocompleteInteraction) {
-  const focusedValue = interaction.options.getFocused()
-  const choices = Object.keys(RULES)
-  const filtered = choices.filter(choice =>
-    focusedValue ? choice.includes(focusedValue) : true
-  )
-
-  await interaction.respond(
-    filtered.map(choice => ({ name: choice, value: choice }))
-  )
-}
+  .setContexts(InteractionContextType.Guild)
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const rule = interaction.options.getString('rule') ?? ''
+  const rule = interaction.options.getString('rule', true)
   const user = interaction.options.getUser('user')
   const number = rule.split(': ')[0]
   const message = RULES[rule as keyof typeof RULES]

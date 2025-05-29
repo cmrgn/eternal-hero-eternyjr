@@ -3,7 +3,7 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js'
-import { logger } from '../logger'
+import { logger } from '../utils/logger'
 
 export const data = new SlashCommandBuilder()
   .setName('talk')
@@ -15,7 +15,7 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
   const { channel, options } = interaction
   const { Ephemeral } = MessageFlags
-  const message = options.getString('message') ?? ''
+  const message = options.getString('message', true)
 
   if (!channel) throw new Error('Could not retrieve channel.')
   if (!channel.isSendable()) throw new Error('Could not send in channel.')

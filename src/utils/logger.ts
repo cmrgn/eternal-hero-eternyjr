@@ -1,6 +1,6 @@
 import type { Giveaway } from 'discord-giveaways'
 import type { ChatInputCommandInteraction } from 'discord.js'
-import { formatUser } from './utils'
+import { formatUser } from './format-user'
 
 const command = (
   interaction: ChatInputCommandInteraction,

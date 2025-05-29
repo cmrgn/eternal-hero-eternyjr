@@ -6,12 +6,6 @@ type Command = {
   execute: (
     interaction: CommandInteraction
   ) => Promise<InteractionResponse<unknown>>
-  autocomplete?: (
-    interaction: AutocompleteInteraction
-  ) => Promise<InteractionResponse<unknown>>
-  onSubmit?: (
-    interaction: AutocompleteInteraction
-  ) => Promise<InteractionResponse<unknown>>
 }
 
 declare module 'discord.js' {

@@ -1,14 +1,14 @@
 import {
-  type AutocompleteInteraction,
   type ChatInputCommandInteraction,
   type GuildMember,
   InteractionContextType,
   MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
+  userMention,
 } from 'discord.js'
-import { logger } from '../logger'
-export { autocomplete } from './rule'
+import { logger } from '../utils/logger'
+import { RULES_CHOICES } from './rule'
 
 export const data = new SlashCommandBuilder()
   .setName('timeout')
@@ -27,16 +27,16 @@ export const data = new SlashCommandBuilder()
       .setName('violation')
       .setDescription('Rule violation')
       .setRequired(true)
-      .setAutocomplete(true)
+      .setChoices(...RULES_CHOICES)
   )
   .setDescription('Time out a user for violating a rule')
   .setContexts(InteractionContextType.Guild)
   .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const rule = interaction.options.getString('violation') ?? ''
+  const rule = interaction.options.getString('violation', true)
   const member = interaction.options.getMember('user') as GuildMember
-  const duration = interaction.options.getInteger('duration') ?? 1
+  const duration = interaction.options.getInteger('duration', true)
 
   logger.command(interaction)
 
@@ -53,7 +53,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   )
 
   const [number, label] = rule.split(': ')
-  const message = `<@${member.id}> was timed out for ${duration} minute${duration === 1 ? '' : 's'} for violating ${number.toLocaleLowerCase()} (${label}).`
+  const message = `${userMention(member.id)} was timed out for ${duration} minute${duration === 1 ? '' : 's'} for violating ${number.toLocaleLowerCase()} (${label}).`
 
   // Announce the timeout
   if (moderation?.isSendable()) await moderation.send(message)

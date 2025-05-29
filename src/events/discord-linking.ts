@@ -1,6 +1,9 @@
-import type { Message, OmitPartialGroupDMChannel } from 'discord.js'
-import { IS_DEV, IS_PROD, TEST_SERVER_ID } from './config'
-import { shouldIgnoreInteraction } from './utils'
+import {
+  channelMention,
+  type Message,
+  type OmitPartialGroupDMChannel,
+} from 'discord.js'
+import { shouldIgnoreInteraction } from '../utils/should-ignore-interaction'
 
 const CHANNEL_NAME = '🔗│discord-linking'
 
@@ -62,7 +65,7 @@ export async function discordLinking(
     const channel = interaction.guild?.channels.cache.find(
       channel => channel.name === CHANNEL_NAME
     )
-    const link = channel?.url ?? CHANNEL_NAME
+    const link = channel ? channelMention(channel.id) : CHANNEL_NAME
     const roles = interaction.member?.roles.cache
     const i18nRole =
       roles?.find(role => role.name in ROLES_MAP)?.name ?? 'en | English'

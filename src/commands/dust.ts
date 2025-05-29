@@ -4,8 +4,8 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js'
-import { logger } from '../logger'
-import { createEmbed } from '../utils'
+import { logger } from '../utils/logger'
+import { createEmbed } from '../utils/create-embed'
 
 export const data = new SlashCommandBuilder()
   .setName('dust')

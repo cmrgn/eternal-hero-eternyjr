@@ -2,12 +2,13 @@ import ms, { type StringValue } from 'ms'
 import {
   type ChatInputCommandInteraction,
   type GuildTextBasedChannel,
+  InteractionContextType,
   type InteractionReplyOptions,
   MessageFlags,
   SlashCommandBuilder,
   type SlashCommandStringOption,
 } from 'discord.js'
-import { logger } from '../logger'
+import { logger } from '../utils/logger'
 
 const messageIdOption = (option: SlashCommandStringOption) => {
   return option
@@ -78,6 +79,7 @@ export const data = new SlashCommandBuilder()
       .addStringOption(messageIdOption)
   )
   .setDescription('Top-level command to manage giveaways')
+  .setContexts(InteractionContextType.Guild)
 
 const MESSAGES = {
   giveaway: undefined,
@@ -115,7 +117,7 @@ function getGiveaway(
 }
 
 function ensureLegitimacy(interaction: ChatInputCommandInteraction) {
-  const messageId = interaction.options.getString('message_id') ?? ''
+  const messageId = interaction.options.getString('message_id', true)
   const giveaway = getGiveaway(interaction, messageId)
 
   if (messageId && !giveaway) {
@@ -127,7 +129,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   try {
     const { client, options, channel } = interaction
     const subcommand = options.getSubcommand()
-    const messageId = options.getString('message_id') ?? ''
+    const messageId = options.getString('message_id', true)
 
     ensureLegitimacy(interaction)
     logger.command(interaction)
@@ -137,9 +139,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const data = await client.giveawaysManager.start(
           channel as GuildTextBasedChannel,
           {
-            duration: ms(options.getString('duration') as StringValue),
+            duration: ms(options.getString('duration', true) as StringValue),
             winnerCount: options.getInteger('winner_count') ?? 1,
-            prize: options.getString('prize') ?? '',
+            prize: options.getString('prize', true),
             messages: MESSAGES,
           }
         )

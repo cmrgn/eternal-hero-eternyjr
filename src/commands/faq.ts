@@ -9,8 +9,8 @@ import {
 import Fuse from 'fuse.js'
 import memoize from 'memoizee'
 import ms from 'ms'
-import { logger } from '../logger'
-import { createEmbed } from '../utils'
+import { logger } from '../utils/logger'
+import { createEmbed } from '../utils/create-embed'
 
 const FAQ_FORUM_NAME = '❓│faq-guide'
 const DISCORD_SERVER_ID = '1239215561649426453'
@@ -94,7 +94,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     ignoreLocation: true,
   })
 
-  const keyword = interaction.options.getString('keyword') ?? ''
+  const keyword = interaction.options.getString('keyword', true)
   const results = fuse
     .search(keyword)
     .filter(result => result.score && result.score <= 0.5)

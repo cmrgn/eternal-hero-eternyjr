@@ -1,13 +1,13 @@
 import { Client, Collection, GatewayIntentBits } from 'discord.js'
 import { commands } from './commands'
-import { initGiveawayManager } from './giveaway-manager'
+import { initGiveawayManager } from './utils/giveaway-manager'
 
 export const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.MessageContent,
   ],
 })
 
