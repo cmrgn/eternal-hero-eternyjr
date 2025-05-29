@@ -1,7 +1,9 @@
 import {
+  bold,
   type ChatInputCommandInteraction,
   InteractionContextType,
   SlashCommandBuilder,
+  userMention,
 } from 'discord.js'
 import { logger } from '../utils/logger'
 
@@ -64,6 +66,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.command(interaction)
 
   return interaction.reply(
-    `${user ? `<@${user.id}> ` : ''}**${number}:** ${message}`
+    `${user ? `${userMention(user.id)} ` : ''}${bold(number)}: ${message}`
   )
 }

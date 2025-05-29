@@ -59,23 +59,22 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const rareKeys = interaction.options.getInteger('rare_keys') ?? 0
   const epicKeys = interaction.options.getInteger('epic_keys') ?? 0
   const legKeys = interaction.options.getInteger('legendary_keys') ?? 0
-  const clanBonds = interaction.options.getInteger('clan_bonds') ?? 0
   const rawDust = interaction.options.getInteger('raw_dust') ?? 0
-  const divineEssences = interaction.options.getInteger('divine_essences') ?? 0
+  const essences = interaction.options.getInteger('divine_essences') ?? 0
+  const clanBonds = interaction.options.getInteger('clan_bonds') ?? 0
 
   logger.command(interaction)
 
   const legKeysViaBonds = Math.floor(clanBonds / 1500)
   const totalLegKeys = legKeys + legKeysViaBonds
-  const divineEssencesViaLegKeys = Math.floor(totalLegKeys / 40) * 4
-  const totalDivineEssences = divineEssences + divineEssencesViaLegKeys
+  const essencesViaLegKeys = Math.floor(totalLegKeys / 40) * 4
+  const totalEssences = essences + essencesViaLegKeys
 
   const viaRareKeys = rareKeys * 11
   const viaEpicKeys = epicKeys * 100
   const viaLegKeys = legKeys * 570
   const viaClanBonds = legKeysViaBonds * 570
-  const viaDivineEssences =
-    totalDivineEssences * 2880 + divineEssencesViaLegKeys * 4266
+  const viaEssences = totalEssences * 2880 + essencesViaLegKeys * 4266
 
   const total =
     rawDust +
@@ -83,46 +82,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     viaEpicKeys +
     viaLegKeys +
     viaClanBonds +
-    viaDivineEssences
+    viaEssences
 
-  const formatter = new Intl.NumberFormat('en-US')
+  const { format } = new Intl.NumberFormat('en-US')
   const embed = createEmbed()
     .setTitle('Dust calculator')
     .addFields(
-      {
-        name: 'Approximated total dust',
-        value: formatter.format(total),
-      },
-      {
-        name: 'Via rare keys',
-        value: formatter.format(viaRareKeys),
-        inline: true,
-      },
-      {
-        name: 'Via epic keys',
-        value: formatter.format(viaEpicKeys),
-        inline: true,
-      },
-      {
-        name: 'Via leg. keys',
-        value: formatter.format(viaLegKeys),
-        inline: true,
-      },
-      {
-        name: 'Via clan bonds',
-        value: formatter.format(viaClanBonds),
-        inline: true,
-      },
-      {
-        name: 'Via raw dust',
-        value: formatter.format(rawDust),
-        inline: true,
-      },
-      {
-        name: 'Via divine essences',
-        value: formatter.format(viaDivineEssences),
-        inline: true,
-      }
+      { name: 'Approximated total dust', value: format(total) },
+      { name: 'Via rare keys', value: format(viaRareKeys), inline: true },
+      { name: 'Via epic keys', value: format(viaEpicKeys), inline: true },
+      { name: 'Via leg. keys', value: format(viaLegKeys), inline: true },
+      { name: 'Via clan bonds', value: format(viaClanBonds), inline: true },
+      { name: 'Via raw dust', value: format(rawDust), inline: true },
+      { name: 'Via divine essences', value: format(viaEssences), inline: true }
     )
 
   return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral })

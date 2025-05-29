@@ -1,4 +1,5 @@
 import {
+  bold,
   type ChatInputCommandInteraction,
   type GuildMember,
   InteractionContextType,
@@ -53,7 +54,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   )
 
   const [number, label] = rule.split(': ')
-  const message = `${userMention(member.id)} was timed out for ${duration} minute${duration === 1 ? '' : 's'} for violating ${number.toLocaleLowerCase()} (${label}).`
+  const message = `${userMention(member.id)} was timed out for ${duration} minute${duration === 1 ? '' : 's'} for violating ${bold(number.toLocaleLowerCase())} (${label}).`
 
   // Announce the timeout
   if (moderation?.isSendable()) await moderation.send(message)
