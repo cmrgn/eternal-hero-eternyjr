@@ -127,12 +127,14 @@ function ensureLegitimacy(interaction: ChatInputCommandInteraction) {
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   try {
+    logger.command(interaction)
+
     const { client, options, channel } = interaction
     const subcommand = options.getSubcommand()
-    const messageId = options.getString('message_id', true)
+    const isStart = subcommand === 'start'
+    const messageId = options.getString('message_id', !isStart) ?? ''
 
-    ensureLegitimacy(interaction)
-    logger.command(interaction)
+    if (!isStart) ensureLegitimacy(interaction)
 
     switch (subcommand) {
       case 'start': {
