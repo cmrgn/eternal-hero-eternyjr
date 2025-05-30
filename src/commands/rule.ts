@@ -8,8 +8,8 @@ import {
 import { logger } from '../utils/logger'
 
 export const RULES = {
-  'Rule 1.1: No bullying':
-    'No hate speech, bullying or discrimination of any kind.',
+  'Rule 1.1: No bullying/name-calling':
+    'No hate speech, bullying, name-calling or discrimination of any kind.',
   'Rule 1.2: No judging': 'No judging other members for who they are.',
   'Rule 1.3: No arguing':
     'No unnecessary arguments or fights — handle disagreements respectfully.',
@@ -26,7 +26,7 @@ export const RULES = {
     'No swearing or attempting to circumvent the profanity filter.',
   'Rule 3.4: No cross-posting':
     'No posting the same message in multiple channels.',
-  'Rule 3.5: No NSWF/spam': 'No NSFW or spam content.',
+  'Rule 3.5: No NSFW/spam': 'No NSFW or spam content.',
   'Rule 3.6: No links':
     'No links to other Discord servers without permission from the mods.',
   'Rule 3.7: No scams': 'No scams or malicious activities.',
