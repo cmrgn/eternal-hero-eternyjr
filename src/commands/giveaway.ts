@@ -85,7 +85,7 @@ const MESSAGES = {
   giveaway: undefined,
   giveawayEnded: undefined,
   title: ':sparkles: :tada: Eternal Giveaway: {this.prize} :tada: :sparkles:',
-  drawing: 'Ends in {timestamp}',
+  drawing: 'Ends {timestamp}',
 }
 
 function initiatorAnswer(
