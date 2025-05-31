@@ -4,7 +4,11 @@ import { DISCORD_TOKEN, IS_DEV, TEST_SERVER_ID } from './config'
 import { deployCommands } from './utils/deploy-commands'
 import { discordLinking } from './events/discord-linking'
 import { handleCommands } from './events/handle-commands'
-import { faqLeaderboard } from './events/faq-leaderboard'
+import {
+  faqLinksOnCreate,
+  faqLinksOnDelete,
+  faqLinksOnUpdate,
+} from './events/faq-leaderboard'
 import { FAQManager } from './utils/faq-manager'
 
 client.login(DISCORD_TOKEN)
@@ -27,7 +31,9 @@ client.on(Events.GuildCreate, guild => deployCommands(guild.id))
 client.on(Events.MessageCreate, discordLinking)
 
 // Look for FAQ links in any message in order to maintain the FAQ leaderboard.
-client.on(Events.MessageCreate, faqLeaderboard)
+client.on(Events.MessageCreate, faqLinksOnCreate)
+client.on(Events.MessageDelete, faqLinksOnDelete)
+client.on(Events.MessageUpdate, faqLinksOnUpdate)
 
 // Handle commands that are supported by the bot.
 client.on(Events.InteractionCreate, handleCommands)
