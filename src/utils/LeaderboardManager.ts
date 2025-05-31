@@ -24,7 +24,7 @@ export class LeaderboardManager {
       await pool.query(
         `
           INSERT INTO faq_leaderboard (guild_id, user_id, contribution_count)
-          VALUES ($1, $2, $3)
+          VALUES ($1, $2, GREATEST($3, 0))
           ON CONFLICT (guild_id, user_id)
           DO UPDATE SET contribution_count = GREATEST(faq_leaderboard.contribution_count + $3, 0)
         `,
@@ -32,7 +32,10 @@ export class LeaderboardManager {
       )
       console.log(`Upserted and incremented count for user ${userId}`)
     } catch (error) {
-      console.error(`Failed to upsert and increment count for user ${userId}`)
+      console.error(
+        `Failed to upsert and increment count for user ${userId}`,
+        error
+      )
     }
   }
 

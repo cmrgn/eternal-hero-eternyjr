@@ -12,7 +12,7 @@ When using the `/faq` command, only commands shared with the `visible: True` opt
 
 ### Linking to threads in messages
 
-Including one or more FAQ links within a simple message yield a contribution. Note that:
+Including one or more FAQ links (either as plain URLs or as Discord channel mentions) within a simple message yield a contribution. Note that:
 
 - Links to the top level FAQ forum itself do not count, only links to threads do.
 - The amount of links within a message does not impact the score, it’s always 1.
