@@ -1,14 +1,17 @@
 # Database
 
-The `/giveaway` command uses the [discord-giveaways](https://github.com/Androz2091/discord-giveaways) package, which requires a database to work properly. To that effect, we use Postgres on Heroku (where the bot is hosted).
+The database, Postgres on Heroku (where the bot is hosted), is used for 2 purposes
+
+- The `/giveaway` command uses the [discord-giveaways](https://github.com/Androz2091/discord-giveaways) package, which requires a database to work properly.
+- The `/faqleaderboard` command stores the contribution data in the database (see [documentation](./FAQ_LEADERBOARD.md)).
 
 We use the [essential-0 plan](https://devcenter.heroku.com/articles/heroku-postgres-plans), which is the cheapest and least permissive plan, but should be good enough for our needs.
 
-## Database structure
+## Table `giveaways` structure
 
 The library relies on a single registry for all giveaways, regardless of the Discord server they belong to. So if the bot is used across multiple servers (or even locally), all giveaways end up in the same database table.
 
-The table has only 2 columns: `id` which contains the Discord message ID of the giveaway embed, and `data` which contains a JSON blob with the giveaway configuration.
+See migrations in the `migrations` folder, particularly the `1748697749855_init-schema` one that establishes the core schema.
 
 ## Inspecting the database
 
