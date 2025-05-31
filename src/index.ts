@@ -9,7 +9,6 @@ import {
   faqLinksOnDelete,
   faqLinksOnUpdate,
 } from './events/faq-leaderboard'
-import { FAQManager } from './utils/faq-manager'
 
 client.login(DISCORD_TOKEN)
 
@@ -37,7 +36,3 @@ client.on(Events.MessageUpdate, faqLinksOnUpdate)
 
 // Handle commands that are supported by the bot.
 client.on(Events.InteractionCreate, handleCommands)
-
-// Cache the FAQ on the client and listen to changes to keep it up-to-date.
-client.faqManager = new FAQManager(client)
-client.faqManager.bindEvents()

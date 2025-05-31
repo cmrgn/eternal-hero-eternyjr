@@ -14,7 +14,7 @@ import {
 } from '../config'
 import { logger } from './logger'
 
-export class FAQManager {
+class FAQManager {
   client: Client
   guildId: string
   #threads: AnyThreadChannel[]
@@ -93,4 +93,10 @@ export class FAQManager {
     this.client.on(Events.ThreadDelete, this.onThreadCreateOrDelete.bind(this))
     this.client.on(Events.ThreadUpdate, this.onThreadUpdate.bind(this))
   }
+}
+
+export const initFAQManager = (client: Client) => {
+  const manager = new FAQManager(client)
+  manager.bindEvents()
+  return manager
 }
