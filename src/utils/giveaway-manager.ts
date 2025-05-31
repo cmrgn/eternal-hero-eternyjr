@@ -1,13 +1,8 @@
-import pg from 'pg'
 import { type GiveawayData, GiveawaysManager } from 'discord-giveaways'
 import type { Client } from 'discord.js'
-import { BOT_COLOR, DATABASE_URL } from '../config'
+import { BOT_COLOR } from '../config'
 import { logger } from '../utils/logger'
-
-const pool = new pg.Pool({
-  connectionString: DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // for Heroku Postgres SSL
-})
+import { pool } from './pg'
 
 export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
   async getAllGiveaways() {
