@@ -23,6 +23,7 @@
     "pg": "^8.16.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "1.9.4",
     "@types/memoizee": "^0.4.12",
     "@types/ms": "^2.1.0",
     "@types/pg": "^8.15.2",
