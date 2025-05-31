@@ -73,7 +73,7 @@ export class LeaderboardManager {
         const hasDeletedMessage = event === Events.MessageDelete
         const increment = hasAddedMessage ? +1 : hasDeletedMessage ? -1 : 0
 
-        this.register(member.id, guildId, increment)
+        if (increment) this.register(member.id, guildId, increment)
       }
     }
   }
@@ -108,7 +108,7 @@ export class LeaderboardManager {
       const hasAddedLinks = !hadOldMessageLinks && hasNewMessageLinks
       const increment = hasRemovedLinks ? -1 : hasAddedLinks ? +1 : 0
 
-      this.register(member.id, guildId, increment)
+      if (increment) this.register(member.id, guildId, increment)
     }
   }
 
