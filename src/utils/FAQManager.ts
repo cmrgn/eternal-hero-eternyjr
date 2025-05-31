@@ -39,7 +39,17 @@ export class FAQManager {
 
   async cacheThreads() {
     this.#threads = await this.fetchThreads()
-    this.#links = this.#threads.map(thread => `<#${thread.id}>`)
+    this.#links = [
+      ...this.#threads.map(thread => thread.url),
+      ...this.#threads.map(thread => `<#${thread.id}>`),
+    ]
+  }
+
+  containsLinkLike(content: string) {
+    return (
+      content.includes('<#') ||
+      content.includes('https://discord.com/channels/')
+    )
   }
 
   async getGuild() {

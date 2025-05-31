@@ -58,9 +58,9 @@ export class LeaderboardManager {
       if (!member || !guildId || !content) return
       if (shouldIgnoreInteraction(message)) return
 
-      // Perform a quick and cheap check to figure out whether the message contains
-      // any link whatsoever, otherwise return early.
-      if (!content.includes('<#')) return
+      // Perform a quick and cheap check to figure out whether the message
+      // contains any link whatsoever, otherwise return early.
+      if (!client.faqManager.containsLinkLike(content)) return
 
       if (client.faqManager.links.some(link => content.includes(link))) {
         const hasAddedMessage = event === Events.MessageCreate
@@ -89,10 +89,12 @@ export class LeaderboardManager {
     // Perform a quick and cheap check to figure out whether the message contains
     // any link whatsoever, otherwise return early.
     const hadOldMessageLinks =
-      oldMessage.content?.includes('<#') &&
+      oldMessage.content &&
+      client.faqManager.containsLinkLike(oldMessage.content) &&
       client.faqManager.links.some(link => oldMessage.content?.includes(link))
     const hasNewMessageLinks =
-      newMessage.content?.includes('<#') &&
+      newMessage.content &&
+      client.faqManager.containsLinkLike(newMessage.content) &&
       client.faqManager.links.some(link => newMessage.content?.includes(link))
 
     if (hadOldMessageLinks !== hasNewMessageLinks) {
