@@ -7,6 +7,7 @@ import {
 } from 'discord.js'
 import { shouldIgnoreInteraction } from './shouldIgnoreInteraction'
 import { pool } from './pg'
+import { logger } from './logger'
 
 type DiscordMessage = OmitPartialGroupDMChannel<
   Message<boolean> | PartialMessage
@@ -30,12 +31,14 @@ export class LeaderboardManager {
         `,
         [guildId, userId, increment]
       )
-      console.log(`Upserted and incremented count for user ${userId}`)
+      logger.info('FAQ_CONTRIBUTION', { status: 'success', increment, userId })
     } catch (error) {
-      console.error(
-        `Failed to upsert and increment count for user ${userId}`,
-        error
-      )
+      logger.info('FAQ_CONTRIBUTION', {
+        status: 'failure',
+        increment,
+        userId,
+        error,
+      })
     }
   }
 
