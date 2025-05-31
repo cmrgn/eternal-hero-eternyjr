@@ -1,19 +1,12 @@
 import {
   type ChatInputCommandInteraction,
-  type CommandInteraction,
-  type ForumChannel,
-  type Guild,
   MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js'
 import Fuse from 'fuse.js'
-import memoize from 'memoizee'
-import ms from 'ms'
 import { logger } from '../utils/logger'
 import { createEmbed } from '../utils/create-embed'
-
-const FAQ_FORUM_NAME = '❓│faq-guide'
-const DISCORD_SERVER_ID = '1239215561649426453'
+import { upsertContribution } from './faqleaderboard'
 
 export const data = new SlashCommandBuilder()
   .setName('faq')
@@ -30,52 +23,6 @@ export const data = new SlashCommandBuilder()
   )
   .setDescription('Search the FAQ')
 
-async function getFAQForum({ guild, guildId, client }: CommandInteraction) {
-  // If running on the main Discord server, use the guild object from the inter-
-  // action, otherwise fetch that guild object through the API.
-  const isMainServer = guildId === DISCORD_SERVER_ID
-  const { channels } = isMainServer
-    ? (guild as Guild)
-    : await client.guilds.fetch(DISCORD_SERVER_ID)
-  const faq = channels.cache.find(channel => channel.name === FAQ_FORUM_NAME)
-
-  return faq as ForumChannel
-}
-
-async function getThreads(interaction: CommandInteraction) {
-  const faq = await getFAQForum(interaction)
-  const [activeThreadRes, archivedThreadRes] = await Promise.all([
-    faq.threads.fetchActive(),
-    faq.threads.fetchArchived(),
-  ])
-
-  const activeThreads = Array.from(activeThreadRes.threads.values())
-  const archivedThreads = Array.from(archivedThreadRes.threads.values())
-  const threads = [...activeThreads, ...archivedThreads]
-
-  logger.info('FETCH_THREADS', {
-    active: activeThreads.length,
-    archived: archivedThreads.length,
-    total: threads.length,
-  })
-
-  return threads
-}
-
-function promisifiedGetThreads(
-  interaction: CommandInteraction
-): ReturnType<typeof getThreads> {
-  return new Promise((resolve, reject) => {
-    getThreads(interaction).then(resolve).catch(reject)
-  })
-}
-
-const memoizedGetThreads = memoize(promisifiedGetThreads, {
-  promise: true,
-  maxAge: ms('1 hour'),
-  normalizer: args => args[0].commandId,
-})
-
 export async function execute(interaction: ChatInputCommandInteraction) {
   if (!interaction.guild) throw new Error('Could not retrieve guild.')
 
@@ -84,7 +31,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     flags: visible ? undefined : MessageFlags.Ephemeral,
   })
 
-  const threads = await memoizedGetThreads(interaction)
+  const { threads } = interaction.client.faqManager
   const fuse = new Fuse(threads, {
     includeScore: true,
     ignoreDiacritics: true,
@@ -118,6 +65,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         value: result.item.url,
       }))
     )
+
+    if (visible && interaction.member && interaction.guildId) {
+      upsertContribution(interaction.member.user.id, interaction.guildId)
+    }
   }
 
   return interaction.editReply({ embeds: [embed] })
