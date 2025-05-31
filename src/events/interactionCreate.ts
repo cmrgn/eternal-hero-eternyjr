@@ -1,7 +1,7 @@
 import { MessageFlags, type Interaction } from 'discord.js'
-import { shouldIgnoreInteraction } from '../utils/should-ignore-interaction'
+import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
 
-export async function handleCommands(interaction: Interaction) {
+export async function onInteractionCreate(interaction: Interaction) {
   // Abort if this interaction is coming from a bot, as this shouldn’t happen.
   if (interaction.user.bot) return
 

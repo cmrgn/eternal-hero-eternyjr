@@ -4,7 +4,7 @@ import {
   SlashCommandBuilder,
 } from 'discord.js'
 import { logger } from '../utils/logger'
-import { createEmbed } from '../utils/create-embed'
+import { createEmbed } from '../utils/createEmbed'
 
 export const data = new SlashCommandBuilder()
   .setName('dust')

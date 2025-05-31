@@ -12,7 +12,7 @@ if (!process.env.DISCORD_CLIENT_ID) {
 
 if (!process.env.DATABASE_URL) {
   console.warn(
-    'Missing environment variable DATABASE_URL; giveaways will not work.'
+    'Missing environment variable DATABASE_URL; giveaways and leaderboards will not work.'
   )
 }
 

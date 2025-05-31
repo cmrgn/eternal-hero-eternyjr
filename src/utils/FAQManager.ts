@@ -14,7 +14,7 @@ import {
 } from '../config'
 import { logger } from './logger'
 
-class FAQManager {
+export class FAQManager {
   client: Client
   guildId: string
   #threads: AnyThreadChannel[]

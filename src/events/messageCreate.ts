@@ -3,7 +3,7 @@ import {
   type Message,
   type OmitPartialGroupDMChannel,
 } from 'discord.js'
-import { shouldIgnoreInteraction } from '../utils/should-ignore-interaction'
+import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
 
 const CHANNEL_NAME = '🔗│discord-linking'
 
@@ -54,19 +54,20 @@ const looksLikePlayerId = (message: string) => {
   return /^[A-Za-z0-9]+$/.test(message)
 }
 
-export async function discordLinking(
+export async function onMessageCreate(
   interaction: OmitPartialGroupDMChannel<Message<boolean>>
 ) {
+  const { content, guild, member } = interaction
+
+  if (!guild) return
   if (shouldIgnoreInteraction(interaction)) return
 
-  const content = interaction.content
-
   if (looksLikePlayerId(content)) {
-    const channel = interaction.guild?.channels.cache.find(
-      channel => channel.name === CHANNEL_NAME
+    const channel = guild.channels.cache.find(
+      ({ name }) => name === CHANNEL_NAME
     )
     const link = channel ? channelMention(channel.id) : CHANNEL_NAME
-    const roles = interaction.member?.roles.cache
+    const roles = member?.roles.cache
     const i18nRole =
       roles?.find(role => role.name in ROLES_MAP)?.name ?? 'en | English'
     const languageName = i18nRole.split(' | ')[1].trim()

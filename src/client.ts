@@ -1,7 +1,8 @@
 import { Client, Collection, GatewayIntentBits } from 'discord.js'
 import { commands } from './commands'
-import { initGiveawayManager } from './utils/giveaway-manager'
-import { initFAQManager } from './utils/faq-manager'
+import { initGiveawayManager } from './utils/GiveawayManager'
+import { initFAQManager } from './utils/FAQManager'
+import { initLeaderboardManager } from './utils/LeaderboardManager'
 
 export const client = new Client({
   intents: [
@@ -20,3 +21,4 @@ for (const command of Object.values(commands)) {
 
 client.giveawaysManager = initGiveawayManager(client)
 client.faqManager = initFAQManager(client)
+client.leaderboardManager = initLeaderboardManager(client)

@@ -1,7 +1,7 @@
 import { type GiveawayData, GiveawaysManager } from 'discord-giveaways'
 import type { Client } from 'discord.js'
 import { BOT_COLOR } from '../config'
-import { logger } from '../utils/logger'
+import { logger } from './logger'
 import { pool } from './pg'
 
 export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {

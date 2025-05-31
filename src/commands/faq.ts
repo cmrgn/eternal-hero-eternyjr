@@ -5,8 +5,7 @@ import {
 } from 'discord.js'
 import Fuse from 'fuse.js'
 import { logger } from '../utils/logger'
-import { createEmbed } from '../utils/create-embed'
-import { upsertContribution } from './faqleaderboard'
+import { createEmbed } from '../utils/createEmbed'
 
 export const data = new SlashCommandBuilder()
   .setName('faq')
@@ -24,14 +23,16 @@ export const data = new SlashCommandBuilder()
   .setDescription('Search the FAQ')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  if (!interaction.guild) throw new Error('Could not retrieve guild.')
+  if (!interaction) throw new Error('Could not retrieve guild.')
 
-  const visible = interaction.options.getBoolean('visible') ?? false
+  const { client, guildId, options, member } = interaction
+  const visible = options.getBoolean('visible') ?? false
+
   await interaction.deferReply({
     flags: visible ? undefined : MessageFlags.Ephemeral,
   })
 
-  const { threads } = interaction.client.faqManager
+  const { threads } = client.faqManager
   const fuse = new Fuse(threads, {
     includeScore: true,
     ignoreDiacritics: true,
@@ -41,7 +42,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     ignoreLocation: true,
   })
 
-  const keyword = interaction.options.getString('keyword', true)
+  const keyword = options.getString('keyword', true)
   const results = fuse
     .search(keyword)
     .filter(result => result.score && result.score <= 0.5)
@@ -66,8 +67,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }))
     )
 
-    if (visible && interaction.member && interaction.guildId) {
-      upsertContribution(interaction.member.user.id, interaction.guildId)
+    if (visible && member && guildId) {
+      client.leaderboardManager.register(member.user.id, guildId)
     }
   }
 
