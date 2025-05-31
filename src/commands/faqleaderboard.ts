@@ -22,7 +22,7 @@ export async function upsertContribution(
       INSERT INTO faq_leaderboard (guild_id, user_id, contribution_count)
       VALUES ($1, $2, $3)
       ON CONFLICT (guild_id, user_id)
-      DO UPDATE SET contribution_count = faq_leaderboard.contribution_count + $3
+      DO UPDATE SET contribution_count = GREATEST(faq_leaderboard.contribution_count + $3, 0)
       `,
       [guildId, userId, increment]
     )
