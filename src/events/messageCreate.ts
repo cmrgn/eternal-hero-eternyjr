@@ -87,10 +87,14 @@ export async function onMessageCreate(interaction: DiscordMessage) {
   const permission = PermissionFlagsBits.SendMessages
   if (!self || !channel.permissionsFor(self).has(permission)) return
 
-  // If the current channel belongs to a category that should be ignored, return
-  // early. Potentially this logic could be flipped over to only handle specific
-  // categories.
-  if (channel.parentId && IGNORED_CATEGORY_IDS.includes(channel.parentId))
+  // If the current channel belongs to a category that should be ignored (but is
+  // not the private test channel), return early. Potentially this logic could
+  // be flipped over to only handle specific categories.
+  if (
+    channel.id !== '1373605591766925412' &&
+    channel.parentId &&
+    IGNORED_CATEGORY_IDS.includes(channel.parentId)
+  )
     return
 
   // If the current channel is a thread, return early as it may be a clan
