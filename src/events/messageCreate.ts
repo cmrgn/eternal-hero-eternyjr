@@ -1,13 +1,13 @@
 import {
   bold,
   channelMention,
+  PermissionFlagsBits,
   type GuildMember,
   type Message,
   type OmitPartialGroupDMChannel,
 } from 'discord.js'
 import { franc } from 'franc-min'
 import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
-import { IS_DEV, TEST_SERVER_ID } from '../config'
 
 type DiscordMessage = OmitPartialGroupDMChannel<Message<boolean>>
 type Locale = {
@@ -287,6 +287,12 @@ export async function onMessageCreate(interaction: DiscordMessage) {
   const channel = getChannel(interaction)
   if (!channel) return
 
+  // If the bot doesn’t have the permissions to post in the current channel,
+  // return early as there is no point trying and throwing an error.
+  const self = guild.members.me
+  const permission = PermissionFlagsBits.SendMessages
+  if (!self || !channel.permissionsFor(self).has(permission)) return
+
   // If the current channel belongs to the “🌍 International Channels” category,
   // return early as this is the only category where non-English is allowed.
   if (channel.parentId && IGNORED_CATEGORY_IDS.includes(channel.parentId))
@@ -316,10 +322,5 @@ export async function onMessageCreate(interaction: DiscordMessage) {
     `${bold(ENGLISH_LOCALE.language)}: ${inEnglish}`,
   ].join('\n\n')
 
-  try {
-    return interaction.reply(message)
-  } catch (error) {
-    console.log('Could not send internationalization message.')
-    console.error(error)
-  }
+  return interaction.reply(message)
 }
