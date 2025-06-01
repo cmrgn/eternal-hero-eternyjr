@@ -1,5 +1,5 @@
 export type Locale = {
-  languageCode: string
+  languageCode: string /* ISO 639-1 */
   languageName: string
   role: string
   channel: string
