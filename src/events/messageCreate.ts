@@ -25,7 +25,7 @@ const IGNORED_CATEGORY_IDS = [
   /* Info */ '1239215562547138693',
   /* International */ '1250884635081048189',
 ]
-const MIN_LENGTH_GUESS = 15
+const MIN_LENGTH_GUESS = 25
 const LOCALES: Locale[] = [
   {
     code2: 'de',
