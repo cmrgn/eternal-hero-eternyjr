@@ -18,8 +18,11 @@ const I18N_ROLES = LOCALES.map(locale => locale.role)
 const BOT_TEST_CHANNEL_ID = '1373605591766925412'
 const INCLUDED_CATEGORY_IDS = [
   /* General */ '1239259552357158942',
+  /* Bug report */ '1239437158247567360',
+  /* Feedback */ '1271841974994993224',
   /* Weapons */ '1262801739829219511',
   /* General (test) */ IS_DEV && '714858253531742209',
+  /* FAQ (test) */ IS_DEV && '1373344771552317532',
 ].filter(Boolean)
 
 const looksLikePlayerId = (message: string) => {
@@ -91,6 +94,7 @@ export async function onMessageCreate(interaction: DiscordMessage) {
   // If the current channel does not belong to a listed category (by being top-
   // level or by belonging to a category that’s not listed), return early. An
   // exception is made to the bot testing channel.
+  console.log(channel)
   if (!channel.parentId) return
   const isTestChannel = channel.id === BOT_TEST_CHANNEL_ID
   const isInRelevantCategory = INCLUDED_CATEGORY_IDS.includes(channel.parentId)
@@ -98,7 +102,7 @@ export async function onMessageCreate(interaction: DiscordMessage) {
 
   // If the current channel is a thread, return early as it may be a clan
   // recruitment thread, or just something else where non-English is allowed.
-  if (channel.isThread()) return
+  // if (channel.isThread()) return
 
   // If the guessed language is English, return early as there is nothing to do.
   const guess = client.languageIdentifier.findLanguage(content)
