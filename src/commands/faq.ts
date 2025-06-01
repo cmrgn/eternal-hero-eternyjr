@@ -2,6 +2,7 @@ import {
   type ChatInputCommandInteraction,
   MessageFlags,
   SlashCommandBuilder,
+  userMention,
 } from 'discord.js'
 import Fuse from 'fuse.js'
 import { logger } from '../utils/logger'
@@ -20,6 +21,9 @@ export const data = new SlashCommandBuilder()
       .setName('visible')
       .setDescription('Whether it should show for everyone')
   )
+  .addUserOption(option =>
+    option.setName('user').setDescription('User to mention')
+  )
   .setDescription('Search the FAQ')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -27,9 +31,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const { client, guildId, options, member } = interaction
   const visible = options.getBoolean('visible') ?? false
+  const user = interaction.options.getUser('user')
 
   await interaction.deferReply({
-    flags: visible ? undefined : MessageFlags.Ephemeral,
+    flags: visible || user ? undefined : MessageFlags.Ephemeral,
   })
 
   const { threads } = client.faqManager
@@ -72,5 +77,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
   }
 
-  return interaction.editReply({ embeds: [embed] })
+  return interaction.editReply({
+    content: user ? `${userMention(user.id)} ` : undefined,
+    embeds: [embed],
+  })
 }
