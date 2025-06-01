@@ -2,6 +2,7 @@ import { bold, channelMention, type GuildBasedChannel } from 'discord.js'
 import { LOCALES } from '../constants/i18n'
 import { IS_DEV } from '../config'
 import type { EnsuredInteraction } from './messageCreate'
+import { isValidHttpUrl } from '../utils/isValidHttpUrl'
 
 // biome-ignore lint/style/noNonNullAssertion: <explanation>
 const ENGLISH_LOCALE = LOCALES.find(locale => locale.languageCode === 'en')!
@@ -20,6 +21,9 @@ export async function languageDetection(
   channel: GuildBasedChannel
 ) {
   const { content, guild, client } = interaction
+
+  // If the content is a URL, do nothing.
+  if (isValidHttpUrl(content)) return
 
   // If the current channel does not belong to a listed category (by being top-
   // level or by belonging to a category that’s not listed), return early. An
