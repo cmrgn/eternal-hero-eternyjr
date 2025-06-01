@@ -1,12 +1,6 @@
-import {
-  bold,
-  channelMention,
-  type GuildMember,
-  type Message,
-  type OmitPartialGroupDMChannel,
-} from 'discord.js'
-import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
+import { bold, channelMention, type GuildMember } from 'discord.js'
 import { type Locale, LOCALES } from '../constants/i18n'
+import type { EnsuredInteraction } from './messageCreate'
 
 // biome-ignore lint/style/noNonNullAssertion: <explanation>
 const ENGLISH_LOCALE = LOCALES.find(locale => locale.languageCode === 'en')!
@@ -31,13 +25,9 @@ function getMemberLocale(member: GuildMember | null): Locale {
   return locale ?? ENGLISH_LOCALE
 }
 
-export async function discordLinking(
-  interaction: OmitPartialGroupDMChannel<Message<boolean>>
-) {
+export async function discordLinking(interaction: EnsuredInteraction) {
   const { content, guild, member } = interaction
 
-  if (!guild || !member || member.user.bot) return
-  if (shouldIgnoreInteraction(interaction)) return
   if (!looksLikePlayerId(content)) return
 
   const channelName = '🔗│discord-linking'
@@ -51,7 +41,7 @@ export async function discordLinking(
 
   const message =
     locale.languageCode === 'en'
-      ? response
+      ? response.replace('%s', link)
       : [
           `${bold(locale.languageName)}: ${response.replace('%s', link)}`,
           `${bold(ENGLISH_LOCALE.languageName)}: ${responseEnglish.replace('%s', link)}`,

@@ -1,15 +1,8 @@
-import {
-  bold,
-  channelMention,
-  PermissionFlagsBits,
-  type Message,
-  type OmitPartialGroupDMChannel,
-} from 'discord.js'
+import { bold, channelMention, PermissionFlagsBits } from 'discord.js'
 import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
 import { LOCALES } from '../constants/i18n'
 import { IS_DEV } from '../config'
-
-type DiscordMessage = OmitPartialGroupDMChannel<Message<boolean>>
+import type { EnsuredInteraction } from './messageCreate'
 
 // biome-ignore lint/style/noNonNullAssertion: <explanation>
 const ENGLISH_LOCALE = LOCALES.find(locale => locale.languageCode === 'en')!
@@ -23,16 +16,13 @@ const INCLUDED_CATEGORY_IDS = [
   /* FAQ (test) */ IS_DEV && '1373344771552317532',
 ].filter(Boolean)
 
-function getChannel(interaction: DiscordMessage) {
+function getChannel(interaction: EnsuredInteraction) {
   const { guild, channel } = interaction
   return guild?.channels.cache.find(({ id }) => id === channel.id)
 }
 
-export async function languageDetection(interaction: DiscordMessage) {
-  const { content, guild, member, client } = interaction
-
-  if (!guild || !member || member.user.bot) return
-  if (shouldIgnoreInteraction(interaction)) return
+export async function languageDetection(interaction: EnsuredInteraction) {
+  const { content, guild, client } = interaction
 
   const channel = getChannel(interaction)
   if (!channel) return
@@ -50,10 +40,6 @@ export async function languageDetection(interaction: DiscordMessage) {
   const isTestChannel = channel.id === BOT_TEST_CHANNEL_ID
   const isInRelevantCategory = INCLUDED_CATEGORY_IDS.includes(channel.parentId)
   if (!isTestChannel && !isInRelevantCategory) return
-
-  // If the current channel is a thread, return early as it may be a clan
-  // recruitment thread, or just something else where non-English is allowed.
-  // if (channel.isThread()) return
 
   // If the guessed language is English, return early as there is nothing to do.
   const guess = client.languageIdentifier.findLanguage(content)
