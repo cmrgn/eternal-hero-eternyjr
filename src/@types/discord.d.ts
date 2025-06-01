@@ -1,3 +1,4 @@
+import type { LanguageIdentifier } from 'cld3-asm'
 import type { GiveawaysManager } from 'discord-giveaways'
 import type { Collection, SlashCommandOptionsOnlyBuilder } from 'discord.js'
 import type { FAQManager } from '../utils/FAQManager'
@@ -16,5 +17,6 @@ declare module 'discord.js' {
     giveawaysManager: GiveawaysManager
     faqManager: FAQManager
     leaderboardManager: LeaderboardManager
+    languageIdentifier: LanguageIdentifier
   }
 }
