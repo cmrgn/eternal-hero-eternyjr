@@ -20,10 +20,11 @@ export async function languageDetection(
   interaction: EnsuredInteraction,
   channel: GuildBasedChannel
 ) {
-  const { content, guild, client } = interaction
+  const { guild, client } = interaction
 
-  // If the content is a URL, do nothing.
-  if (isValidHttpUrl(content)) return
+  // Remove URLs from the message before performing language detection as to not
+  // consider URL content.
+  const content = interaction.content.replace(/https?:\/\/[\n\S]+/g, '').trim()
 
   // If the current channel does not belong to a listed category (by being top-
   // level or by belonging to a category that’s not listed), return early. An
