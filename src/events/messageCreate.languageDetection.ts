@@ -1,5 +1,4 @@
-import { bold, channelMention, PermissionFlagsBits } from 'discord.js'
-import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
+import { bold, channelMention, type GuildBasedChannel } from 'discord.js'
 import { LOCALES } from '../constants/i18n'
 import { IS_DEV } from '../config'
 import type { EnsuredInteraction } from './messageCreate'
@@ -16,22 +15,11 @@ const INCLUDED_CATEGORY_IDS = [
   /* FAQ (test) */ IS_DEV && '1373344771552317532',
 ].filter(Boolean)
 
-function getChannel(interaction: EnsuredInteraction) {
-  const { guild, channel } = interaction
-  return guild?.channels.cache.find(({ id }) => id === channel.id)
-}
-
-export async function languageDetection(interaction: EnsuredInteraction) {
+export async function languageDetection(
+  interaction: EnsuredInteraction,
+  channel: GuildBasedChannel
+) {
   const { content, guild, client } = interaction
-
-  const channel = getChannel(interaction)
-  if (!channel) return
-
-  // If the bot doesn’t have the permissions to post in the current channel,
-  // return early as there is no point trying and throwing an error.
-  const self = guild.members.me
-  const permission = PermissionFlagsBits.SendMessages
-  if (!self || !channel.permissionsFor(self).has(permission)) return
 
   // If the current channel does not belong to a listed category (by being top-
   // level or by belonging to a category that’s not listed), return early. An
