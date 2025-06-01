@@ -6,13 +6,11 @@ import {
   type Client,
   type AnyThreadChannel,
 } from 'discord.js'
-import {
-  DISCORD_SERVER_ID,
-  FAQ_FORUM_NAME,
-  IS_DEV,
-  TEST_SERVER_ID,
-} from '../config'
+import { IS_DEV, TEST_SERVER_ID } from '../config'
 import { logger } from './logger'
+
+const DISCORD_SERVER_ID = '1239215561649426453'
+const FAQ_FORUM_NAME = '❓│faq-guide'
 
 export class FAQManager {
   client: Client

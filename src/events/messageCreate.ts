@@ -94,7 +94,6 @@ export async function onMessageCreate(interaction: DiscordMessage) {
   // If the current channel does not belong to a listed category (by being top-
   // level or by belonging to a category that’s not listed), return early. An
   // exception is made to the bot testing channel.
-  console.log(channel)
   if (!channel.parentId) return
   const isTestChannel = channel.id === BOT_TEST_CHANNEL_ID
   const isInRelevantCategory = INCLUDED_CATEGORY_IDS.includes(channel.parentId)
