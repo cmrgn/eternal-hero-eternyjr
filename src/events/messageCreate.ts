@@ -8,18 +8,19 @@ import {
 } from 'discord.js'
 import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
 import { type Locale, LOCALES } from '../constants/i18n'
+import { IS_DEV } from '../config'
 
 type DiscordMessage = OmitPartialGroupDMChannel<Message<boolean>>
 
 // biome-ignore lint/style/noNonNullAssertion: <explanation>
 const ENGLISH_LOCALE = LOCALES.find(locale => locale.languageCode === 'en')!
 const I18N_ROLES = LOCALES.map(locale => locale.role)
-const IGNORED_CATEGORY_IDS = [
-  /* Test */ '1378712571099611236',
-  /* Admin */ '1350167759035830394',
-  /* Info */ '1239215562547138693',
-  /* International */ '1250884635081048189',
-]
+const BOT_TEST_CHANNEL_ID = '1373605591766925412'
+const INCLUDED_CATEGORY_IDS = [
+  /* General */ '1239259552357158942',
+  /* Weapons */ '1262801739829219511',
+  /* General (test) */ IS_DEV && '714858253531742209',
+].filter(Boolean)
 
 const looksLikePlayerId = (message: string) => {
   if (message.length < 20) return false
@@ -87,15 +88,13 @@ export async function onMessageCreate(interaction: DiscordMessage) {
   const permission = PermissionFlagsBits.SendMessages
   if (!self || !channel.permissionsFor(self).has(permission)) return
 
-  // If the current channel belongs to a category that should be ignored (but is
-  // not the private test channel), return early. Potentially this logic could
-  // be flipped over to only handle specific categories.
-  if (
-    channel.id !== '1373605591766925412' &&
-    channel.parentId &&
-    IGNORED_CATEGORY_IDS.includes(channel.parentId)
-  )
-    return
+  // If the current channel does not belong to a listed category (by being top-
+  // level or by belonging to a category that’s not listed), return early. An
+  // exception is made to the bot testing channel.
+  if (!channel.parentId) return
+  const isTestChannel = channel.id === BOT_TEST_CHANNEL_ID
+  const isInRelevantCategory = INCLUDED_CATEGORY_IDS.includes(channel.parentId)
+  if (!isTestChannel && !isInRelevantCategory) return
 
   // If the current channel is a thread, return early as it may be a clan
   // recruitment thread, or just something else where non-English is allowed.
