@@ -17,10 +17,13 @@ const looksLikePlayerId = (message: string) => {
 function getMemberLocale(member: GuildMember | null): Locale {
   if (!member) throw new Error('Missing member to get locale from.')
 
+  // If the member has no international role, or multiple of them, return
+  // English as a locale.
   const roles = member?.roles.cache
-  const i18nRole = roles.find(role => I18N_ROLES.includes(role.name))
-  if (!i18nRole) return ENGLISH_LOCALE
+  const i18nRoles = roles.filter(role => I18N_ROLES.includes(role.name))
+  if (i18nRoles.size !== 1) return ENGLISH_LOCALE
 
+  const [i18nRole] = Array.from(i18nRoles.values())
   const locale = LOCALES.find(locale => locale.role === i18nRole.name)
   return locale ?? ENGLISH_LOCALE
 }
