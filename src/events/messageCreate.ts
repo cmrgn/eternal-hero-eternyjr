@@ -19,9 +19,13 @@ type Locale = {
   messages: { discord_linking: string; internationalization: string }
 }
 
+const IGNORED_CATEGORY_IDS = [
+  /* Test */ '1378712571099611236',
+  /* Admin */ '1350167759035830394',
+  /* Info */ '1239215562547138693',
+  /* International */ '1250884635081048189',
+]
 const MIN_LENGTH_GUESS = 15
-const I18N_CATEGORY_ID =
-  IS_DEV && TEST_SERVER_ID ? '1378712571099611236' : '1250884635081048189'
 const LOCALES: Locale[] = [
   {
     code2: 'de',
@@ -281,14 +285,16 @@ export async function onMessageCreate(interaction: DiscordMessage) {
   }
 
   const channel = getChannel(interaction)
+  if (!channel) return
 
   // If the current channel belongs to the “🌍 International Channels” category,
   // return early as this is the only category where non-English is allowed.
-  if (channel?.parentId === I18N_CATEGORY_ID) return
+  if (channel.parentId && IGNORED_CATEGORY_IDS.includes(channel.parentId))
+    return
 
   // If the current channel is a thread, return early as it may be a clan
   // recruitment thread, or just something else where non-English is allowed.
-  if (channel?.isThread()) return
+  if (channel.isThread()) return
 
   // If the guessed language is English, return early as there is nothing to do.
   const guessedLanguage = franc(content, { minLength: MIN_LENGTH_GUESS })
