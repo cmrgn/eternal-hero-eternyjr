@@ -316,5 +316,10 @@ export async function onMessageCreate(interaction: DiscordMessage) {
     `${bold(ENGLISH_LOCALE.language)}: ${inEnglish}`,
   ].join('\n\n')
 
-  return interaction.reply(message)
+  try {
+    return interaction.reply(message)
+  } catch (error) {
+    console.log('Could not send internationalization message.')
+    console.error(error)
+  }
 }
