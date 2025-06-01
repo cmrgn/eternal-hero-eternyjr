@@ -280,9 +280,15 @@ export async function onMessageCreate(interaction: DiscordMessage) {
     return message ? interaction.reply(message) : undefined
   }
 
+  const channel = getChannel(interaction)
+
   // If the current channel belongs to the “🌍 International Channels” category,
   // return early as this is the only category where non-English is allowed.
-  if (getChannel(interaction)?.parentId === I18N_CATEGORY_ID) return
+  if (channel?.parentId === I18N_CATEGORY_ID) return
+
+  // If the current channel is a thread, return early as it may be a clan
+  // recruitment thread, or just something else where non-English is allowed.
+  if (channel?.isThread()) return
 
   // If the guessed language is English, return early as there is nothing to do.
   const guessedLanguage = franc(content, { minLength: MIN_LENGTH_GUESS })
