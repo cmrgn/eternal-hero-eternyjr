@@ -284,6 +284,8 @@ export async function onMessageCreate(interaction: DiscordMessage) {
     return message ? interaction.reply(message) : undefined
   }
 
+  return
+
   const channel = getChannel(interaction)
   if (!channel) return
 
