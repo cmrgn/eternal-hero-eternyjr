@@ -10,7 +10,7 @@ import { onInteractionCreate } from './events/interactionCreate'
 async function main() {
   // Store a language identifier on the client on mount so it can be reused
   // for the language detection without incurring a bootstrap performance hit.
-  client.languageIdentifier = (await loadModule()).create(/* min length */ 30)
+  client.languageIdentifier = (await loadModule()).create(/* min length */ 50)
 
   await client.login(DISCORD_TOKEN)
   client.once(Events.ClientReady, onClientReady)
