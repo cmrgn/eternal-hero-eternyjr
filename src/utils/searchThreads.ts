@@ -1,5 +1,11 @@
-import type { AnyThreadChannel } from 'discord.js'
+import {
+  channelMention,
+  userMention,
+  type AnyThreadChannel,
+  type ChatInputCommandInteraction,
+} from 'discord.js'
 import Fuse, { type FuseResult } from 'fuse.js'
+import { ALERT_CHANNEL_ID } from '../config'
 
 type SearchResult = {
   keyword: string
@@ -14,7 +20,10 @@ const BASE_SEARCH_OPTIONS = {
   ignoreLocation: true,
 }
 
-const ALT_KEYWORDS = [{ from: 'blank pages', to: 'Tomes of Knowledge' }]
+const ALT_KEYWORDS = [
+  { from: 'blank pages', to: 'Tomes of Knowledge' },
+  { from: 'error token', to: 'token' },
+]
 
 const ALT_SEARCH = new Fuse(ALT_KEYWORDS, {
   ...BASE_SEARCH_OPTIONS,
@@ -45,4 +54,20 @@ export function searchThreads(
 
   // Alternative search yielded results
   return { keyword: altKeyword.item.to, results: altResults }
+}
+
+export async function alertEmptySearch(
+  interaction: ChatInputCommandInteraction,
+  keyword: string
+) {
+  const channel = await interaction.client.channels.fetch(ALERT_CHANNEL_ID)
+  if (!channel?.isSendable()) return
+
+  try {
+    return channel.send(
+      `A search for _“${keyword}”_ (server ${interaction.guild?.name ?? interaction.guildId}, channel ${channelMention(interaction.channelId)}, user ${userMention(interaction.user.id)}) yielded no results. If it’s unexpected, we may want to improve it with assigning that keyword (or something similar) to a specific search term.`
+    )
+  } catch (error) {
+    console.error(error)
+  }
 }

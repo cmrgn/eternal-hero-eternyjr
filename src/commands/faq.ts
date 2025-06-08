@@ -6,7 +6,7 @@ import {
 } from 'discord.js'
 import { logger } from '../utils/logger'
 import { createEmbed } from '../utils/createEmbed'
-import { searchThreads } from '../utils/searchThreads'
+import { alertEmptySearch, searchThreads } from '../utils/searchThreads'
 import { KITTY_USER_ID } from '../config'
 
 export const data = new SlashCommandBuilder()
@@ -61,6 +61,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       client.leaderboardManager.register(member.user.id, guildId)
     }
   } else {
+    await alertEmptySearch(interaction, keyword)
     embed.setDescription(
       `Your search for “${keyword}” yielded no results. Try a more generic term, or reach out to ${userMention(KITTY_USER_ID)} if you think this is a mistake.`
     )
