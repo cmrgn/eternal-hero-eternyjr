@@ -23,3 +23,4 @@ export const DISCORD_TOKEN = process.env.DISCORD_TOKEN
 export const IS_DEV = process.env.NODE_ENV === 'development'
 export const IS_PROD = process.env.NODE_ENV === 'production'
 export const TEST_SERVER_ID = process.env.TEST_SERVER_ID
+export const KITTY_USER_ID = '368097495605182483'

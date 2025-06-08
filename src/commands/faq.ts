@@ -4,9 +4,10 @@ import {
   SlashCommandBuilder,
   userMention,
 } from 'discord.js'
-import Fuse from 'fuse.js'
 import { logger } from '../utils/logger'
 import { createEmbed } from '../utils/createEmbed'
+import { searchThreads } from '../utils/searchThreads'
+import { KITTY_USER_ID } from '../config'
 
 export const data = new SlashCommandBuilder()
   .setName('faq')
@@ -30,55 +31,44 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (!interaction) throw new Error('Could not retrieve guild.')
 
   const { client, guildId, options, member } = interaction
+
   const visible = options.getBoolean('visible') ?? false
-  const user = interaction.options.getUser('user')
-
-  await interaction.deferReply({
-    flags: visible || user ? undefined : MessageFlags.Ephemeral,
-  })
-
-  const { threads } = client.faqManager
-  const fuse = new Fuse(threads, {
-    includeScore: true,
-    ignoreDiacritics: true,
-    keys: ['name'],
-    minMatchCharLength: 3,
-    threshold: 0.3,
-    ignoreLocation: true,
-  })
-
+  const user = options.getUser('user')
   const keyword = options.getString('keyword', true)
-  const results = fuse
-    .search(keyword)
-    .filter(result => result.score && result.score <= 0.5)
+
   const embed = createEmbed().setTitle(`FAQ search: “${keyword}”`)
+  const search = searchThreads(client.faqManager.threads, keyword)
 
-  logger.command(interaction, {
-    results: results.map(result => ({
-      name: result.item.name,
-      score: result.score,
-    })),
-  })
+  if (search.results.length > 0) {
+    if (search.keyword !== keyword) {
+      embed.setDescription(
+        `Your search for “${keyword}” yielded no results, but it seems related to _${search.keyword}_.`
+      )
+    }
 
-  if (results.length === 0) {
-    embed.setDescription(
-      `Your search for “${keyword}” yielded no results. Try a more generic term, or reach out to Kitty if you think this is a mistake.`
-    )
-  } else {
     embed.addFields(
-      results.map(result => ({
-        name: result.item.name,
-        value: result.item.url,
-      }))
+      search.results.map(({ item }) => ({ name: item.name, value: item.url }))
     )
+
+    logger.command(interaction, {
+      results: search.results.map(({ item, score }) => ({
+        name: item.name,
+        score,
+      })),
+    })
 
     if (visible && member && guildId) {
       client.leaderboardManager.register(member.user.id, guildId)
     }
+  } else {
+    embed.setDescription(
+      `Your search for “${keyword}” yielded no results. Try a more generic term, or reach out to ${userMention(KITTY_USER_ID)} if you think this is a mistake.`
+    )
   }
 
-  return interaction.editReply({
-    content: user ? `${userMention(user.id)} ` : undefined,
+  return interaction.reply({
+    flags: visible || user ? undefined : MessageFlags.Ephemeral,
+    content: user ? userMention(user.id) : undefined,
     embeds: [embed],
   })
 }
