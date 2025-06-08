@@ -1,15 +1,24 @@
 import {
   channelMention,
+  type Client,
+  type Guild,
+  type User,
   userMention,
-  type ChatInputCommandInteraction,
 } from 'discord.js'
 import { ALERT_CHANNEL_ID } from '../config'
 import stripIndent from 'strip-indent'
 
-export async function alert(
-  interaction: ChatInputCommandInteraction,
-  message: string
-) {
+export type InteractionLike = {
+  client: Client
+  guild?: Guild | null
+  guildId: string | null
+  channelId?: string
+  user?: User | null
+  userId?: string | null
+}
+
+export async function alert(interaction: InteractionLike, message: string) {
+  const userId = interaction.user?.id ?? interaction.userId
   const channel = await interaction.client.channels.fetch(ALERT_CHANNEL_ID)
   if (!channel?.isSendable()) return
 
@@ -20,8 +29,8 @@ export async function alert(
 
       **Context:**
       - Server: ${interaction.guild?.name ?? interaction.guildId}
-      - Channel: ${channelMention(interaction.channelId)}
-      - User: ${userMention(interaction.user.id)}
+      - Channel: ${interaction.channelId ? channelMention(interaction.channelId) : 'unknown'}
+      - User: ${userId ? userMention(userId) : 'unknown'}
     `)
     )
   } catch (error) {

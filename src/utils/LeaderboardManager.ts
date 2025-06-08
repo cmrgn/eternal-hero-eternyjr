@@ -8,6 +8,7 @@ import {
 import { shouldIgnoreInteraction } from './shouldIgnoreInteraction'
 import { pool } from './pg'
 import { logger } from './logger'
+import { alert } from './alert'
 
 type DiscordMessage = OmitPartialGroupDMChannel<
   Message<boolean> | PartialMessage
@@ -20,7 +21,13 @@ export class LeaderboardManager {
     this.client = client
   }
 
-  async register(userId: string, guildId: string, increment = 1) {
+  async register(options: {
+    userId: string
+    channelId: string
+    guildId: string
+    increment?: number
+  }) {
+    const { userId, guildId, channelId, increment = 1 } = options
     try {
       await pool.query(
         `
@@ -33,6 +40,11 @@ export class LeaderboardManager {
       )
       logger.info('FAQ_CONTRIBUTION', { status: 'success', increment, userId })
     } catch (error) {
+      await alert(
+        { client: this.client, guildId, channelId, userId },
+        `A link to the FAQ failed to be properly recorded in the database.\`\`\`${error}\`\`\``
+      )
+
       logger.info('FAQ_CONTRIBUTION', {
         status: 'failure',
         increment,
@@ -59,7 +71,7 @@ export class LeaderboardManager {
 
   faqLinksOnCreateOrDelete(event: Events.MessageCreate | Events.MessageDelete) {
     return async (message: DiscordMessage) => {
-      const { member, content, client, guildId } = message
+      const { client, guildId, channelId, member, content } = message
 
       if (!member || !guildId || !content) return
       if (shouldIgnoreInteraction(message)) return
@@ -73,7 +85,8 @@ export class LeaderboardManager {
         const hasDeletedMessage = event === Events.MessageDelete
         const increment = hasAddedMessage ? +1 : hasDeletedMessage ? -1 : 0
 
-        if (increment) this.register(member.id, guildId, increment)
+        if (increment)
+          this.register({ userId: member.id, guildId, channelId, increment })
       }
     }
   }
@@ -87,7 +100,7 @@ export class LeaderboardManager {
   }
 
   faqLinksOnUpdate(oldMessage: DiscordMessage, newMessage: DiscordMessage) {
-    const { client, guildId, member } = newMessage
+    const { client, guildId, channelId, member } = newMessage
 
     if (!member || !guildId) return
     if (shouldIgnoreInteraction(newMessage)) return
@@ -108,7 +121,8 @@ export class LeaderboardManager {
       const hasAddedLinks = !hadOldMessageLinks && hasNewMessageLinks
       const increment = hasRemovedLinks ? -1 : hasAddedLinks ? +1 : 0
 
-      if (increment) this.register(member.id, guildId, increment)
+      if (increment)
+        this.register({ userId: member.id, guildId, channelId, increment })
     }
   }
 

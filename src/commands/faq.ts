@@ -30,7 +30,7 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
   if (!interaction) throw new Error('Could not retrieve guild.')
 
-  const { client, guildId, options, member } = interaction
+  const { client, guildId, channelId, member, options } = interaction
 
   const visible = options.getBoolean('visible') ?? false
   const user = options.getUser('user')
@@ -58,7 +58,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     })
 
     if (visible && member && guildId) {
-      client.leaderboardManager.register(member.user.id, guildId)
+      const userId = member.user.id
+      client.leaderboardManager.register({ userId, channelId, guildId })
     }
   } else {
     await alertEmptySearch(interaction, keyword)
