@@ -20,10 +20,7 @@ const BASE_SEARCH_OPTIONS = {
   ignoreLocation: true,
 }
 
-const ALT_KEYWORDS = [
-  { from: 'blank pages', to: 'Tomes of Knowledge' },
-  { from: 'error token', to: 'token' },
-]
+const ALT_KEYWORDS = [{ from: 'error token', to: 'token' }]
 
 const ALT_SEARCH = new Fuse(ALT_KEYWORDS, {
   ...BASE_SEARCH_OPTIONS,
