@@ -1,11 +1,6 @@
-import {
-  channelMention,
-  userMention,
-  type AnyThreadChannel,
-  type ChatInputCommandInteraction,
-} from 'discord.js'
+import type { AnyThreadChannel, ChatInputCommandInteraction } from 'discord.js'
 import Fuse, { type FuseResult } from 'fuse.js'
-import { alert } from './alert'
+import { sendAlert } from './sendAlert'
 
 type SearchResult = {
   keyword: string
@@ -57,7 +52,7 @@ export async function alertEmptySearch(
   interaction: ChatInputCommandInteraction,
   keyword: string
 ) {
-  return alert(
+  return sendAlert(
     interaction,
     `A search for _“${keyword}”_ yielded no results. If it’s unexpected, we may want to improve it with assigning that keyword (or something similar) to a specific search term.`
   )

@@ -8,7 +8,7 @@ import {
 import { shouldIgnoreInteraction } from './shouldIgnoreInteraction'
 import { pool } from './pg'
 import { logger } from './logger'
-import { alert } from './alert'
+import { sendAlert } from './sendAlert'
 
 type DiscordMessage = OmitPartialGroupDMChannel<
   Message<boolean> | PartialMessage
@@ -40,7 +40,7 @@ export class LeaderboardManager {
       )
       logger.info('FAQ_CONTRIBUTION', { status: 'success', increment, userId })
     } catch (error) {
-      await alert(
+      await sendAlert(
         { client: this.client, guildId, channelId, userId },
         `A link to the FAQ failed to be properly recorded in the database.\`\`\`${error}\`\`\``
       )
