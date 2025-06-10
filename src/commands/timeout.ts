@@ -10,7 +10,7 @@ import {
 } from 'discord.js'
 import { logger } from '../utils/logger'
 import { RULES_CHOICES } from './rule'
-import ms, { StringValue } from 'ms'
+import ms, { type StringValue } from 'ms'
 
 export const data = new SlashCommandBuilder()
   .setName('timeout')
