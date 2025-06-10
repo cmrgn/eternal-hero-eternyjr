@@ -15,7 +15,10 @@ const BASE_SEARCH_OPTIONS = {
   ignoreLocation: true,
 }
 
-const ALT_KEYWORDS = [{ from: 'error token', to: 'token' }]
+const ALT_KEYWORDS = [
+  { from: 'error token', to: 'token' },
+  { from: 'relic XP', to: 'relic not gaining XP' },
+]
 
 const ALT_SEARCH = new Fuse(ALT_KEYWORDS, {
   ...BASE_SEARCH_OPTIONS,
