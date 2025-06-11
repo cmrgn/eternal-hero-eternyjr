@@ -1,21 +1,26 @@
 import { type GiveawayData, GiveawaysManager } from 'discord-giveaways'
 import type { Client } from 'discord.js'
-import { BOT_COLOR } from '../config'
+import { BOT_COLOR, IS_DEV } from '../config'
 import { logger } from './logger'
 import { pool } from './pg'
 import { shouldIgnoreInteraction } from './shouldIgnoreInteraction'
 
+const ENVIRONMENT = IS_DEV ? 'DEV' : 'PROD'
+
 export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
   async getAllGiveaways() {
-    const { rows } = await pool.query('SELECT data FROM giveaways')
+    const { rows } = await pool.query(
+      'SELECT data FROM giveaways WHERE environment = $1',
+      [ENVIRONMENT]
+    )
     return rows.map(row => row.data)
   }
 
   async saveGiveaway(messageId: string, giveawayData: GiveawayData) {
-    await pool.query('INSERT INTO giveaways (id, data) VALUES ($1, $2)', [
-      messageId,
-      giveawayData,
-    ])
+    await pool.query(
+      'INSERT INTO giveaways (id, data, environment) VALUES ($1, $2, $3)',
+      [messageId, giveawayData, ENVIRONMENT]
+    )
     return true
   }
 
