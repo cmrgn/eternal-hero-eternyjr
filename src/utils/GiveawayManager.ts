@@ -3,6 +3,7 @@ import type { Client } from 'discord.js'
 import { BOT_COLOR } from '../config'
 import { logger } from './logger'
 import { pool } from './pg'
+import { shouldIgnoreInteraction } from './shouldIgnoreInteraction'
 
 export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
   async getAllGiveaways() {
@@ -53,30 +54,40 @@ export const initGiveawayManager = (client: Client) => {
   })
 
   manager.on('giveawayReactionAdded', (giveaway, member) => {
+    if (shouldIgnoreInteraction(giveaway)) return
+
     logger.giveaway(giveaway, 'user_entered', {
       user: logger.utils.formatUser(member.user),
     })
   })
 
   manager.on('giveawayReactionRemoved', (giveaway, member) => {
+    if (shouldIgnoreInteraction(giveaway)) return
+
     logger.giveaway(giveaway, 'user_left', {
       user: logger.utils.formatUser(member.user),
     })
   })
 
   manager.on('giveawayRerolled', (giveaway, winners) => {
+    if (shouldIgnoreInteraction(giveaway)) return
+
     logger.giveaway(giveaway, 'giveaway_rerolled', {
       winners: winners.map(winner => logger.utils.formatUser(winner.user)),
     })
   })
 
   manager.on('giveawayEnded', (giveaway, winners) => {
+    if (shouldIgnoreInteraction(giveaway)) return
+
     logger.giveaway(giveaway, 'giveaway_ended', {
       winners: winners.map(winner => logger.utils.formatUser(winner.user)),
     })
   })
 
   manager.on('giveawayDeleted', giveaway => {
+    if (shouldIgnoreInteraction(giveaway)) return
+
     logger.giveaway(giveaway, 'giveaway_deleted')
   })
 
