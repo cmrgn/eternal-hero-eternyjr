@@ -8,16 +8,27 @@ import { createEmbed } from '../utils/createEmbed'
 
 export const data = new SlashCommandBuilder()
   .setName('faqleaderboard')
+  .addIntegerOption(option =>
+    option
+      .setName('size')
+      .setDescription('Amount of people to display')
+      .setMinValue(1)
+      .setMaxValue(20)
+  )
   .setDescription('Display the FAQ leaderboard')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   logger.command(interaction)
 
-  const { guildId, client } = interaction
+  const { guildId, client, options } = interaction
 
   if (!guildId) return
 
-  const leaderboard = await client.leaderboardManager.getLeaderboard(guildId, 5)
+  const size = options.getInteger('size') ?? 5
+  const leaderboard = await client.leaderboardManager.getLeaderboard(
+    guildId,
+    size
+  )
   const embed = createEmbed().setTitle('FAQ Leaderboard')
 
   if (leaderboard.length === 0) {
