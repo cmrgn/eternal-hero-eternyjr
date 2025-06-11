@@ -47,10 +47,11 @@ export const initGiveawayManager = (client: Client) => {
       embedColor: BOT_COLOR,
       embedColorEnd: BOT_COLOR,
       reaction: '🎉',
-      // Unless it’s run in the mod channel (for testing purposes), prevent
+      // Unless it’s run in the mod channels (for testing purposes), prevent
       // moderators from winning a giveaway.
-      exemptMembers: (member, giveaway) => {
-        if (giveaway.channelId === '1262282620268576809') return false
+      exemptMembers: (member, { channelId }) => {
+        if (['1373605591766925412', '1262282620268576809'].includes(channelId))
+          return false
         return Boolean(
           member.roles.cache.find(role => role.name === 'Community Mod')
         )
