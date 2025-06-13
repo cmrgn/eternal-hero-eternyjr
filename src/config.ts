@@ -21,6 +21,7 @@ export const DATABASE_URL = process.env.DATABASE_URL
 export const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID
 export const ALERT_CHANNEL_ID = '1381174240660951160'
 export const DISCORD_TOKEN = process.env.DISCORD_TOKEN
+export const CROWDIN_TOKEN = process.env.CROWDIN_TOKEN
 export const IS_DEV = process.env.NODE_ENV === 'development'
 export const IS_PROD = process.env.NODE_ENV === 'production'
 export const TEST_SERVER_ID = process.env.TEST_SERVER_ID

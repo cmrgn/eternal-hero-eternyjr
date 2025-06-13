@@ -15,6 +15,7 @@
     "migrate-create": "node-pg-migrate create -m ./migrations"
   },
   "dependencies": {
+    "@crowdin/crowdin-api-client": "^1.45.0",
     "cld3-asm": "^4.0.0",
     "discord-giveaways": "^6.0.1",
     "discord.js": "^14.19.3",
