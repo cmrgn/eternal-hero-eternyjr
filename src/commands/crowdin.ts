@@ -151,11 +151,11 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
   const missCount = missing.length
   const content = `
 Translations for term \`${key}\`:
-- English (original): ${term.text}
+- English (original): _${term.text}_
 ${filled
   .map(
     ({ language: { name, locale }, translation: { data } }) =>
-      `- ${name} (\`${locale}\`): _${data.text}_`
+      `- ${name} (\`${locale}\`): _${data.text}_ (added on <t:${new Date(data.createdAt).valueOf() / 1000}:d>)`
   )
   .join('\n')}
 
