@@ -124,6 +124,15 @@ function formatLanguageProgress({
   return `- ${language.name} (\`${languageId}\`): translated ${translationProgress}% / approved ${approvalProgress}%`
 }
 
+const nameMapping = {
+  'Alex Dvl': 'iFunz',
+  'Michał Malarek': 'Exor',
+  Артур: 'roartie',
+  Kaiichi0: 'Kaichii',
+  酷玩熊: 'Kukuch',
+  김지운: '망고',
+}
+
 async function commandTerm(interaction: ChatInputCommandInteraction) {
   const { options } = interaction
   const key = options.getString('key', true)
@@ -155,7 +164,7 @@ Translations for term \`${key}\`:
 ${filled
   .map(
     ({ language: { name, locale }, translation: { data } }) =>
-      `- ${name} (\`${locale}\`): _${data.text}_ (added on <t:${new Date(data.createdAt).valueOf() / 1000}:d>)`
+      `- ${name} (\`${locale}\`): _${data.text}_ (added on <t:${new Date(data.createdAt).valueOf() / 1000}:d> by ${nameMapping[data.user.fullName as keyof typeof nameMapping] ?? data.user.fullName})`
   )
   .join('\n')}
 
