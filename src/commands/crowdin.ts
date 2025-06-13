@@ -65,6 +65,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     project.data.id
   )
   const header = '**Translation progress:**\n'
+  const footer =
+    '\n\n-# If you think your translation progress is not accurate, make sure you have saved your translations in Crowdin. Drafts do not count towards completion.'
 
   if (language) {
     const languageData = projectProgress.data.find(findLanguageObject(language))
@@ -76,12 +78,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       })
     }
 
-    const languageProgress = header + formatLanguageProgress(languageData)
+    const languageProgress =
+      header + formatLanguageProgress(languageData) + footer
     return interaction.reply({ content: languageProgress, flags })
   }
 
   const overall =
-    header + projectProgress.data.map(formatLanguageProgress).join('\n')
+    header +
+    projectProgress.data.map(formatLanguageProgress).join('\n') +
+    footer
 
   await interaction.reply({ content: overall, flags })
 }
