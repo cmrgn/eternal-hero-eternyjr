@@ -4,23 +4,12 @@ import {
   SlashCommandBuilder,
 } from 'discord.js'
 import { logger } from '../utils/logger'
-import type Client from '@crowdin/crowdin-api-client'
-import {
-  default as Crowdin,
-  type LanguagesModel,
-  type ResponseObject,
-  type TranslationStatusModel,
+import type {
+  ResponseObject,
+  TranslationStatusModel,
 } from '@crowdin/crowdin-api-client'
-import { CROWDIN_TOKEN } from '../config'
+import crowdin, { CROWDIN_PROJECT_ID } from '../utils/crowdin'
 import { LOCALES } from '../constants/i18n'
-
-// @ts-expect-error
-const crowdin: Client = new Crowdin.default({ token: CROWDIN_TOKEN ?? '' })
-
-// This is just a short cut to avoid querying the API just to retrieve the
-// project ID. It’s a bit weird that the Crowdin URLs do not share these IDs to
-// begin with to be honest.
-const CROWDIN_PROJECT_ID = 797774
 
 export const data = new SlashCommandBuilder()
   .setName('crowdin')
@@ -87,7 +76,9 @@ async function commandProgress(interaction: ChatInputCommandInteraction) {
   const flags = visible ? undefined : MessageFlags.Ephemeral
 
   const { data: projectProgress } =
-    await crowdin.translationStatusApi.getProjectProgress(CROWDIN_PROJECT_ID)
+    await crowdin.client.translationStatusApi.getProjectProgress(
+      CROWDIN_PROJECT_ID
+    )
 
   const header = '**Translation progress:**\n'
   const footer =
@@ -139,28 +130,29 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
   const visible = options.getBoolean('visible') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
 
-  const { targetLanguages: languages } = await getCrowdinProject()
-  const term = await getProjectString(CROWDIN_PROJECT_ID, key)
+  await interaction.deferReply({ flags })
 
-  if (!term) {
-    return interaction.reply({
+  const string = await crowdin.getStringItem(key)
+
+  if (!string) {
+    return interaction.editReply({
       content: `Could not find translation object for \`${key}\`.`,
-      flags: MessageFlags.Ephemeral,
     })
   }
 
-  const translations = await Promise.all(
-    languages.map(language =>
-      getProjectStringTranslation(CROWDIN_PROJECT_ID, term.id, language)
-    )
-  )
+  const translations = await crowdin.getStringTranslations(string.id)
 
-  const filled = translations.filter(({ translation }) => Boolean(translation))
-  const missing = translations.filter(({ translation }) => !translation)
+  const filled = translations.filter(
+    ({ translation }) =>
+      Boolean(translation) && translation.data.text.length > 0
+  )
+  const missing = translations.filter(
+    ({ translation }) => !translation || translation.data.text.length === 0
+  )
   const missCount = missing.length
   const content = `
 Translations for term \`${key}\`:
-- English (original): _${term.text}_
+- English (original): _${string.text}_
 ${filled
   .map(
     ({ language: { name, locale }, translation: { data } }) =>
@@ -175,42 +167,5 @@ ${
 }
   `
 
-  return interaction.reply({
-    content,
-    flags,
-  })
-}
-
-async function getCrowdinProject() {
-  const projects = await crowdin.projectsGroupsApi.listProjects()
-  const project = projects.data.find(
-    project => project.data.identifier === 'eternal-hero'
-  )
-  if (!project) throw new Error('Cannot find Crowdin project.')
-
-  return project.data
-}
-
-async function getProjectString(projectId: number, key: string) {
-  const projectStrings =
-    await crowdin.sourceStringsApi.listProjectStrings(projectId)
-  const projectString = projectStrings.data.find(
-    item => item.data.identifier === key
-  )
-
-  return projectString?.data
-}
-
-async function getProjectStringTranslation(
-  projectId: number,
-  projectStringId: number,
-  language: LanguagesModel.Language
-) {
-  const outcome = await crowdin.stringTranslationsApi.listStringTranslations(
-    projectId,
-    projectStringId,
-    language.id
-  )
-
-  return { language, translation: outcome.data[0] }
+  return interaction.editReply({ content })
 }
