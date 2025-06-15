@@ -18,6 +18,7 @@ const BASE_SEARCH_OPTIONS = {
 const ALT_KEYWORDS = [
   { from: 'error token', to: 'token' },
   { from: 'relic XP', to: 'relic not gaining XP' },
+  { from: 'floating', to: 'extra weapon mastery point' },
 ]
 
 const ALT_SEARCH = new Fuse(ALT_KEYWORDS, {
