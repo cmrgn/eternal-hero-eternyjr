@@ -19,6 +19,7 @@ const ALT_KEYWORDS = [
   { from: 'error token', to: 'token' },
   { from: 'relic XP', to: 'relic not gaining XP' },
   { from: 'floating', to: 'extra weapon mastery point' },
+  { from: 'additional skill points', to: 'extra weapon mastery point' },
   { from: 'caps stats', to: 'caps to some stats' },
 ]
 
