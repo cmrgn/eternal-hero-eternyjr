@@ -112,7 +112,7 @@ async function commandProgress(interaction: ChatInputCommandInteraction) {
 function formatLanguageProgress({
   data: { language, languageId, translationProgress, approvalProgress },
 }: ResponseObject<TranslationStatusModel.LanguageProgress>) {
-  return `- ${language.name} (\`${languageId}\`): translated ${translationProgress}% / approved ${approvalProgress}%`
+  return `- ${language.name} (\`${languageId}\`): translated ${translationProgress}% · approved ${approvalProgress}%`
 }
 
 const nameMapping = {
