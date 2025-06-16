@@ -92,13 +92,24 @@ async function cacheCrowdinStrings(strings: SourceStringsModel.String[]) {
   }
 }
 
-async function getStringTranslations(stringId: StringId) {
+async function getLanguage(locale: string) {
   const { targetLanguages: languages } = await getProject()
-  const translations = await Promise.all(
+  return languages.find(language => language.id === locale)
+}
+
+async function getStringTranslationsForAllLanguages(stringId: StringId) {
+  const { targetLanguages: languages } = await getProject()
+
+  return getStringTranslations(stringId, languages)
+}
+
+async function getStringTranslations(
+  stringId: StringId,
+  languages: LanguagesModel.Language[]
+) {
+  return Promise.all(
     languages.map(language => getProjectStringTranslation(stringId, language))
   )
-
-  return translations
 }
 
 async function getStringItem(identifier: string) {
@@ -130,5 +141,7 @@ export default {
   client,
   getProject,
   getStringItem,
+  getStringTranslationsForAllLanguages,
   getStringTranslations,
+  getLanguage,
 }

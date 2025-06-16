@@ -5,7 +5,9 @@ import {
 } from 'discord.js'
 import { logger } from '../utils/logger'
 import type {
+  LanguagesModel,
   ResponseObject,
+  StringTranslationsModel,
   TranslationStatusModel,
 } from '@crowdin/crowdin-api-client'
 import crowdin, { CROWDIN_PROJECT_ID } from '../utils/crowdin'
@@ -46,6 +48,19 @@ export const data = new SlashCommandBuilder()
           .setDescription('Translation key')
           .setRequired(true)
       )
+      .addStringOption(option =>
+        option
+          .setName('language')
+          .setDescription('Translation language')
+          .setChoices(
+            Object.values(LOCALES)
+              .filter(locale => locale.crowdin)
+              .map(locale => ({
+                name: locale.languageName,
+                value: locale.languageCode,
+              }))
+          )
+      )
       .addBooleanOption(option =>
         option
           .setName('visible')
@@ -71,7 +86,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
 async function commandProgress(interaction: ChatInputCommandInteraction) {
   const { options } = interaction
-  const language = options.getString('language') ?? ''
+  const locale = options.getString('language') ?? ''
   const visible = options.getBoolean('visible') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
 
@@ -84,14 +99,14 @@ async function commandProgress(interaction: ChatInputCommandInteraction) {
   const footer =
     '\n\n-# If you think your translation progress is not accurate, make sure you have saved your translations in Crowdin. Drafts do not count towards completion.'
 
-  if (language) {
+  if (locale) {
     const languageData = projectProgress.find(
-      ({ data }) => data.languageId === language
+      ({ data }) => data.languageId === locale
     )
 
     if (!languageData) {
       return interaction.reply({
-        content: `Could not find language object for \`${language}\`.`,
+        content: `Could not find language object for \`${locale}\`.`,
         flags: MessageFlags.Ephemeral,
       })
     }
@@ -115,18 +130,10 @@ function formatLanguageProgress({
   return `- ${language.name} (\`${languageId}\`): translated ${translationProgress}% · approved ${approvalProgress}%`
 }
 
-const nameMapping = {
-  'Alex Dvl': 'iFunz',
-  'Michał Malarek': 'Exor',
-  Артур: 'roartie',
-  Kaiichi0: 'Kaichii',
-  酷玩熊: 'Kukuch',
-  김지운: '망고',
-}
-
 async function commandTerm(interaction: ChatInputCommandInteraction) {
   const { options } = interaction
   const key = options.getString('key', true)
+  const locale = options.getString('language') ?? ''
   const visible = options.getBoolean('visible') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
 
@@ -140,7 +147,29 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
     })
   }
 
-  const translations = await crowdin.getStringTranslations(string.id)
+  if (locale) {
+    const language = await crowdin.getLanguage(locale)
+
+    if (!language) {
+      const error = `Could not find language object for \`${locale}\`.`
+      return interaction.editReply({ content: error })
+    }
+
+    const [translation] = await crowdin.getStringTranslations(string.id, [
+      language,
+    ])
+
+    const content = `
+Translations for term \`${key}\`:
+- English (original): _${string.text}_
+- ${formatTranslation(translation)}`
+
+    return interaction.editReply({ content })
+  }
+
+  const translations = await crowdin.getStringTranslationsForAllLanguages(
+    string.id
+  )
 
   const filled = translations.filter(
     ({ translation }) =>
@@ -153,12 +182,7 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
   const content = `
 Translations for term \`${key}\`:
 - English (original): _${string.text}_
-${filled
-  .map(
-    ({ language: { name, locale }, translation: { data } }) =>
-      `- ${name} (\`${locale}\`): _${data.text}_ (added on <t:${new Date(data.createdAt).valueOf() / 1000}:d> by ${nameMapping[data.user.fullName as keyof typeof nameMapping] ?? data.user.fullName})`
-  )
-  .join('\n')}
+- ${filled.map(formatTranslation).join('\n- ')}
 
 ${
   missCount > 0
@@ -168,4 +192,36 @@ ${
   `
 
   return interaction.editReply({ content })
+}
+
+function formatTranslation({
+  language,
+  translation,
+}: {
+  language: LanguagesModel.Language
+  translation: ResponseObject<StringTranslationsModel.StringTranslation>
+}) {
+  if (!translation) {
+    return `${formatLanguage(language)}:`
+  }
+
+  const { data } = translation
+  const nameMapping = {
+    'Alex Dvl': 'iFunz',
+    'Michał Malarek': 'Exor',
+    Артур: 'roartie',
+    Kaiichi0: 'Kaichii',
+    酷玩熊: 'Kukuch',
+    김지운: '망고',
+  }
+  const userName = data.user.fullName
+  const displayName =
+    nameMapping[userName as keyof typeof nameMapping] ?? userName
+  const date = new Date(data.createdAt).valueOf() / 1000
+
+  return `${formatLanguage(language)}: _${data.text}_ (added on <t:${date}:d> by ${displayName})`
+}
+
+function formatLanguage(language: LanguagesModel.Language) {
+  return `${language.name} (\`${language.locale}\`)`
 }
