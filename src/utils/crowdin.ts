@@ -125,13 +125,7 @@ async function getStringItem(identifier: string) {
     const strings = await getProjectStrings(CROWDIN_PROJECT_ID)
     await cacheCrowdinStrings(strings)
 
-    string = strings.find(string => string.identifier === identifier)
-
-    if (!string) {
-      throw new Error(`Identifier \`${identifier}\` not found in Crowdin.`)
-    }
-
-    return string
+    return strings.find(string => string.identifier === identifier)
   }
 
   return { id: result.string_id, text: result.text }
