@@ -213,6 +213,7 @@ function formatTranslation({
     Kaiichi0: 'Kaichii',
     酷玩熊: 'Kukuch',
     김지운: '망고',
+    'Gan Ying Zhi': 'Rain',
   }
   const userName = data.user.fullName
   const displayName =
