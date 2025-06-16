@@ -99,7 +99,6 @@ async function getLanguage(locale: string) {
 
 async function getStringTranslationsForAllLanguages(stringId: StringId) {
   const { targetLanguages: languages } = await getProject()
-
   return getStringTranslations(stringId, languages)
 }
 
@@ -107,6 +106,14 @@ async function getStringTranslations(
   stringId: StringId,
   languages: LanguagesModel.Language[]
 ) {
+  logger.info('CROWDIN', {
+    endPoint: 'stringTranslationsApi.listStringTranslations',
+    params: {
+      projectId: CROWDIN_PROJECT_ID,
+      stringId,
+      languages: languages.length,
+    },
+  })
   return Promise.all(
     languages.map(language => getProjectStringTranslation(stringId, language))
   )
