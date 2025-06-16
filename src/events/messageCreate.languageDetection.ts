@@ -1,12 +1,10 @@
 import { bold, channelMention, type GuildBasedChannel } from 'discord.js'
 import { LOCALES } from '../constants/i18n'
-import { IS_DEV } from '../config'
+import { BOT_TEST_CHANNEL_ID, IS_DEV } from '../config'
 import type { EnsuredInteraction } from './messageCreate'
-import { isValidHttpUrl } from '../utils/isValidHttpUrl'
 
 // biome-ignore lint/style/noNonNullAssertion: <explanation>
 const ENGLISH_LOCALE = LOCALES.find(locale => locale.languageCode === 'en')!
-const BOT_TEST_CHANNEL_ID = '1373605591766925412'
 const INCLUDED_CATEGORY_IDS = [
   /* General */ '1239259552357158942',
   /* Bug report */ '1239437158247567360',

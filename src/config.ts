@@ -17,6 +17,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 export const BOT_COLOR = '#ac61ff'
+export const BOT_TEST_CHANNEL_ID = '1373605591766925412'
 export const DATABASE_URL = process.env.DATABASE_URL
 export const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID
 export const ALERT_CHANNEL_ID = '1381174240660951160'

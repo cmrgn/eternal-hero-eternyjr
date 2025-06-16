@@ -9,6 +9,7 @@ import { shouldIgnoreInteraction } from './shouldIgnoreInteraction'
 import { pool } from './pg'
 import { logger } from './logger'
 import { sendAlert } from './sendAlert'
+import { BOT_TEST_CHANNEL_ID } from '../config'
 
 type DiscordMessage = OmitPartialGroupDMChannel<
   Message<boolean> | PartialMessage
@@ -91,7 +92,10 @@ export class LeaderboardManager {
     }
   }
 
-  faqLinksOnCreate(interaction: DiscordMessage) {
+  async faqLinksOnCreate(interaction: DiscordMessage) {
+    const isTestChannel = interaction.channelId === BOT_TEST_CHANNEL_ID
+    if (isTestChannel) return
+
     return this.faqLinksOnCreateOrDelete(Events.MessageCreate)(interaction)
   }
 

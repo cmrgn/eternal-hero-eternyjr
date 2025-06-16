@@ -5,11 +5,12 @@ import {
   type GuildMember,
   type Message,
   type OmitPartialGroupDMChannel,
-  type TextBasedChannel,
+  type PartialMessage,
 } from 'discord.js'
 import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
 import { discordLinking } from './messageCreate.discordLinking'
 import { languageDetection } from './messageCreate.languageDetection'
+import { getChannelFromInteraction } from '../utils/getChannelFromInteraction'
 
 export type InteractionLike = OmitPartialGroupDMChannel<Message<boolean>>
 export type EnsuredInteraction = Omit<
@@ -35,9 +36,7 @@ export async function onMessageCreate(interaction: InteractionLike) {
 
   // If the channel cannot be found (this should never happen since the channel
   // ID comes from the interaction itself), do nothing.
-  const fullChannel =
-    guild.channels.cache.find(({ id }) => id === channel.id) ??
-    ((await interaction.client.channels.fetch(channel.id)) as GuildBasedChannel)
+  const fullChannel = await getChannelFromInteraction(interaction)
   if (!fullChannel) return
 
   // If the bot is missing the permissions to post in the channel, do nothing.
