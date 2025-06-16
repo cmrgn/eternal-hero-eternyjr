@@ -24,7 +24,7 @@ async function getProjectStringTranslation(
 ) {
   logger.info('CROWDIN', {
     endPoint: 'stringTranslationsApi.listStringTranslations',
-    params: { projectId: CROWDIN_PROJECT_ID, language, stringId },
+    params: { projectId: CROWDIN_PROJECT_ID, stringId, language: language.id },
   })
   const outcome = await client.stringTranslationsApi.listStringTranslations(
     CROWDIN_PROJECT_ID,
