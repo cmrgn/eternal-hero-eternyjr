@@ -4,7 +4,6 @@ import { client } from './client'
 import { DISCORD_TOKEN } from './config'
 import { onClientReady } from './events/clientReady'
 import { onGuildCreate } from './events/guildCreate'
-import { onGuildDelete } from './events/guildDelete'
 import { onMessageCreate } from './events/messageCreate'
 import { onInteractionCreate } from './events/interactionCreate'
 
