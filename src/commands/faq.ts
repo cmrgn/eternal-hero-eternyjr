@@ -9,6 +9,8 @@ import { createEmbed } from '../utils/createEmbed'
 import { alertEmptySearch, searchThreads } from '../utils/searchThreads'
 import { KITTY_USER_ID } from '../config'
 
+export const scope = 'PUBLIC'
+
 export const data = new SlashCommandBuilder()
   .setName('faq')
   .addStringOption(option =>

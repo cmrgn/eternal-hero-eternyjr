@@ -7,6 +7,8 @@ import {
 } from 'discord.js'
 import { logger } from '../utils/logger'
 
+export const scope = 'OFFICIAL'
+
 export const RULES = {
   'Rule 1.1: No bullying/name-calling':
     'No hate speech, bullying, name-calling or discrimination of any kind.',

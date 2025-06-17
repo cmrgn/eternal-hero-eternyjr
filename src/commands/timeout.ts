@@ -12,6 +12,8 @@ import { logger } from '../utils/logger'
 import { RULES_CHOICES } from './rule'
 import ms, { type StringValue } from 'ms'
 
+export const scope = 'OFFICIAL'
+
 export const data = new SlashCommandBuilder()
   .setName('timeout')
   .addUserOption(option =>

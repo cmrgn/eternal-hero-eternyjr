@@ -20,6 +20,7 @@ export const BOT_COLOR = '#ac61ff'
 export const BOT_TEST_CHANNEL_ID = '1373605591766925412'
 export const DATABASE_URL = process.env.DATABASE_URL
 export const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID
+export const DISCORD_SERVER_ID = '1239215561649426453'
 export const ALERT_CHANNEL_ID = '1381174240660951160'
 export const DISCORD_TOKEN = process.env.DISCORD_TOKEN
 export const CROWDIN_TOKEN = process.env.CROWDIN_TOKEN

@@ -5,6 +5,8 @@ import {
 } from 'discord.js'
 import { logger } from '../utils/logger'
 
+export const scope = 'PUBLIC'
+
 export const data = new SlashCommandBuilder()
   .setName('talk')
   .addStringOption(option =>

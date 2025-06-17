@@ -10,6 +10,8 @@ import {
 } from 'discord.js'
 import { logger } from '../utils/logger'
 
+export const scope = 'PUBLIC'
+
 const messageIdOption = (option: SlashCommandStringOption) => {
   return option
     .setName('message_id')

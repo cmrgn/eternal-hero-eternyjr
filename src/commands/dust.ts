@@ -6,6 +6,8 @@ import {
 import { logger } from '../utils/logger'
 import { createEmbed } from '../utils/createEmbed'
 
+export const scope = 'PUBLIC'
+
 export const data = new SlashCommandBuilder()
   .setName('dust')
   .addIntegerOption(option =>

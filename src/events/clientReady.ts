@@ -1,6 +1,6 @@
 import type { Client } from 'discord.js'
 import { IS_DEV, TEST_SERVER_ID } from '../config'
-import { deployCommands } from '../utils/deployCommands'
+import { deployCommands } from '../utils/commands'
 
 export function onClientReady(client: Client<true>) {
   console.log(`Discord bot is ready! 🤖 Logged in as ${client.user.tag}`)

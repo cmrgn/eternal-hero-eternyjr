@@ -13,6 +13,8 @@ import type {
 import crowdin, { CROWDIN_PROJECT_ID } from '../utils/crowdin'
 import { LOCALES } from '../constants/i18n'
 
+export const scope = 'OFFICIAL'
+
 export const data = new SlashCommandBuilder()
   .setName('crowdin')
   .addSubcommand(subcommand =>
