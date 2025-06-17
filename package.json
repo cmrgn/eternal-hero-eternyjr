@@ -11,6 +11,7 @@
     "start": "node dist/index.cjs",
     "build": "tsup src/index.ts --minify",
     "deploy-commands": "tsx src/scripts/deploy-commands.ts",
+    "delete-commands": "tsx src/scripts/delete-commands.ts",
     "migrate": "node-pg-migrate -d -m ./migrations --no-reject-unauthorized",
     "migrate-create": "node-pg-migrate create -m ./migrations"
   },

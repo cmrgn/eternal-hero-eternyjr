@@ -16,7 +16,6 @@ async function main() {
   await client.login(DISCORD_TOKEN)
   client.once(Events.ClientReady, onClientReady)
   client.on(Events.GuildCreate, onGuildCreate)
-  client.on(Events.GuildDelete, onGuildDelete)
   client.on(Events.MessageCreate, onMessageCreate)
   client.on(Events.InteractionCreate, onInteractionCreate)
 }
