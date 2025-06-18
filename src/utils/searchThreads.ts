@@ -17,10 +17,8 @@ const BASE_SEARCH_OPTIONS = {
 
 const ALT_KEYWORDS = [
   { from: 'error token', to: 'invalid token error' },
-  { from: 'relic XP', to: 'relic not gaining XP' },
   { from: 'floating', to: 'extra weapon mastery point' },
   { from: 'additional skill points', to: 'extra weapon mastery point' },
-  { from: 'caps stats', to: 'caps to some stats' },
   { from: 'guide', to: 'getting started as a beginner' },
   { from: 'augmentation', to: 'reroll rank power' },
 ]
@@ -31,7 +29,7 @@ const ALT_SEARCH = new Fuse(ALT_KEYWORDS, {
 })
 
 const isRelevant = <T>(result: FuseResult<T>) =>
-  result.score && result.score <= 0.5
+  result.score && result.score <= 0.65
 
 export function searchThreads(
   threads: AnyThreadChannel[],

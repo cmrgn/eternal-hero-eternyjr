@@ -19,6 +19,8 @@ export class FAQManager {
 
   constructor(client: Client) {
     this.client = client
+    // Force `guildId` to `DISCORD_SERVER_ID` to test with the real FAQ, even
+    // of the test server
     this.guildId = IS_DEV
       ? (TEST_SERVER_ID ?? DISCORD_SERVER_ID)
       : DISCORD_SERVER_ID
