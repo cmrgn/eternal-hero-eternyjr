@@ -21,6 +21,7 @@ const ALT_KEYWORDS = [
   { from: 'additional skill points', to: 'extra weapon mastery point' },
   { from: 'guide', to: 'getting started as a beginner' },
   { from: 'augmentation', to: 'reroll rank power' },
+  { from: 'afk farm', to: 'AFK/idle' },
 ]
 
 const ALT_SEARCH = new Fuse(ALT_KEYWORDS, {
