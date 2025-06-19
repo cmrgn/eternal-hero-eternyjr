@@ -1,4 +1,5 @@
 import { bold, channelMention, type GuildMember } from 'discord.js'
+
 import { type Locale, LOCALES } from '../constants/i18n'
 import type { EnsuredInteraction } from './messageCreate'
 

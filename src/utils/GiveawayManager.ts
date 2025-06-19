@@ -1,5 +1,6 @@
 import { type GiveawayData, GiveawaysManager } from 'discord-giveaways'
 import type { Client } from 'discord.js'
+
 import { BOT_COLOR, IS_DEV } from '../config'
 import { logger } from './logger'
 import { pool } from './pg'

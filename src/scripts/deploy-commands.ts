@@ -1,4 +1,5 @@
 import dotenv from 'dotenv'
+
 import { deployCommands } from '../utils/commands'
 
 dotenv.config()

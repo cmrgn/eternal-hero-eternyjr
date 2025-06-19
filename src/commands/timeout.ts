@@ -8,9 +8,10 @@ import {
   SlashCommandBuilder,
   userMention,
 } from 'discord.js'
+import ms, { type StringValue } from 'ms'
+
 import { logger } from '../utils/logger'
 import { RULES_CHOICES } from './rule'
-import ms, { type StringValue } from 'ms'
 
 export const scope = 'OFFICIAL'
 

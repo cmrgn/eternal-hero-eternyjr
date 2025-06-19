@@ -1,4 +1,5 @@
 import dotenv from 'dotenv'
+
 import { deleteCommands } from '../utils/commands'
 
 dotenv.config()

@@ -1,4 +1,5 @@
 import { bold, channelMention, type GuildBasedChannel } from 'discord.js'
+
 import { LOCALES } from '../constants/i18n'
 import { BOT_TEST_CHANNEL_ID, IS_DEV } from '../config'
 import type { EnsuredInteraction } from './messageCreate'

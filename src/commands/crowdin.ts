@@ -3,13 +3,14 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js'
-import { logger } from '../utils/logger'
 import type {
   LanguagesModel,
   ResponseObject,
   StringTranslationsModel,
   TranslationStatusModel,
 } from '@crowdin/crowdin-api-client'
+
+import { logger } from '../utils/logger'
 import crowdin, { CROWDIN_PROJECT_ID } from '../utils/crowdin'
 import { LOCALES } from '../constants/i18n'
 

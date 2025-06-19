@@ -8,6 +8,7 @@ import {
   SlashCommandBuilder,
   type SlashCommandStringOption,
 } from 'discord.js'
+
 import { logger } from '../utils/logger'
 
 export const scope = 'PUBLIC'

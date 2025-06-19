@@ -1,4 +1,5 @@
 import type { Guild } from 'discord.js'
+
 import { deployCommands } from '../utils/commands'
 import { IS_DEV } from '../config'
 

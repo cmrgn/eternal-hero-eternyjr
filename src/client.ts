@@ -1,4 +1,5 @@
 import { Client, Collection, GatewayIntentBits } from 'discord.js'
+
 import { commands } from './commands'
 import { initGiveawayManager } from './utils/GiveawayManager'
 import { initFAQManager } from './utils/FAQManager'

@@ -1,4 +1,5 @@
 import { REST, Routes } from 'discord.js'
+
 import {
   DISCORD_TOKEN,
   DISCORD_CLIENT_ID,

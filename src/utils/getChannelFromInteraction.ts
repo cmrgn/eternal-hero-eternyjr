@@ -1,4 +1,5 @@
-import type { GuildBasedChannel, Message } from 'discord.js'
+import type { GuildBasedChannel } from 'discord.js'
+
 import type { InteractionLike } from '../events/messageCreate'
 
 export async function getChannelFromInteraction(interaction: InteractionLike) {

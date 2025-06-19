@@ -1,5 +1,6 @@
 import type { AnyThreadChannel, ChatInputCommandInteraction } from 'discord.js'
 import Fuse, { type FuseResult } from 'fuse.js'
+
 import { sendAlert } from './sendAlert'
 
 type SearchResult = {

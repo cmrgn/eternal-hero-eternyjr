@@ -6,6 +6,7 @@ import {
   type Client,
   type AnyThreadChannel,
 } from 'discord.js'
+
 import { IS_DEV, TEST_SERVER_ID, DISCORD_SERVER_ID } from '../config'
 import { logger } from './logger'
 

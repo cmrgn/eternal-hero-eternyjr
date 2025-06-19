@@ -5,13 +5,13 @@ import {
   type GuildMember,
   type Message,
   type OmitPartialGroupDMChannel,
-  type PartialMessage,
 } from 'discord.js'
-import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
-import { discordLinking } from './messageCreate.discordLinking'
-import { languageDetection } from './messageCreate.languageDetection'
-import { getChannelFromInteraction } from '../utils/getChannelFromInteraction'
+
 import { DISCORD_SERVER_ID, TEST_SERVER_ID } from '../config'
+import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
+import { getChannelFromInteraction } from '../utils/getChannelFromInteraction'
+import { languageDetection } from './messageCreate.languageDetection'
+import { discordLinking } from './messageCreate.discordLinking'
 
 export type InteractionLike = OmitPartialGroupDMChannel<Message<boolean>>
 export type EnsuredInteraction = Omit<

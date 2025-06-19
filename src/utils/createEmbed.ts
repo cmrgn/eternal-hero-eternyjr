@@ -1,4 +1,5 @@
 import { EmbedBuilder } from 'discord.js'
+
 import { BOT_COLOR } from '../config'
 
 export const createEmbed = () =>

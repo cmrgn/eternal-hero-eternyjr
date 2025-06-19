@@ -1,4 +1,5 @@
 import type { Client } from 'discord.js'
+
 import { IS_DEV, TEST_SERVER_ID } from '../config'
 import { deployCommands } from '../utils/commands'
 

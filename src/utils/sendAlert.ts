@@ -5,6 +5,7 @@ import {
   type User,
   userMention,
 } from 'discord.js'
+
 import { ALERT_CHANNEL_ID } from '../config'
 import { stripIndent } from './stripIndent'
 

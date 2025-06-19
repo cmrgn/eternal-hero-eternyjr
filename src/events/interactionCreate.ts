@@ -1,4 +1,5 @@
 import { MessageFlags, type Interaction } from 'discord.js'
+
 import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
 
 export async function onInteractionCreate(interaction: Interaction) {
