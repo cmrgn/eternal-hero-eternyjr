@@ -5,7 +5,7 @@ import {
   type LanguagesModel,
 } from '@crowdin/crowdin-api-client'
 
-import { CROWDIN_TOKEN } from '../config'
+import { CROWDIN_TOKEN } from '../constants/config'
 import { pool } from './pg'
 import { logger } from './logger'
 

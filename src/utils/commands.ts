@@ -1,11 +1,7 @@
 import { REST, Routes } from 'discord.js'
 
-import {
-  DISCORD_TOKEN,
-  DISCORD_CLIENT_ID,
-  DISCORD_SERVER_ID,
-  TEST_SERVER_ID,
-} from '../config'
+import { DISCORD_TOKEN, DISCORD_CLIENT_ID } from '../constants/config'
+import { DISCORD_SERVER_ID, TEST_SERVER_ID } from '../constants/discord'
 import { commands } from '../commands'
 
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN)

@@ -8,7 +8,7 @@ import {
 import { logger } from '../utils/logger'
 import { createEmbed } from '../utils/createEmbed'
 import { alertEmptySearch, searchThreads } from '../utils/searchThreads'
-import { KITTY_USER_ID } from '../config'
+import { KITTY_USER_ID } from '../constants/discord'
 
 export const scope = 'PUBLIC'
 

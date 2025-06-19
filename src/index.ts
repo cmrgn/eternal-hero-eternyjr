@@ -2,7 +2,7 @@ import { Events } from 'discord.js'
 import { loadModule } from 'cld3-asm'
 
 import { client } from './client'
-import { DISCORD_TOKEN } from './config'
+import { DISCORD_TOKEN } from './constants/config'
 import { onClientReady } from './events/clientReady'
 import { onGuildCreate } from './events/guildCreate'
 import { onMessageCreate } from './events/messageCreate'

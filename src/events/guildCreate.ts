@@ -1,7 +1,7 @@
 import type { Guild } from 'discord.js'
 
 import { deployCommands } from '../utils/commands'
-import { IS_DEV } from '../config'
+import { IS_DEV } from '../constants/config'
 
 export function onGuildCreate(guild: Guild) {
   // The local bot should never react to adding the bot to other servers, since

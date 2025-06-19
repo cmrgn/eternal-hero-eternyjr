@@ -1,4 +1,5 @@
-import { IS_DEV, IS_PROD, TEST_SERVER_ID } from '../config'
+import { IS_DEV, IS_PROD } from '../constants/config'
+import { TEST_SERVER_ID } from '../constants/discord'
 
 export function shouldIgnoreInteraction(interaction: {
   guildId: string | null

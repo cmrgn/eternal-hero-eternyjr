@@ -1,6 +1,7 @@
 import type { Client } from 'discord.js'
 
-import { IS_DEV, TEST_SERVER_ID } from '../config'
+import { IS_DEV } from '../constants/config'
+import { TEST_SERVER_ID } from '../constants/discord'
 import { deployCommands } from '../utils/commands'
 
 export function onClientReady(client: Client<true>) {

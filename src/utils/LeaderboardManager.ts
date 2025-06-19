@@ -6,7 +6,7 @@ import {
   type PartialMessage,
 } from 'discord.js'
 
-import { BOT_TEST_CHANNEL_ID } from '../config'
+import { BOT_TEST_CHANNEL_ID } from '../constants/discord'
 import { shouldIgnoreInteraction } from './shouldIgnoreInteraction'
 import { pool } from './pg'
 import { logger } from './logger'

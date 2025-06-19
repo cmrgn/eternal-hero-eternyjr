@@ -6,7 +6,7 @@ import {
   userMention,
 } from 'discord.js'
 
-import { ALERT_CHANNEL_ID } from '../config'
+import { ALERT_CHANNEL_ID } from '../constants/discord'
 import { stripIndent } from './stripIndent'
 
 export type InteractionLike = {

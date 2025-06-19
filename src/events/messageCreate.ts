@@ -7,7 +7,7 @@ import {
   type OmitPartialGroupDMChannel,
 } from 'discord.js'
 
-import { DISCORD_SERVER_ID, TEST_SERVER_ID } from '../config'
+import { DISCORD_SERVER_ID, TEST_SERVER_ID } from '../constants/discord'
 import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
 import { getChannelFromInteraction } from '../utils/getChannelFromInteraction'
 import { languageDetection } from './messageCreate.languageDetection'

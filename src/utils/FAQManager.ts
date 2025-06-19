@@ -7,7 +7,8 @@ import {
   type AnyThreadChannel,
 } from 'discord.js'
 
-import { IS_DEV, TEST_SERVER_ID, DISCORD_SERVER_ID } from '../config'
+import { DISCORD_SERVER_ID, TEST_SERVER_ID } from '../constants/discord'
+import { IS_DEV } from '../constants/config'
 import { logger } from './logger'
 
 const FAQ_FORUM_NAME = '❓│faq-guide'

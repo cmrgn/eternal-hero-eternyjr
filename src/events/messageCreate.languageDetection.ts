@@ -1,7 +1,8 @@
 import { bold, channelMention, type GuildBasedChannel } from 'discord.js'
 
 import { LOCALES } from '../constants/i18n'
-import { BOT_TEST_CHANNEL_ID, IS_DEV } from '../config'
+import { BOT_TEST_CHANNEL_ID } from '../constants/discord'
+import { IS_DEV } from '../constants/config'
 import type { EnsuredInteraction } from './messageCreate'
 
 // biome-ignore lint/style/noNonNullAssertion: <explanation>

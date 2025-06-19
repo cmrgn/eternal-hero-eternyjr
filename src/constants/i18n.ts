@@ -204,3 +204,5 @@ export const LOCALES: Locale[] = [
     },
   },
 ]
+
+export const MIN_LENGTH_LANGUAGE_DETECTION_THRESHOLD = 40
