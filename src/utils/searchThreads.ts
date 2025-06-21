@@ -23,6 +23,7 @@ const ALT_KEYWORDS = [
   { from: 'guide', to: 'getting started as a beginner' },
   { from: 'augmentation', to: 'reroll rank power' },
   { from: 'afk farm', to: 'AFK/idle' },
+  { from: 'newbie', to: 'beginner' },
 ]
 
 const ALT_SEARCH = new Fuse(ALT_KEYWORDS, {
