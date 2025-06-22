@@ -23,15 +23,14 @@ export class LocalizationManager {
     const res = await this.openai.chat.completions.create({
       model: GPT_MODEL,
       messages: [
+        { role: 'system', content: BASE_PROMPT },
         {
-          role: 'system',
+          role: 'user',
           content: `
-          ${BASE_PROMPT}
           ${LOCALIZATION_PROMPT}
-          Translate the following text to English unlesss it is already in English, in which case return it as is.
-          `,
+          Translate the following text to English unless it is already in English, in which case return it as is.
+          ${originalText}`,
         },
-        { role: 'user', content: originalText },
       ],
     })
 
@@ -42,14 +41,14 @@ export class LocalizationManager {
     const response = await this.openai.chat.completions.create({
       model: GPT_MODEL,
       messages: [
+        { role: 'system', content: BASE_PROMPT },
         {
-          role: 'system',
+          role: 'user',
           content: `
-          ${BASE_PROMPT}
           ${LOCALIZATION_PROMPT}
-          Translate the following answer to the language used in the test sentence “${testSentence}”, unless that sentence is in English, in which case return the answer as is.`,
+          Translate the following text to the language used in the test sentence “${testSentence}”, unless that sentence is in English, in which case return the text as is.
+          ${answerText}`,
         },
-        { role: 'user', content: answerText },
       ],
     })
 
