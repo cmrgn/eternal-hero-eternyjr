@@ -51,8 +51,7 @@ export class SearchManager {
 
   index: Index<RecordMetadata>
   client: Client
-  primaryFuse: Fuse<AnyThreadChannel>
-  secondaryFuse: Fuse<{ from: string; to: string }>
+  altFuse: Fuse<{ from: string; to: string }>
 
   constructor(client: Client, fuzzySearchOptions = FUZZY_SEARCH_OPTIONS) {
     if (!PINECONE_API_KEY) {
@@ -66,11 +65,7 @@ export class SearchManager {
       .index(this.#INDEX_NAME)
       .namespace('en')
 
-    this.primaryFuse = new Fuse(this.client.faqManager.threads, {
-      ...fuzzySearchOptions,
-      keys: ['name'],
-    })
-    this.secondaryFuse = new Fuse(
+    this.altFuse = new Fuse(
       [
         { from: 'error token', to: 'invalid token error' },
         { from: 'floating', to: 'extra weapon mastery point' },
@@ -82,16 +77,6 @@ export class SearchManager {
       ],
       { ...fuzzySearchOptions, keys: ['from'] }
     )
-    this.client.on(Events.ThreadCreate, this.reFuse.bind(this))
-    this.client.on(Events.ThreadDelete, this.reFuse.bind(this))
-    this.client.on(Events.ThreadUpdate, this.reFuse.bind(this))
-  }
-
-  reFuse() {
-    this.primaryFuse = new Fuse(this.client.faqManager.threads, {
-      ...FUZZY_SEARCH_OPTIONS,
-      keys: ['name'],
-    })
   }
 
   normalizeResult(
@@ -160,19 +145,22 @@ export class SearchManager {
     keyword: string
     results: FuseResult<AnyThreadChannel>[]
   } {
+    const primaryFuse = new Fuse(this.client.faqManager.threads, {
+      ...FUZZY_SEARCH_OPTIONS,
+      keys: ['name'],
+    })
+
     // Base search, yielding results
-    const results = this.primaryFuse.search(keyword).filter(this.isHitRelevant)
+    const results = primaryFuse.search(keyword).filter(this.isHitRelevant)
     if (results.length) return { keyword, results }
 
     // Base search without results, no alternative search available
-    const altKeywords = this.secondaryFuse
-      .search(keyword)
-      .filter(this.isHitRelevant)
+    const altKeywords = this.altFuse.search(keyword).filter(this.isHitRelevant)
     const altKeyword = altKeywords[0]
     if (!altKeyword) return { keyword, results: [] }
 
     // Alternative search available, but no results either
-    const altResults = this.primaryFuse
+    const altResults = primaryFuse
       .search(altKeyword.item.to)
       .filter(this.isHitRelevant)
     if (!altResults.length) return { keyword: altKeyword.item.to, results: [] }
