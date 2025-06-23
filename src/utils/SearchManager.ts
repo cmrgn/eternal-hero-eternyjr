@@ -47,21 +47,16 @@ const FUZZY_SEARCH_OPTIONS = {
 }
 
 export class SearchManager {
+  // This is the name of the index on Pinecone
   #INDEX_NAME = 'faq-index'
 
   index: Index<RecordMetadata>
   client: Client
   altFuse: Fuse<{ from: string; to: string }>
 
-  constructor(client: Client, fuzzySearchOptions = FUZZY_SEARCH_OPTIONS) {
-    if (!PINECONE_API_KEY) {
-      throw new Error(
-        'Missing environment variable PINECONE_API_KEY; aborting.'
-      )
-    }
-
+  constructor(client: Client) {
     this.client = client
-    this.index = new Pinecone({ apiKey: PINECONE_API_KEY })
+    this.index = new Pinecone({ apiKey: PINECONE_API_KEY ?? '_' })
       .index(this.#INDEX_NAME)
       .namespace('en')
 
@@ -75,7 +70,7 @@ export class SearchManager {
         { from: 'afk farm', to: 'AFK/idle' },
         { from: 'newbie', to: 'beginner' },
       ],
-      { ...fuzzySearchOptions, keys: ['from'] }
+      { ...FUZZY_SEARCH_OPTIONS, keys: ['from'] }
     )
   }
 
@@ -99,12 +94,31 @@ export class SearchManager {
     return result
   }
 
-  async search(query: string, type: SearchType, limit = 1) {
+  async search(
+    query: string,
+    type: SearchType,
+    limit = 1
+  ): Promise<{ query: string; results: ResolvedHit[] }> {
+    if (!PINECONE_API_KEY && type === 'VECTOR') {
+      type = 'FUZZY'
+      console.log(
+        'Missing environment variable PINECONE_API_KEY; falling back to Fuzzy search.'
+      )
+    }
+
     if (type === 'VECTOR') {
-      const hits = await this.searchIndex(query, limit)
-      return {
-        query,
-        results: hits.filter(this.isHitRelevant).map(this.normalizeResult),
+      try {
+        const hits = await this.searchIndex(query, limit)
+        return {
+          query,
+          results: hits.filter(this.isHitRelevant).map(this.normalizeResult),
+        }
+      } catch (error) {
+        console.warn(
+          'Vector search failed; falling back to fuzzy search.',
+          error
+        )
+        return this.search(query, 'FUZZY', limit)
       }
     }
 
