@@ -5,7 +5,7 @@ import {
 } from 'discord.js'
 
 import { logger } from '../utils/logger'
-import type { PineconeEntry } from './indexfaq'
+import type { PineconeMetadata } from './indexfaq'
 
 export const scope = 'OFFICIAL'
 
@@ -27,7 +27,7 @@ export const data = new SlashCommandBuilder()
       .setName('visible')
       .setDescription('Whether it should show for everyone')
   )
-  .setDescription('Search the FAQ')
+  .setDescription('Ask the FAQ')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   logger.command(interaction)
@@ -43,10 +43,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ flags })
 
   const englishQuery = await localizationManager.translateToEnglish(query)
-  const hits = await searchManager.search(englishQuery)
-  const [hit] = hits.filter(searchManager.isHitRelevant)
+  const { results } = await searchManager.search(englishQuery, 'VECTOR', 1)
+  const [result] = results
 
-  if (!hit) {
+  if (!result) {
     return interaction.editReply({
       content:
         'Unfortunately, no relevant content was found for your question. Please try rephrasing it or ask a different question.',
@@ -54,7 +54,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   const { entry_question: question, entry_answer: answer } =
-    hit.fields as PineconeEntry
+    result.fields as PineconeMetadata
 
   const localizedAnswer = raw
     ? await localizationManager.translateFromEnglish(answer, query)

@@ -3,11 +3,17 @@ import {
   type Index,
   Pinecone,
   type RecordMetadata,
+  type SearchRecordsResponse,
 } from '@pinecone-database/pinecone'
 import type { AnyThreadChannel } from 'discord.js'
 import Fuse, { type FuseResult } from 'fuse.js'
 
 import { PINECONE_API_KEY } from '../constants/config'
+import type { PineconeMetadata } from '../commands/indexfaq'
+
+export type Hit = SearchRecordsResponse['result']['hits'][number]
+export type ResolvedHit = Hit & { fields: PineconeMetadata }
+export type SearchType = 'VECTOR' | 'FUZZY'
 
 export const BASE_PROMPT = `
 Sole purpose:
@@ -39,9 +45,6 @@ const FUZZY_SEARCH_OPTIONS = {
   threshold: 0.3,
   ignoreLocation: true,
 }
-
-const isRelevant = <T>(result: FuseResult<T>) =>
-  result.score && result.score <= 0.65
 
 export class SearchManager {
   #INDEX_NAME = 'faq-index'
@@ -91,7 +94,50 @@ export class SearchManager {
     })
   }
 
-  async search(query: string, limit = 1) {
+  normalizeResult(
+    result: ResolvedHit | FuseResult<AnyThreadChannel>
+  ): ResolvedHit {
+    if ('refIndex' in result) {
+      return {
+        _id: `entry#${result.item.id}`,
+        _score: result.score ?? 0,
+        fields: {
+          entry_question: result.item.name,
+          entry_answer: '',
+          entry_tags: [],
+          entry_date: result.item.createdAt?.toISOString() ?? '',
+          entry_url: result.item.url,
+        },
+      }
+    }
+
+    return result
+  }
+
+  async search(query: string, type: SearchType, limit = 1) {
+    if (type === 'VECTOR') {
+      const hits = await this.searchIndex(query, limit)
+      return {
+        query,
+        results: hits.filter(this.isHitRelevant).map(this.normalizeResult),
+      }
+    }
+
+    if (type === 'FUZZY') {
+      const hits = this.searchThreads(query)
+      return {
+        query: hits.keyword,
+        results: hits.results
+          .filter(this.isHitRelevant)
+          .slice(0, limit)
+          .map(this.normalizeResult),
+      }
+    }
+
+    return { query, results: [] }
+  }
+
+  async searchIndex(query: string, limit = 1) {
     const response = await this.index.searchRecords({
       query: { topK: limit, inputs: { text: query } },
       rerank: {
@@ -101,11 +147,13 @@ export class SearchManager {
       },
     })
 
-    return response.result.hits
+    return response.result.hits as ResolvedHit[]
   }
 
-  isHitRelevant(hit: Awaited<ReturnType<SearchManager['search']>>[number]) {
-    return hit._score > 0.3
+  isHitRelevant(hit: ResolvedHit | FuseResult<unknown>): boolean {
+    if ('_score' in hit) return hit._score > 0.3
+    if ('score' in hit && hit.score) return hit.score <= 0.65
+    return false
   }
 
   searchThreads(keyword: string): {
@@ -113,18 +161,20 @@ export class SearchManager {
     results: FuseResult<AnyThreadChannel>[]
   } {
     // Base search, yielding results
-    const results = this.primaryFuse.search(keyword).filter(isRelevant)
+    const results = this.primaryFuse.search(keyword).filter(this.isHitRelevant)
     if (results.length) return { keyword, results }
 
     // Base search without results, no alternative search available
-    const altKeywords = this.secondaryFuse.search(keyword).filter(isRelevant)
+    const altKeywords = this.secondaryFuse
+      .search(keyword)
+      .filter(this.isHitRelevant)
     const altKeyword = altKeywords[0]
     if (!altKeyword) return { keyword, results: [] }
 
     // Alternative search available, but no results either
     const altResults = this.primaryFuse
       .search(altKeyword.item.to)
-      .filter(isRelevant)
+      .filter(this.isHitRelevant)
     if (!altResults.length) return { keyword: altKeyword.item.to, results: [] }
 
     // Alternative search yielded results

@@ -9,6 +9,7 @@ import { logger } from '../utils/logger'
 import { createEmbed } from '../utils/createEmbed'
 import { KITTY_USER_ID } from '../constants/discord'
 import { sendAlert } from '../utils/sendAlert'
+import type { SearchType } from '../utils/SearchManager'
 
 export const scope = 'PUBLIC'
 
@@ -28,6 +29,15 @@ export const data = new SlashCommandBuilder()
   .addUserOption(option =>
     option.setName('user').setDescription('User to mention')
   )
+  .addStringOption(option =>
+    option
+      .setName('method')
+      .setDescription('Search method')
+      .addChoices(
+        { name: 'Fuzzy', value: 'FUZZY' },
+        { name: 'Vector', value: 'VECTOR' }
+      )
+  )
   .setDescription('Search the FAQ')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -38,25 +48,29 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const visible = options.getBoolean('visible') ?? false
   const user = options.getUser('user')
   const keyword = options.getString('keyword', true)
+  const method = (options.getString('method') ?? 'FUZZY') as SearchType
 
   const embed = createEmbed().setTitle(`FAQ search: “${keyword}”`)
-  const search = client.searchManager.searchThreads(keyword)
+  const search = await client.searchManager.search(keyword, method, 5)
 
   if (search.results.length > 0) {
-    if (search.keyword !== keyword) {
+    if (method === 'FUZZY' && search.query !== keyword) {
       embed.setDescription(
-        `Your search for “${keyword}” yielded no results, but it seems related to _${search.keyword}_.`
+        `Your search for “${keyword}” yielded no results, but it seems related to _${search.query}_.`
       )
     }
 
     embed.addFields(
-      search.results.map(({ item }) => ({ name: item.name, value: item.url }))
+      search.results.map(result => ({
+        name: result.fields.entry_question,
+        value: result.fields.entry_url,
+      }))
     )
 
     logger.command(interaction, {
-      results: search.results.map(({ item, score }) => ({
-        name: item.name,
-        score,
+      results: search.results.map(result => ({
+        name: result.fields.entry_question,
+        score: result._score,
       })),
     })
 
@@ -65,9 +79,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       client.leaderboardManager.register({ userId, channelId, guildId })
     }
   } else {
+    const message = `A ${method.toLowerCase()} search for _“${keyword}”_ yielded no results.`
     await sendAlert(
       interaction,
-      `A search for _“${keyword}”_ yielded no results. If it’s unexpected, we may want to improve it with assigning that keyword (or something similar) to a specific search term.`
+      method === 'VECTOR'
+        ? message
+        : `${message} If it’s unexpected, we may want to improve it with assigning that keyword (or something similar) to a specific search term.`
     )
     embed.setDescription(
       `Your search for “${keyword}” yielded no results. Try a more generic term, or reach out to ${userMention(KITTY_USER_ID)} if you think this is a mistake.`

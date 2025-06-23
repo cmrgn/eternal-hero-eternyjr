@@ -33,14 +33,18 @@ function getThreadTags(thread: AnyThreadChannel) {
     .filter(Boolean)
 }
 
-export type PineconeEntry = {
-  id: string
-  chunk_text: string
+export type PineconeMetadata = {
   entry_question: string
   entry_answer: string
   entry_tags: string[]
   entry_date: string
+  entry_url: string
 }
+
+export type PineconeEntry = {
+  id: string
+  chunk_text: string
+} & PineconeMetadata
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   logger.command(interaction)
@@ -58,6 +62,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         createdAt: thread.createdAt?.toISOString(),
         content: firstMessage?.content ?? '',
         tags: getThreadTags(thread),
+        url: thread.url,
       }
     })
   )
@@ -72,6 +77,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       entry_answer: entry.content,
       entry_date: entry.createdAt ?? '',
       entry_tags: entry.tags,
+      entry_url: entry.url,
     }))
   const count = entries.length
 
