@@ -74,26 +74,10 @@ export class SearchManager {
     )
   }
 
-  normalizeResult(
-    result: ResolvedHit | FuseResult<AnyThreadChannel>
-  ): ResolvedHit {
-    if ('refIndex' in result) {
-      return {
-        _id: `entry#${result.item.id}`,
-        _score: 1 - (result.score ?? 1),
-        fields: {
-          entry_question: result.item.name,
-          entry_answer: '',
-          entry_tags: [],
-          entry_date: result.item.createdAt?.toISOString() ?? '',
-          entry_url: result.item.url,
-        },
-      }
-    }
-
-    return result
-  }
-
+  // Perform a search: either an asynchronous vector search on the FAQ content
+  // or a synchronous fuzzy search on the FAQ titles. Note: for vector searches,
+  // the limit is not guaranteed to be reached even when there would be enough
+  // results because low scoring results get filtered out.
   async search(
     query: string,
     type: SearchType,
@@ -108,7 +92,7 @@ export class SearchManager {
 
     if (type === 'VECTOR') {
       try {
-        const hits = await this.searchIndex(query, limit)
+        const hits = await this.searchVector(query, limit)
         return {
           query,
           results: hits.filter(this.isHitRelevant).map(this.normalizeResult),
@@ -123,7 +107,7 @@ export class SearchManager {
     }
 
     if (type === 'FUZZY') {
-      const hits = this.searchThreads(query)
+      const hits = this.searchFuzzy(query)
       return {
         query: hits.keyword,
         results: hits.results
@@ -136,7 +120,9 @@ export class SearchManager {
     return { query, results: [] }
   }
 
-  async searchIndex(query: string, limit = 1) {
+  // Perform a vector search with Pinecone, with immediate reranking for better
+  // results.
+  async searchVector(query: string, limit = 1) {
     const response = await this.index.searchRecords({
       query: { topK: limit, inputs: { text: query } },
       rerank: {
@@ -149,13 +135,11 @@ export class SearchManager {
     return response.result.hits as ResolvedHit[]
   }
 
-  isHitRelevant(hit: ResolvedHit | FuseResult<unknown>): boolean {
-    if ('_score' in hit) return hit._score > 0.3
-    if ('score' in hit && hit.score) return hit.score <= 0.65
-    return false
-  }
-
-  searchThreads(keyword: string): {
+  // Perform a fuzzy search with Fuse.js. If it yields no result, it will
+  // perform a search within the alt fuse to find a manually indexed keyword. If
+  // it finds one, it will redo the original search with the new keyword. This
+  // helps padding some obvious gaps in search results.
+  searchFuzzy(keyword: string): {
     keyword: string
     results: FuseResult<AnyThreadChannel>[]
   } {
@@ -181,6 +165,39 @@ export class SearchManager {
 
     // Alternative search yielded results
     return { keyword: altKeyword.item.to, results: altResults }
+  }
+
+  // Figure out whether the given result is a relevant one. Note: this needs to
+  // happen **before** result normalization since it uses the raw score from
+  // Fuse.js, and not the normalized one.
+  isHitRelevant(hit: ResolvedHit | FuseResult<unknown>): boolean {
+    if ('_score' in hit) return hit._score > 0.3
+    if ('score' in hit && hit.score) return hit.score <= 0.65
+    return false
+  }
+
+  // Normalize fuzzy search results into the same shape as the vector search
+  // results to make it more convenient to use the search. Note: the content of
+  // each FAQ entry and its tags will be missing, since the fuzzy search only
+  // operates on entry names.
+  normalizeResult(
+    result: ResolvedHit | FuseResult<AnyThreadChannel>
+  ): ResolvedHit {
+    if ('refIndex' in result) {
+      return {
+        _id: `entry#${result.item.id}`,
+        _score: 1 - (result.score ?? 1),
+        fields: {
+          entry_question: result.item.name,
+          entry_answer: '',
+          entry_tags: [],
+          entry_date: result.item.createdAt?.toISOString() ?? '',
+          entry_url: result.item.url,
+        },
+      }
+    }
+
+    return result
   }
 }
 
