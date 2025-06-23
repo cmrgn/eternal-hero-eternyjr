@@ -85,7 +85,7 @@ export class SearchManager {
     if ('refIndex' in result) {
       return {
         _id: `entry#${result.item.id}`,
-        _score: result.score ?? 0,
+        _score: 1 - (result.score ?? 1),
         fields: {
           entry_question: result.item.name,
           entry_answer: '',
