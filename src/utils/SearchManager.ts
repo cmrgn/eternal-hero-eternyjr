@@ -11,8 +11,10 @@ import Fuse, { type FuseResult } from 'fuse.js'
 import { PINECONE_API_KEY } from '../constants/config'
 import type { PineconeMetadata } from '../commands/indexfaq'
 
-export type Hit = SearchRecordsResponse['result']['hits'][number]
-export type ResolvedHit = Hit & { fields: PineconeMetadata }
+type Hit = SearchRecordsResponse['result']['hits'][number]
+type SearchResultVector = Hit & { fields: PineconeMetadata }
+type SearchResultFuse = FuseResult<AnyThreadChannel>
+export type SearchResult = SearchResultVector
 export type SearchType = 'VECTOR' | 'FUZZY'
 
 export const BASE_PROMPT = `
@@ -82,7 +84,7 @@ export class SearchManager {
     query: string,
     type: SearchType,
     limit = 1
-  ): Promise<{ query: string; results: ResolvedHit[] }> {
+  ): Promise<{ query: string; results: SearchResult[] }> {
     if (!PINECONE_API_KEY && type === 'VECTOR') {
       type = 'FUZZY'
       console.log(
@@ -132,7 +134,7 @@ export class SearchManager {
       },
     })
 
-    return response.result.hits as ResolvedHit[]
+    return response.result.hits as SearchResultVector[]
   }
 
   // Perform a fuzzy search with Fuse.js. If it yields no result, it will
@@ -141,7 +143,7 @@ export class SearchManager {
   // helps padding some obvious gaps in search results.
   searchFuzzy(keyword: string): {
     keyword: string
-    results: FuseResult<AnyThreadChannel>[]
+    results: SearchResultFuse[]
   } {
     const primaryFuse = new Fuse(this.client.faqManager.threads, {
       ...FUZZY_SEARCH_OPTIONS,
@@ -170,7 +172,7 @@ export class SearchManager {
   // Figure out whether the given result is a relevant one. Note: this needs to
   // happen **before** result normalization since it uses the raw score from
   // Fuse.js, and not the normalized one.
-  isHitRelevant(hit: ResolvedHit | FuseResult<unknown>): boolean {
+  isHitRelevant(hit: SearchResultVector | FuseResult<unknown>): boolean {
     if ('_score' in hit) return hit._score > 0.3
     if ('score' in hit && hit.score) return hit.score <= 0.65
     return false
@@ -180,9 +182,7 @@ export class SearchManager {
   // results to make it more convenient to use the search. Note: the content of
   // each FAQ entry and its tags will be missing, since the fuzzy search only
   // operates on entry names.
-  normalizeResult(
-    result: ResolvedHit | FuseResult<AnyThreadChannel>
-  ): ResolvedHit {
+  normalizeResult(result: SearchResultVector | SearchResultFuse): SearchResult {
     if ('refIndex' in result) {
       return {
         _id: `entry#${result.item.id}`,
