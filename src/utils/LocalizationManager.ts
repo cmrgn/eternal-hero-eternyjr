@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import type { Client } from 'discord.js'
 
-import { GPT_MODEL, BASE_PROMPT } from './SearchManager'
+import { BASE_PROMPT } from './SearchManager'
 import { OPENAI_API_KEY } from '../constants/config'
 
 const LOCALIZATION_PROMPT = `
@@ -9,6 +9,7 @@ You are a translation bot specifically for the game Eternal Hero, so the way you
 `
 
 export class LocalizationManager {
+  #GPT_MODEL = 'gpt-3.5-turbo'
   openai: OpenAI
 
   constructor() {
@@ -21,7 +22,7 @@ export class LocalizationManager {
 
   async translateToEnglish(originalText: string) {
     const res = await this.openai.chat.completions.create({
-      model: GPT_MODEL,
+      model: this.#GPT_MODEL,
       messages: [
         { role: 'system', content: BASE_PROMPT },
         {
@@ -39,7 +40,7 @@ export class LocalizationManager {
 
   async translateFromEnglish(answerText: string, testSentence: string) {
     const response = await this.openai.chat.completions.create({
-      model: GPT_MODEL,
+      model: this.#GPT_MODEL,
       messages: [
         { role: 'system', content: BASE_PROMPT },
         {
@@ -60,7 +61,7 @@ export class LocalizationManager {
     matchedFAQ: { question: string; answer: string }
   ) {
     const chat = await this.openai.chat.completions.create({
-      model: GPT_MODEL,
+      model: this.#GPT_MODEL,
       messages: [
         { role: 'system', content: BASE_PROMPT },
         {

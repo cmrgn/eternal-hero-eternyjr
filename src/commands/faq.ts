@@ -7,8 +7,8 @@ import {
 
 import { logger } from '../utils/logger'
 import { createEmbed } from '../utils/createEmbed'
-import { alertEmptySearch, searchThreads } from '../utils/searchThreads'
 import { KITTY_USER_ID } from '../constants/discord'
+import { sendAlert } from '../utils/sendAlert'
 
 export const scope = 'PUBLIC'
 
@@ -40,7 +40,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const keyword = options.getString('keyword', true)
 
   const embed = createEmbed().setTitle(`FAQ search: “${keyword}”`)
-  const search = searchThreads(client.faqManager.threads, keyword)
+  const search = client.searchManager.searchThreads(keyword)
 
   if (search.results.length > 0) {
     if (search.keyword !== keyword) {
@@ -65,7 +65,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       client.leaderboardManager.register({ userId, channelId, guildId })
     }
   } else {
-    await alertEmptySearch(interaction, keyword)
+    await sendAlert(
+      interaction,
+      `A search for _“${keyword}”_ yielded no results. If it’s unexpected, we may want to improve it with assigning that keyword (or something similar) to a specific search term.`
+    )
     embed.setDescription(
       `Your search for “${keyword}” yielded no results. Try a more generic term, or reach out to ${userMention(KITTY_USER_ID)} if you think this is a mistake.`
     )

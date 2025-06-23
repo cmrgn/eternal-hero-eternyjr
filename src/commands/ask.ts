@@ -5,6 +5,7 @@ import {
 } from 'discord.js'
 
 import { logger } from '../utils/logger'
+import type { PineconeEntry } from './indexfaq'
 
 export const scope = 'OFFICIAL'
 
@@ -21,11 +22,11 @@ export const data = new SlashCommandBuilder()
       .setName('raw')
       .setDescription('Whether to skip rephrasing by ChatGPT')
   )
-  /*.addBooleanOption(option =>
+  .addBooleanOption(option =>
     option
       .setName('visible')
       .setDescription('Whether it should show for everyone')
-  )*/
+  )
   .setDescription('Search the FAQ')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -34,22 +35,26 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
   const { searchManager, localizationManager } = client
 
+  const query = options.getString('question', true)
   const visible = options.getBoolean('visible') ?? false
   const raw = options.getBoolean('raw') ?? false
-  // const flags = visible ? undefined : MessageFlags.Ephemeral
-  const query = options.getString('question', true)
+  const flags = visible ? undefined : MessageFlags.Ephemeral
 
-  await interaction.deferReply()
+  await interaction.deferReply({ flags })
 
   const englishQuery = await localizationManager.translateToEnglish(query)
-  const [hit] = await searchManager.search(englishQuery)
+  const hits = await searchManager.search(englishQuery)
+  const [hit] = hits.filter(searchManager.isHitRelevant)
 
   if (!hit) {
-    return interaction.editReply({ content: searchManager.NO_RESULTS_MESSAGE })
+    return interaction.editReply({
+      content:
+        'Unfortunately, no relevant content was found for your question. Please try rephrasing it or ask a different question.',
+    })
   }
 
-  // @ts-expect-error
-  const { entry_name: question, chunk_text: answer } = hit.fields
+  const { entry_question: question, entry_answer: answer } =
+    hit.fields as PineconeEntry
 
   const localizedAnswer = raw
     ? await localizationManager.translateFromEnglish(answer, query)

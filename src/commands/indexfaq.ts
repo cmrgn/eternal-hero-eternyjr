@@ -1,5 +1,7 @@
 import {
+  type AnyThreadChannel,
   type ChatInputCommandInteraction,
+  ForumChannel,
   MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js'
@@ -17,6 +19,29 @@ export const data = new SlashCommandBuilder()
   .setName('indexfaq')
   .setDescription('Index the FAQ in Pinecone')
 
+function getThreadTags(thread: AnyThreadChannel) {
+  if (!(thread.parent instanceof ForumChannel)) {
+    return []
+  }
+
+  return thread.appliedTags
+    .map(
+      id =>
+        (thread.parent as ForumChannel).availableTags.find(pt => pt.id === id)
+          ?.name ?? ''
+    )
+    .filter(Boolean)
+}
+
+export type PineconeEntry = {
+  id: string
+  chunk_text: string
+  entry_question: string
+  entry_answer: string
+  entry_tags: string[]
+  entry_date: string
+}
+
 export async function execute(interaction: ChatInputCommandInteraction) {
   logger.command(interaction)
 
@@ -32,18 +57,22 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         name: thread.name,
         createdAt: thread.createdAt?.toISOString(),
         content: firstMessage?.content ?? '',
-        tags: thread.appliedTags,
+        tags: getThreadTags(thread),
       }
     })
   )
 
   const index = pc.index(INDEX_NAME).namespace('en')
-  const entries = threadsData.map(entry => ({
-    id: `entry#${entry.id}`,
-    chunk_text: entry.content,
-    entry_name: entry.name,
-    entry_date: entry.createdAt ?? '',
-  }))
+  const entries: PineconeEntry[] = threadsData
+    .filter(entry => entry.content)
+    .map(entry => ({
+      id: `entry#${entry.id}`,
+      chunk_text: `${entry.name}\n\n${entry.content}`,
+      entry_question: entry.name,
+      entry_answer: entry.content,
+      entry_date: entry.createdAt ?? '',
+      entry_tags: entry.tags,
+    }))
   const count = entries.length
 
   while (entries.length) {
