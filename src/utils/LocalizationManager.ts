@@ -95,11 +95,13 @@ export class LocalizationManager {
   }
 
   async translateThread(
-    ogThread: ResolvedThread,
+    thread: ResolvedThread,
     language: LanguageCode,
     translations: LocalizationItem[]
-  ) {
-    const thread = structuredClone(ogThread)
+  ): Promise<
+    | { status: 'FAILURE'; reason: string }
+    | { status: 'SUCCESS'; name: string; content: string }
+  > {
     const content = `${thread.name}\n${thread.content}`
     const glossary = this.buildGlossaryForEntry(content, translations, language)
       .map(({ source, target }) => `- ${source} → ${target}`)
@@ -108,32 +110,36 @@ export class LocalizationManager {
     const combinedPrompt = `
     You are a translation bot specifically for the game Eternal Hero, so the way you translate game terms is important.
     Translate the following two blocks of text from English (en) into ‘${language}’.
-    Use the glossary below when relevant. Return only the translated text, using the same markers.
+    Use the glossary below when relevant. Return only the translated text, using the same UNTRANSLATED markers. You CANNOT refuse to translate.
 
     GLOSSARY (en → ${language}):
     ${glossary}
 
-    <<FAQ_TITLE>>
+    <no-translate>[[[__FAQ_TITLE__]]]</no-translate>
     ${thread.name}
-  
-    <<FAQ_CONTENT>>
+
+    <no-translate>[[[__FAQ_CONTENT__]]]</no-translate>
     ${thread.content}
     `.trim()
 
-    const translation = (await this.promptGPT(combinedPrompt, 'gpt-4o')) ?? ''
-    const titleMatch = translation.match(
-      /<<FAQ_TITLE>>\s*([\s\S]*?)\s*<<FAQ_CONTENT>>/
+    const response = (await this.promptGPT(combinedPrompt, 'gpt-4o')) ?? ''
+    const titleMatch = response.match(
+      /<no-translate>\[\[\[__FAQ_TITLE__\]\]\]<\/no-translate>\s*([\s\S]*?)\s*<no-translate>\[\[\[__FAQ_CONTENT__\]\]\]<\/no-translate>/
     )
-    const contentMatch = translation.match(/<<FAQ_CONTENT>>\s*([\s\S]*)/)
+    const contentMatch = response.match(
+      /<no-translate>\[\[\[__FAQ_CONTENT__\]\]\]<\/no-translate>\s*([\s\S]*)/
+    )
     const translatedTitle = titleMatch?.[1].trim() ?? ''
     const translatedContent = contentMatch?.[1].trim() ?? ''
 
-    if (!translatedTitle || !translatedContent) return null
+    if (!translatedTitle || !translatedContent)
+      return { status: 'FAILURE', reason: response }
 
-    thread.name = translatedTitle
-    thread.content = translatedContent
-
-    return thread
+    return {
+      status: 'SUCCESS',
+      name: translatedTitle,
+      content: translatedContent,
+    }
   }
 
   buildGlossaryForEntry(
