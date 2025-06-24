@@ -4,12 +4,22 @@ import {
   type SourceStringsModel,
   type LanguagesModel,
 } from '@crowdin/crowdin-api-client'
+import decompress from 'decompress'
+import fetch from 'node-fetch'
+import csvtojson from 'csvtojson'
 
 import { CROWDIN_TOKEN } from '../constants/config'
 import { pool } from './pg'
 import { logger } from './logger'
+import { type LanguageCode, LOCALES } from '../constants/i18n'
+import type { LocalizationItem } from './LocalizationManager'
 
 type StringId = SourceStringsModel.String['id']
+
+export type CrowdinItem = Record<LanguageCode, string> & {
+  Key: string
+  Context?: string
+}
 
 // @ts-expect-error
 const client: Client = new Crowdin.default({ token: CROWDIN_TOKEN ?? '' })
@@ -123,7 +133,6 @@ async function getStringItem(identifier: string) {
   )
 
   const result: { string_id: StringId; text: string } | undefined = rows[0]
-  let string: SourceStringsModel.String | undefined
 
   if (!result) {
     const strings = await getProjectStrings(CROWDIN_PROJECT_ID)
@@ -135,6 +144,68 @@ async function getStringItem(identifier: string) {
   return { id: result.string_id, text: result.text }
 }
 
+async function buildProject() {
+  const {
+    data: { id: buildId },
+  } = await client.translationsApi.buildProject(CROWDIN_PROJECT_ID)
+
+  return buildId
+}
+
+async function waitForBuild(buildId: number) {
+  let status = 'inProgress'
+  while (status === 'inProgress') {
+    const { data } = await client.translationsApi.checkBuildStatus(
+      CROWDIN_PROJECT_ID,
+      buildId
+    )
+    status = data.status
+    if (status === 'failed') throw new Error('Crowdin build failed')
+    if (status !== 'finished') await new Promise(res => setTimeout(res, 1000))
+  }
+}
+
+async function downloadBuildArtefact(buildId: number) {
+  // Retrieve the URL to download the zip file with all CSV translation files
+  const { data } = await client.translationsApi.downloadTranslations(
+    CROWDIN_PROJECT_ID,
+    buildId
+  )
+
+  // Download the archive
+  const response = await fetch(data.url)
+  if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`)
+  const zipBuffer = await response.buffer()
+
+  // Unzip the archive
+  const files = await decompress(zipBuffer)
+
+  // Convert each CSV file into JSON
+  const jsons: CrowdinItem[][] = []
+  for (const file of files) {
+    const content = file.data.toString('utf-8')
+    const json = await csvtojson().fromString(content)
+    jsons.push(json)
+  }
+
+  const supportedLanguageCodes: LanguageCode[] = LOCALES.map(
+    ({ languageCode }) => languageCode
+  )
+
+  // Flatten all JSON structures into a single array, and reshape the entries
+  // for convenience
+  return jsons
+    .reduce((acc, array) => acc.concat(array), [])
+    .map(object => {
+      const translations: Record<LanguageCode, string> = {}
+      for (const locale in object) {
+        if (supportedLanguageCodes.includes(locale))
+          translations[locale] = object[locale]
+      }
+      return { key: object.Key, translations } as LocalizationItem
+    })
+}
+
 export default {
   client,
   getProject,
@@ -142,4 +213,7 @@ export default {
   getStringTranslationsForAllLanguages,
   getStringTranslations,
   getLanguage,
+  buildProject,
+  waitForBuild,
+  downloadBuildArtefact,
 }
