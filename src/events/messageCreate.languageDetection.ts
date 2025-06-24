@@ -34,18 +34,16 @@ export async function languageDetection(
   const isInRelevantCategory = INCLUDED_CATEGORY_IDS.includes(channel.parentId)
   if (!isTestChannel && !isInRelevantCategory) return
 
-  // If the guessed language is English, return early as there is nothing to do.
-  const guess = client.languageIdentifier.findLanguage(content)
-  if (guess.language === 'en') return
+  const guess = interaction.client.localizationManager.guessLanguage(content)
 
   // If the guessed language is not unknown or unreliable, return early as it’s
   // better to have a false negative than a false positive.
-  if (guess.language === 'und' || !guess.is_reliable || guess.probability < 0.9)
-    return
+  // If the guessed language is English, return early as there is nothing to do.
+  if (!guess || guess === 'en') return
 
   // If the guessed language is not a language we have an international channel
   // for, return the generic English response about rule 3.1.
-  const locale = LOCALES.find(locale => locale.languageCode === guess.language)
+  const locale = LOCALES.find(locale => locale.languageCode === guess)
   const inEnglish = ENGLISH_LOCALE.messages.internationalization
   if (!locale) return interaction.reply(inEnglish)
 

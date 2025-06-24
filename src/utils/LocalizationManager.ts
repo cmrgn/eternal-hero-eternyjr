@@ -3,6 +3,7 @@ import type { Client } from 'discord.js'
 
 import { BASE_PROMPT } from './SearchManager'
 import { OPENAI_API_KEY } from '../constants/config'
+import { type Locale, LOCALES } from '../constants/i18n'
 
 const LOCALIZATION_PROMPT = `
 You are a translation bot specifically for the game Eternal Hero, so the way you translate game terms is important.
@@ -11,13 +12,27 @@ You are a translation bot specifically for the game Eternal Hero, so the way you
 export class LocalizationManager {
   #GPT_MODEL = 'gpt-3.5-turbo'
   openai: OpenAI
+  client: Client
 
-  constructor() {
+  constructor(client: Client) {
     if (!OPENAI_API_KEY) {
       throw new Error('Missing environment variable OPENAI_API_KEY; aborting.')
     }
 
+    this.client = client
     this.openai = new OpenAI({ apiKey: OPENAI_API_KEY })
+  }
+
+  isLanguageSupported(language: string) {
+    return Boolean(LOCALES.find(locale => locale.languageCode === language))
+  }
+
+  guessLanguage(userInput: string): Locale['languageCode'] | null {
+    const guess = this.client.languageIdentifier.findLanguage(userInput)
+    if (guess.probability < 0.9) return null
+    if (guess.language === 'und') return null
+    if (!this.isLanguageSupported(guess.language)) return null
+    return guess.language
   }
 
   async promptGPT(userPrompt: string, model = this.#GPT_MODEL) {
@@ -68,6 +83,6 @@ export class LocalizationManager {
 }
 
 export const initLocalizationManager = (client: Client) => {
-  const localizationManager = new LocalizationManager()
+  const localizationManager = new LocalizationManager(client)
   return localizationManager
 }
