@@ -5,7 +5,7 @@ import {
 } from 'discord.js'
 
 import { logger } from '../utils/logger'
-import type { PineconeMetadata } from './indexfaq'
+import type { PineconeMetadata } from '../utils/SearchManager'
 
 export const scope = 'OFFICIAL'
 
