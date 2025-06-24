@@ -14,6 +14,7 @@ import { IS_DEV } from '../constants/config'
 import { logger } from './logger'
 
 export type ResolvedThread = {
+  isResolved: true
   id: string
   name: string
   createdAt: string
@@ -159,15 +160,22 @@ export class FAQManager {
       .filter(Boolean)
   }
 
-  async resolveThread(thread: AnyThreadChannel): Promise<ResolvedThread> {
-    const firstMessage = await thread.fetchStarterMessage()
+  async resolveThread(
+    thread: AnyThreadChannel | ResolvedThread
+  ): Promise<ResolvedThread> {
+    if ('isResolved' in thread && thread.isResolved) return thread
+
+    const firstMessage = await (
+      thread as AnyThreadChannel
+    ).fetchStarterMessage()
 
     return {
+      isResolved: true,
       id: thread.id,
       name: thread.name,
-      createdAt: thread.createdAt?.toISOString() ?? '',
+      createdAt: thread.createdAt?.toString() ?? '',
       content: firstMessage?.content ?? '',
-      tags: this.getThreadTags(thread),
+      tags: this.getThreadTags(thread as AnyThreadChannel),
       url: thread.url,
     }
   }

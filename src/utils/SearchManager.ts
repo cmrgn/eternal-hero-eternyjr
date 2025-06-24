@@ -239,9 +239,15 @@ export class SearchManager {
     return count
   }
 
-  async indexThread(thread: AnyThreadChannel, namespace: PineconeNamespace) {
+  async indexThread(
+    thread: AnyThreadChannel | ResolvedThread,
+    namespace: PineconeNamespace
+  ) {
     const threadId = thread.id
-    const resolvedThread = await this.client.faqManager.resolveThread(thread)
+    const isResolved = 'isResolved' in thread && thread.isResolved
+    const resolvedThread = isResolved
+      ? thread
+      : await this.client.faqManager.resolveThread(thread)
     const record = this.prepareForIndexing(resolvedThread)
     await this.indexRecords([record], namespace)
     logger.info('INDEXING', { action: 'UPSERT', id: threadId, namespace })

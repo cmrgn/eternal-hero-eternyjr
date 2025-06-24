@@ -108,7 +108,7 @@ export class LocalizationManager {
     const translatedTitle = titleMatch?.[1].trim() ?? ''
     const translatedContent = contentMatch?.[1].trim() ?? ''
 
-    if (!translatedTitle || !translatedContent) return thread
+    if (!translatedTitle || !translatedContent) return null
 
     thread.name = translatedTitle
     thread.content = translatedContent

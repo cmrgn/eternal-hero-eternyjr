@@ -3,10 +3,13 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js'
+import pMap from 'p-map'
+import Bottleneck from 'bottleneck'
 
 import { logger } from '../utils/logger'
 import { LOCALES } from '../constants/i18n'
-import pMap from 'p-map'
+import type { ResolvedThread } from '../utils/FAQManager'
+import type { PineconeNamespace } from '../utils/SearchManager'
 
 export const scope = 'OFFICIAL'
 
@@ -27,6 +30,23 @@ export const data = new SlashCommandBuilder()
   )
   .setDescription('Index the FAQ in Pinecone')
 
+const discordEditLimiter = new Bottleneck({
+  reservoir: 5, // Allow 5 calls
+  reservoirRefreshAmount: 5, // Refill to 5
+  reservoirRefreshInterval: 5000, // Every 5 seconds
+})
+
+const notify = discordEditLimiter.wrap(
+  (
+    interaction: ChatInputCommandInteraction,
+    thread: ResolvedThread,
+    namespace: PineconeNamespace
+  ) =>
+    interaction.editReply({
+      content: `Indexing _“${thread.name}”_ in namespace \`${namespace}\`.`,
+    })
+)
+
 export async function execute(interaction: ChatInputCommandInteraction) {
   logger.command(interaction)
 
@@ -34,32 +54,33 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const language = interaction.options.getString('language') ?? 'en'
   const { faqManager, searchManager, localizationManager } = interaction.client
-  const { threads } = faqManager
+  const concurrency = 2
+  const namespace = language // Replace with whatever else for testing
 
   // Retrive the content for every thread in the FAQ
-  let threadsWithContent = await Promise.all(
-    threads.map(faqManager.resolveThread)
+  const threadsWithContent = await Promise.all(
+    faqManager.threads.map(thread => faqManager.resolveThread(thread))
   )
 
-  if (language !== 'en') {
-    threadsWithContent = await pMap(
-      threadsWithContent,
-      async thread => localizationManager.translateFAQEntry(thread, language),
-      { concurrency: 2 }
-    )
-  }
-
-  // Format the content for Pinecone indexation
-  const entries = threadsWithContent
-    .filter(entry => entry.content)
-    .map(searchManager.prepareForIndexing)
-  const count = entries.length
-
-  // Index all the threads into Pinecone
-  await searchManager.indexRecords(entries, language)
+  // Iterate over all threads with the given concurrency, and for each thread,
+  // translate it if the expected language is not English, and upsert it into
+  // the relevant Pinecone namespace
+  await pMap(
+    threadsWithContent,
+    async thread => {
+      await notify(interaction, thread, namespace)
+      const localizedThread =
+        language !== 'en'
+          ? await localizationManager.translateFAQEntry(thread, language)
+          : thread
+      if (!localizedThread) return
+      await searchManager.indexThread(localizedThread, namespace)
+    },
+    { concurrency }
+  )
 
   // Acknowledge the indexation
-  await interaction.editReply({
-    content: `Indexed ${count} entries into Pinecone.`,
+  return interaction.editReply({
+    content: `Finished indexing **${threadsWithContent.length} threads** in namespace \`${namespace}\`.`,
   })
 }
