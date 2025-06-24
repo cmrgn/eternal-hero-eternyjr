@@ -1,12 +1,12 @@
 import { Client, Collection, GatewayIntentBits, Partials } from 'discord.js'
 
 import { commands } from './commands'
-import { initGiveawayManager } from './utils/GiveawayManager'
-import { initFAQManager } from './utils/FAQManager'
-import { initLeaderboardManager } from './utils/LeaderboardManager'
-import { initSearchManager } from './utils/SearchManager'
-import { initLocalizationManager } from './utils/LocalizationManager'
-import { initIndexationManager } from './utils/IndexationManager'
+import { initGiveawayManager } from './managers/GiveawayManager'
+import { initFAQManager } from './managers/FAQManager'
+import { initLeaderboardManager } from './managers/LeaderboardManager'
+import { initSearchManager } from './managers/SearchManager'
+import { initLocalizationManager } from './managers/LocalizationManager'
+import { initIndexationManager } from './managers/IndexationManager'
 
 export const client = new Client({
   intents: [

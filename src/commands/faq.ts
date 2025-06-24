@@ -9,7 +9,7 @@ import { logger } from '../utils/logger'
 import { createEmbed } from '../utils/createEmbed'
 import { KITTY_USER_ID } from '../constants/discord'
 import { sendAlert } from '../utils/sendAlert'
-import type { SearchType } from '../utils/SearchManager'
+import type { SearchType } from '../managers/SearchManager'
 
 export const scope = 'PUBLIC'
 

@@ -7,10 +7,10 @@ import {
 } from 'discord.js'
 
 import { BOT_TEST_CHANNEL_ID } from '../constants/discord'
-import { shouldIgnoreInteraction } from './shouldIgnoreInteraction'
-import { pool } from './pg'
-import { logger } from './logger'
-import { sendAlert } from './sendAlert'
+import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
+import { pool } from '../utils/pg'
+import { logger } from '../utils/logger'
+import { sendAlert } from '../utils/sendAlert'
 
 type DiscordMessage = OmitPartialGroupDMChannel<
   Message<boolean> | PartialMessage

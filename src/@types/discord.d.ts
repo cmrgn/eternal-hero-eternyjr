@@ -1,11 +1,11 @@
 import type { LanguageIdentifier } from 'cld3-asm'
 import type { GiveawaysManager } from 'discord-giveaways'
 import type { Collection, SlashCommandOptionsOnlyBuilder } from 'discord.js'
-import type { FAQManager } from '../utils/FAQManager'
-import type { LeaderboardManager } from '../utils/LeaderboardManager'
-import type { SearchManager } from '../utils/SearchManager'
-import type { LocalizationManager } from '../utils/LocalizationManager'
-import type { IndexationManager } from '../utils/IndexationManager'
+import type { FAQManager } from '../managers/FAQManager'
+import type { LeaderboardManager } from '../managers/LeaderboardManager'
+import type { SearchManager } from '../managers/SearchManager'
+import type { LocalizationManager } from '../managers/LocalizationManager'
+import type { IndexationManager } from '../managers/IndexationManager'
 
 type Command = {
   data: SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder

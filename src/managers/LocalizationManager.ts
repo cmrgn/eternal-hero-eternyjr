@@ -1,13 +1,13 @@
 import OpenAI from 'openai'
 import type { Client } from 'discord.js'
+import fuzzysort from 'fuzzysort'
 
 import { BASE_PROMPT } from './SearchManager'
 import { OPENAI_API_KEY } from '../constants/config'
 import { type LanguageCode, LOCALES } from '../constants/i18n'
 import type { ResolvedThread } from './FAQManager'
-import crowdin from './crowdin'
-import fuzzysort from 'fuzzysort'
-import { cleanUpTranslation } from './cleanUpTranslation'
+import crowdin from '../utils/crowdin'
+import { cleanUpTranslation } from '../utils/cleanUpTranslation'
 
 const LOCALIZATION_PROMPT = `
 You are a translation bot specifically for the game Eternal Hero, so the way you translate game terms is important.

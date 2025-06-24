@@ -1,11 +1,11 @@
 import { type GiveawayData, GiveawaysManager } from 'discord-giveaways'
 import type { Client } from 'discord.js'
 
+import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
 import { BOT_COLOR } from '../constants/discord'
 import { IS_DEV } from '../constants/config'
-import { logger } from './logger'
-import { pool } from './pg'
-import { shouldIgnoreInteraction } from './shouldIgnoreInteraction'
+import { logger } from '../utils/logger'
+import { pool } from '../utils/pg'
 
 const ENVIRONMENT = IS_DEV ? 'DEV' : 'PROD'
 

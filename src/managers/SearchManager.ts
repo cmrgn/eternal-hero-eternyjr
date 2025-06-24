@@ -1,9 +1,8 @@
 import type { Client } from 'discord.js'
-import {
-  type Index,
-  Pinecone,
-  type RecordMetadata,
-  type SearchRecordsResponse,
+import type {
+  Index,
+  RecordMetadata,
+  SearchRecordsResponse,
 } from '@pinecone-database/pinecone'
 import type { AnyThreadChannel } from 'discord.js'
 import Fuse, { type FuseResult } from 'fuse.js'

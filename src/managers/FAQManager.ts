@@ -11,7 +11,7 @@ import {
 
 import { DISCORD_SERVER_ID, TEST_SERVER_ID } from '../constants/discord'
 import { IS_DEV } from '../constants/config'
-import { logger } from './logger'
+import { logger } from '../utils/logger'
 
 export type ResolvedThread = {
   isResolved: true

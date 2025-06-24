@@ -10,8 +10,8 @@ import type { PineconeEntry, PineconeNamespace } from './SearchManager'
 import type { LocalizationItem } from './LocalizationManager'
 import { type LanguageCode, LOCALES } from '../constants/i18n'
 import { PINECONE_API_KEY } from '../constants/config'
-import { logger } from './logger'
-import { withRetries } from './withRetries'
+import { logger } from '../utils/logger'
+import { withRetries } from '../utils/withRetries'
 
 class IndexationManager {
   // This is the name of the index on Pinecone

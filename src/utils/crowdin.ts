@@ -11,8 +11,8 @@ import csvtojson from 'csvtojson'
 import { CROWDIN_TOKEN } from '../constants/config'
 import { pool } from './pg'
 import { logger } from './logger'
-import { type LanguageCode, LOCALES } from '../constants/i18n'
-import type { LocalizationItem } from './LocalizationManager'
+import type { LanguageCode } from '../constants/i18n'
+import type { LocalizationItem } from '../managers/LocalizationManager'
 
 type StringId = SourceStringsModel.String['id']
 

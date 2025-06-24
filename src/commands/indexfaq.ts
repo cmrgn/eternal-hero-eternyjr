@@ -6,12 +6,10 @@ import {
 import pMap from 'p-map'
 import Bottleneck from 'bottleneck'
 
-import type { ResolvedThread } from '../utils/FAQManager'
-import type { LocalizationItem } from '../utils/LocalizationManager'
+import type { ResolvedThread } from '../managers/FAQManager'
 import { logger } from '../utils/logger'
 import { LOCALES } from '../constants/i18n'
 import { sendAlert } from '../utils/sendAlert'
-import { ALERT_CHANNEL_ID } from '../constants/discord'
 
 export const scope = 'OFFICIAL'
 
