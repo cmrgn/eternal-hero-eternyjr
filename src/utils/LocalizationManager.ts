@@ -3,12 +3,20 @@ import type { Client } from 'discord.js'
 
 import { BASE_PROMPT } from './SearchManager'
 import { OPENAI_API_KEY } from '../constants/config'
-import { type Locale, LOCALES } from '../constants/i18n'
+import { type LanguageCode, LOCALES } from '../constants/i18n'
 import type { ResolvedThread } from './FAQManager'
+import crowdin from './crowdin'
+import fuzzysort from 'fuzzysort'
+import { cleanUpTranslation } from './cleanUpTranslation'
 
 const LOCALIZATION_PROMPT = `
 You are a translation bot specifically for the game Eternal Hero, so the way you translate game terms is important.
 `
+
+export type LocalizationItem = {
+  key: string
+  translations: Record<LanguageCode, string>
+}
 
 export class LocalizationManager {
   #GPT_MODEL = 'gpt-3.5-turbo'
@@ -28,7 +36,7 @@ export class LocalizationManager {
     return Boolean(LOCALES.find(locale => locale.languageCode === language))
   }
 
-  guessLanguage(userInput: string): Locale['languageCode'] | null {
+  guessLanguage(userInput: string): LanguageCode | null {
     const guess = this.client.languageIdentifier.findLanguage(userInput)
     if (guess.probability < 0.9) return null
     if (guess.language === 'und') return null
@@ -84,15 +92,23 @@ export class LocalizationManager {
 
   async translateThread(
     ogThread: ResolvedThread,
-    targetLanguage: Locale['languageCode']
+    language: LanguageCode,
+    translations: LocalizationItem[]
   ) {
     const thread = structuredClone(ogThread)
+    const content = `${thread.name}\n${thread.content}`
+    const glossary = this.buildGlossaryForEntry(content, translations, language)
+      .map(({ source, target }) => `- ${source} → ${target}`)
+      .join('\n')
 
     const combinedPrompt = `
     You are a translation bot specifically for the game Eternal Hero, so the way you translate game terms is important.
-    Translate the following two blocks of text from English (en) into ‘${targetLanguage}’.
-    Return only the translated text, using the same markers.
-    
+    Translate the following two blocks of text from English (en) into ‘${language}’.
+    Use the glossary below when relevant. Return only the translated text, using the same markers.
+
+    GLOSSARY (en → ${language}):
+    ${glossary}
+
     <<FAQ_TITLE>>
     ${thread.name}
   
@@ -114,6 +130,40 @@ export class LocalizationManager {
     thread.content = translatedContent
 
     return thread
+  }
+
+  buildGlossaryForEntry(
+    content: string,
+    translations: LocalizationItem[],
+    language: LanguageCode,
+    { maxTerms = 100, scoreCutoff = -100 } = {}
+  ) {
+    const haystack = cleanUpTranslation(content)
+    const scored: { source: string; target: string; score: number }[] = []
+    const seen = new Set<string>()
+
+    for (const item of translations) {
+      const cleaned = cleanUpTranslation(item.translations.en)
+      if (seen.has(cleaned)) continue
+      const match = fuzzysort.single(cleaned, haystack)
+      if (match && match.score >= scoreCutoff) {
+        scored.push({
+          source: cleaned,
+          target: cleanUpTranslation(item.translations[language]),
+          score: match.score,
+        })
+        seen.add(cleaned)
+      }
+    }
+
+    // Sort by best match and limit count
+    return scored.sort((a, b) => a.score - b.score).slice(0, maxTerms)
+  }
+
+  async fetchAllProjectTranslations() {
+    const buildId = await crowdin.buildProject()
+    await crowdin.waitForBuild(buildId)
+    return crowdin.downloadBuildArtefact(buildId)
   }
 }
 
