@@ -23,6 +23,10 @@ export class LocalizationManager {
   openai: OpenAI
   client: Client
 
+  #cachedTranslations: LocalizationItem[] | null = null
+  #lastFetchedAt = 0
+  #cacheTTL = 15 * 60 * 1000 // 15 minutes
+
   constructor(client: Client) {
     if (!OPENAI_API_KEY) {
       throw new Error('Missing environment variable OPENAI_API_KEY; aborting.')
@@ -160,10 +164,25 @@ export class LocalizationManager {
     return scored.sort((a, b) => a.score - b.score).slice(0, maxTerms)
   }
 
-  async fetchAllProjectTranslations() {
+  async fetchAllProjectTranslations(forceRefresh = false) {
+    const now = Date.now()
+
+    if (
+      !forceRefresh &&
+      this.#cachedTranslations &&
+      now - this.#lastFetchedAt < this.#cacheTTL
+    ) {
+      return this.#cachedTranslations
+    }
+
     const buildId = await crowdin.buildProject()
     await crowdin.waitForBuild(buildId)
-    return crowdin.downloadBuildArtefact(buildId)
+    const data = await crowdin.downloadBuildArtefact(buildId)
+
+    this.#cachedTranslations = data
+    this.#lastFetchedAt = now
+
+    return data
   }
 }
 
