@@ -1,4 +1,4 @@
-import { Events, type Client } from 'discord.js'
+import type { Client } from 'discord.js'
 import {
   type Index,
   Pinecone,
@@ -9,9 +9,7 @@ import type { AnyThreadChannel } from 'discord.js'
 import Fuse, { type FuseResult } from 'fuse.js'
 
 import { PINECONE_API_KEY } from '../constants/config'
-import type { ResolvedThread } from './FAQManager'
-import { logger } from './logger'
-import type { LanguageCode, Locale } from '../constants/i18n'
+import type { LanguageCode } from '../constants/i18n'
 
 export type PineconeMetadata = {
   entry_question: string
@@ -75,9 +73,7 @@ export class SearchManager {
 
   constructor(client: Client) {
     this.client = client
-    this.index = new Pinecone({ apiKey: PINECONE_API_KEY ?? '_' }).index(
-      this.#INDEX_NAME
-    )
+    this.index = this.client.indexationManager.index
 
     this.altFuse = new Fuse(
       [
@@ -216,46 +212,6 @@ export class SearchManager {
     }
 
     return result
-  }
-
-  prepareForIndexing(entry: ResolvedThread): PineconeEntry {
-    return {
-      id: `entry#${entry.id}`,
-      chunk_text: `${entry.name}\n\n${entry.content}`,
-      entry_question: entry.name,
-      entry_answer: entry.content,
-      entry_date: entry.createdAt ?? '',
-      entry_tags: entry.tags,
-      entry_url: entry.url,
-    }
-  }
-
-  async indexRecords(entries: PineconeEntry[], namespace: PineconeNamespace) {
-    const count = entries.length
-    while (entries.length) {
-      const batch = entries.splice(0, 90)
-      await this.index.namespace(namespace).upsertRecords(batch)
-    }
-    return count
-  }
-
-  async indexThread(
-    thread: AnyThreadChannel | ResolvedThread,
-    namespace: PineconeNamespace
-  ) {
-    const threadId = thread.id
-    const isResolved = 'isResolved' in thread && thread.isResolved
-    const resolvedThread = isResolved
-      ? thread
-      : await this.client.faqManager.resolveThread(thread)
-    const record = this.prepareForIndexing(resolvedThread)
-    await this.indexRecords([record], namespace)
-    logger.info('INDEXING', { action: 'UPSERT', id: threadId, namespace })
-  }
-
-  async unindexThread(threadId: string, namespace: PineconeNamespace) {
-    await this.index.namespace(namespace).deleteOne(threadId)
-    logger.info('INDEXING', { action: 'DELETE', id: threadId, namespace })
   }
 }
 

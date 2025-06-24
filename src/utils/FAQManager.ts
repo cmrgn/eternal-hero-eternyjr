@@ -35,9 +35,7 @@ export class FAQManager {
     this.client = client
     // Force `guildId` to `DISCORD_SERVER_ID` to test with the real FAQ, even
     // of the test server
-    this.guildId = IS_DEV
-      ? (TEST_SERVER_ID ?? DISCORD_SERVER_ID)
-      : DISCORD_SERVER_ID
+    this.guildId = IS_DEV ? DISCORD_SERVER_ID : DISCORD_SERVER_ID
     this.#threads = []
     this.#links = []
   }
@@ -99,30 +97,33 @@ export class FAQManager {
     return faq as ForumChannel
   }
 
+  belongsToFAQ({ parentId, guild }: { parentId: string | null; guild: Guild }) {
+    return parentId === this.getFAQForum(guild)?.id
+  }
+
   async onThreadCreate(thread: AnyThreadChannel) {
-    const { parentId, guild, id } = thread
-    const belongsToFAQ = parentId === this.getFAQForum(guild)?.id
-    if (belongsToFAQ) {
+    if (this.belongsToFAQ(thread)) {
       this.cacheThreads()
-      await this.client.searchManager.unindexThread(id, 'en')
+      const { indexationManager } = this.client
+      const resolvedThread = await this.resolveThread(thread)
+      await indexationManager.indexThreadInAllLanguages(resolvedThread)
     }
   }
 
-  async onThreadDelete({ id, parentId, guild }: AnyThreadChannel) {
-    const belongsToFAQ = parentId === this.getFAQForum(guild)?.id
-    if (belongsToFAQ) {
+  async onThreadDelete(thread: AnyThreadChannel) {
+    if (this.belongsToFAQ(thread)) {
       this.cacheThreads()
-      await this.client.searchManager.unindexThread(id, 'en')
+      const { indexationManager } = this.client
+      await indexationManager.unindexThreadInAllLanguages(thread.id)
     }
   }
 
   async onThreadUpdate(prev: AnyThreadChannel, next: AnyThreadChannel) {
-    const { parentId, guild, name: prevName } = prev
-    const { name: nextName } = next
-    const belongsToFAQ = parentId === this.getFAQForum(guild)?.id
-    if (belongsToFAQ && prevName !== nextName) {
+    if (this.belongsToFAQ(prev) && prev.name !== next.name) {
       this.cacheThreads()
-      await this.client.searchManager.indexThread(next, 'en')
+      const { indexationManager } = this.client
+      const resolvedThread = await this.resolveThread(next)
+      await indexationManager.indexThreadInAllLanguages(resolvedThread)
     }
   }
 
@@ -140,10 +141,11 @@ export class FAQManager {
     if (!thread?.isThread()) return
 
     // Make sure the parent of the thread is the FAQ forum, abort if not
-    const belongsToFAQ = thread.parent?.id === this.getFAQForum(guild)?.id
-    if (!belongsToFAQ) return
-
-    await this.client.searchManager.indexThread(thread, 'en')
+    if (this.belongsToFAQ({ parentId: thread.parent?.id ?? null, guild })) {
+      const { indexationManager } = this.client
+      const resolvedThread = await this.resolveThread(thread)
+      await indexationManager.indexThreadInAllLanguages(resolvedThread)
+    }
   }
 
   getThreadTags(thread: AnyThreadChannel) {
