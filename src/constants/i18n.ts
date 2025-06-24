@@ -43,7 +43,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: true,
+    crowdin: false,
     languageCode: 'es',
     languageName: 'Español',
     role: 'es | Español',
@@ -178,7 +178,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: true,
+    crowdin: false,
     languageCode: 'th',
     languageName: 'ภาษาไทย',
     role: 'th | ภาษาไทย',
