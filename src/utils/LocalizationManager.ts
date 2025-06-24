@@ -147,6 +147,7 @@ export class LocalizationManager {
     const seen = new Set<string>()
 
     for (const item of translations) {
+      if (!(language in item.translations)) continue
       const cleaned = cleanUpTranslation(item.translations.en)
       if (seen.has(cleaned)) continue
       const match = fuzzysort.single(cleaned, haystack)
