@@ -9,7 +9,20 @@ import type { AnyThreadChannel } from 'discord.js'
 import Fuse, { type FuseResult } from 'fuse.js'
 
 import { PINECONE_API_KEY } from '../constants/config'
-import type { PineconeMetadata } from '../commands/indexfaq'
+import type { ResolvedThread } from './FAQManager'
+
+export type PineconeMetadata = {
+  entry_question: string
+  entry_answer: string
+  entry_tags: string[]
+  entry_date: string
+  entry_url: string
+}
+
+export type PineconeEntry = {
+  id: string
+  chunk_text: string
+} & PineconeMetadata
 
 type Hit = SearchRecordsResponse['result']['hits'][number]
 type SearchResultVector = Hit & { fields: PineconeMetadata }
@@ -198,6 +211,18 @@ export class SearchManager {
     }
 
     return result
+  }
+
+  prepareForIndexing(entry: ResolvedThread): PineconeEntry {
+    return {
+      id: `entry#${entry.id}`,
+      chunk_text: `${entry.name}\n\n${entry.content}`,
+      entry_question: entry.name,
+      entry_answer: entry.content,
+      entry_date: entry.createdAt ?? '',
+      entry_tags: entry.tags,
+      entry_url: entry.url,
+    }
   }
 }
 

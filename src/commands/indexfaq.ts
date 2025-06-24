@@ -9,6 +9,7 @@ import { Pinecone } from '@pinecone-database/pinecone'
 
 import { logger } from '../utils/logger'
 import { PINECONE_API_KEY } from '../constants/config'
+import { PineconeEntry } from '../utils/SearchManager'
 
 export const scope = 'OFFICIAL'
 
@@ -19,66 +20,20 @@ export const data = new SlashCommandBuilder()
   .setName('indexfaq')
   .setDescription('Index the FAQ in Pinecone')
 
-function getThreadTags(thread: AnyThreadChannel) {
-  if (!(thread.parent instanceof ForumChannel)) {
-    return []
-  }
-
-  return thread.appliedTags
-    .map(
-      id =>
-        (thread.parent as ForumChannel).availableTags.find(pt => pt.id === id)
-          ?.name ?? ''
-    )
-    .filter(Boolean)
-}
-
-export type PineconeMetadata = {
-  entry_question: string
-  entry_answer: string
-  entry_tags: string[]
-  entry_date: string
-  entry_url: string
-}
-
-export type PineconeEntry = {
-  id: string
-  chunk_text: string
-} & PineconeMetadata
-
 export async function execute(interaction: ChatInputCommandInteraction) {
   logger.command(interaction)
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
-  const threads = interaction.client.faqManager.threads
-  const threadsData = await Promise.all(
-    threads.map(async thread => {
-      const firstMessage = await thread.fetchStarterMessage()
-
-      return {
-        id: thread.id,
-        name: thread.name,
-        createdAt: thread.createdAt?.toISOString(),
-        content: firstMessage?.content ?? '',
-        tags: getThreadTags(thread),
-        url: thread.url,
-      }
-    })
-  )
+  const { client } = interaction
+  const { faqManager, searchManager } = client
+  const { threads } = faqManager
+  const threadsData = await Promise.all(threads.map(faqManager.resolveThread))
 
   const index = pc.index(INDEX_NAME).namespace('en')
-  const entries: PineconeEntry[] = threadsData
+  const entries = threadsData
     .filter(entry => entry.content)
-    .map(entry => ({
-      id: `entry#${entry.id}`,
-      chunk_text: `${entry.name}\n\n${entry.content}`,
-      entry_question: entry.name,
-      entry_answer: entry.content,
-      entry_date: entry.createdAt ?? '',
-      entry_tags: entry.tags,
-      entry_url: entry.url,
-    }))
+    .map(searchManager.prepareForIndexing)
   const count = entries.length
 
   while (entries.length) {

@@ -2,7 +2,7 @@ import {
   type ThreadChannel,
   type Guild,
   Events,
-  type ForumChannel,
+  ForumChannel,
   type Client,
   type AnyThreadChannel,
 } from 'discord.js'
@@ -12,6 +12,15 @@ import { IS_DEV } from '../constants/config'
 import { logger } from './logger'
 
 const FAQ_FORUM_NAME = '❓│faq-guide'
+
+export type ResolvedThread = {
+  id: string
+  name: string
+  createdAt: string
+  content: string
+  tags: string[]
+  url: string
+}
 
 export class FAQManager {
   client: Client
@@ -85,23 +94,75 @@ export class FAQManager {
     return faq as ForumChannel
   }
 
-  onThreadCreateOrDelete({ parentId, guild }: ThreadChannel) {
+  async onThreadCreate(thread: AnyThreadChannel) {
+    const { parentId, guild } = thread
     const belongsToFAQ = parentId === this.getFAQForum(guild)?.id
-    if (belongsToFAQ) this.cacheThreads()
+    if (belongsToFAQ) {
+      this.cacheThreads()
+      const searchManager = this.client.searchManager
+      const resolvedThread = await this.resolveThread(thread)
+      const record = searchManager.prepareForIndexing(resolvedThread)
+      const id = record.id
+      await searchManager.index.namespace('en').upsertRecords([record])
+      logger.info('INDEXING', { action: 'CREATE', id, namespace: 'en' })
+    }
   }
 
-  onThreadUpdate(
-    { parentId, guild, name }: ThreadChannel,
-    { name: newName }: ThreadChannel
-  ) {
+  async onThreadDelete({ id, parentId, guild }: AnyThreadChannel) {
     const belongsToFAQ = parentId === this.getFAQForum(guild)?.id
-    if (belongsToFAQ && name !== newName) this.cacheThreads()
+    if (belongsToFAQ) {
+      this.cacheThreads()
+      const searchManager = this.client.searchManager
+      await searchManager.index.namespace('en').deleteOne(id)
+      logger.info('INDEXING', { action: 'DELETE', id, namespace: 'en' })
+    }
+  }
+
+  async onThreadUpdate(prev: AnyThreadChannel, next: AnyThreadChannel) {
+    const { parentId, guild, name: prevName } = prev
+    const { name: nextName, id } = next
+    const belongsToFAQ = parentId === this.getFAQForum(guild)?.id
+    if (belongsToFAQ && prevName !== nextName) {
+      this.cacheThreads()
+      const searchManager = this.client.searchManager
+      const resolvedThread = await this.resolveThread(next)
+      const record = searchManager.prepareForIndexing(resolvedThread)
+      await searchManager.index.namespace('en').upsertRecords([record])
+      logger.info('INDEXING', { action: 'UPDATE', id, namespace: 'en' })
+    }
+  }
+
+  getThreadTags(thread: AnyThreadChannel) {
+    if (!(thread.parent instanceof ForumChannel)) {
+      return []
+    }
+
+    return thread.appliedTags
+      .map(
+        id =>
+          (thread.parent as ForumChannel).availableTags.find(pt => pt.id === id)
+            ?.name ?? ''
+      )
+      .filter(Boolean)
+  }
+
+  async resolveThread(thread: AnyThreadChannel): Promise<ResolvedThread> {
+    const firstMessage = await thread.fetchStarterMessage()
+
+    return {
+      id: thread.id,
+      name: thread.name,
+      createdAt: thread.createdAt?.toISOString() ?? '',
+      content: firstMessage?.content ?? '',
+      tags: this.getThreadTags(thread),
+      url: thread.url,
+    }
   }
 
   bindEvents() {
     this.client.once(Events.ClientReady, this.cacheThreads.bind(this))
-    this.client.on(Events.ThreadCreate, this.onThreadCreateOrDelete.bind(this))
-    this.client.on(Events.ThreadDelete, this.onThreadCreateOrDelete.bind(this))
+    this.client.on(Events.ThreadCreate, this.onThreadCreate.bind(this))
+    this.client.on(Events.ThreadDelete, this.onThreadDelete.bind(this))
     this.client.on(Events.ThreadUpdate, this.onThreadUpdate.bind(this))
   }
 }
