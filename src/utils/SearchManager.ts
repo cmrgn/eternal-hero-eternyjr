@@ -224,6 +224,15 @@ export class SearchManager {
       entry_url: entry.url,
     }
   }
+
+  async indexRecords(entries: PineconeEntry[]) {
+    const count = entries.length
+    while (entries.length) {
+      const batch = entries.splice(0, 90)
+      await this.index.namespace('en').upsertRecords(batch)
+    }
+    return count
+  }
 }
 
 export const initSearchManager = (client: Client) => {

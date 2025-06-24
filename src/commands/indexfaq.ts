@@ -17,22 +17,24 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
-  const { client } = interaction
-  const { faqManager, searchManager } = client
+  const { faqManager, searchManager } = interaction.client
   const { threads } = faqManager
-  const threadsData = await Promise.all(threads.map(faqManager.resolveThread))
 
-  const index = searchManager.index.namespace('en')
-  const entries = threadsData
+  // Retrive the content for every thread in the FAQ
+  const threadsWithContent = await Promise.all(
+    threads.map(faqManager.resolveThread)
+  )
+
+  // Format the content for Pinecone indexation
+  const entries = threadsWithContent
     .filter(entry => entry.content)
     .map(searchManager.prepareForIndexing)
   const count = entries.length
 
-  while (entries.length) {
-    const batch = entries.splice(0, 90)
-    await index.upsertRecords(batch)
-  }
+  // Index all the threads into Pinecone
+  await searchManager.indexRecords(entries)
 
+  // Acknowledge the indexation
   await interaction.editReply({
     content: `Indexed ${count} entries into Pinecone.`,
   })
