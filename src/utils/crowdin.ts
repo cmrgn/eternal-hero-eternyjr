@@ -188,22 +188,14 @@ async function downloadBuildArtefact(buildId: number) {
     jsons.push(json)
   }
 
-  const supportedLanguageCodes: LanguageCode[] = LOCALES.map(
-    ({ languageCode }) => languageCode
-  )
-
   // Flatten all JSON structures into a single array, and reshape the entries
   // for convenience
   return jsons
     .reduce((acc, array) => acc.concat(array), [])
-    .map(object => {
-      const translations: Record<LanguageCode, string> = {}
-      for (const locale in object) {
-        if (supportedLanguageCodes.includes(locale))
-          translations[locale] = object[locale]
-      }
-      return { key: object.Key, translations } as LocalizationItem
-    })
+    .map(
+      ({ Key: key, Context, ...translations }) =>
+        ({ key, translations }) as LocalizationItem
+    )
 }
 
 export default {
