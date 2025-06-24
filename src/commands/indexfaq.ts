@@ -71,7 +71,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       await notify(interaction, thread, namespace)
       const localizedThread =
         language !== 'en'
-          ? await localizationManager.translateFAQEntry(thread, language)
+          ? await localizationManager.translateThread(thread, language)
           : thread
       if (!localizedThread) return
       await searchManager.indexThread(localizedThread, namespace)

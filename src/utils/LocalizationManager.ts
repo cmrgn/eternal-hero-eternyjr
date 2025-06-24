@@ -82,7 +82,7 @@ export class LocalizationManager {
     `)
   }
 
-  async translateFAQEntry(
+  async translateThread(
     ogThread: ResolvedThread,
     targetLanguage: Locale['languageCode']
   ) {
