@@ -4,6 +4,7 @@ import type { Client } from 'discord.js'
 import { BASE_PROMPT } from './SearchManager'
 import { OPENAI_API_KEY } from '../constants/config'
 import { type Locale, LOCALES } from '../constants/i18n'
+import type { ResolvedThread } from './FAQManager'
 
 const LOCALIZATION_PROMPT = `
 You are a translation bot specifically for the game Eternal Hero, so the way you translate game terms is important.
@@ -79,6 +80,40 @@ export class LocalizationManager {
     You must not change the meaning of the answer, and you must not add any information that is not in the FAQ.
     Also be mindful about what appears like game terms, since their meaning can be subtle and matterns.
     `)
+  }
+
+  async translateFAQEntry(
+    ogThread: ResolvedThread,
+    targetLanguage: Locale['languageCode']
+  ) {
+    const thread = structuredClone(ogThread)
+
+    const combinedPrompt = `
+    You are a translation bot specifically for the game Eternal Hero, so the way you translate game terms is important.
+    Translate the following two blocks of text from English (en) into ‘${targetLanguage}’.
+    Return only the translated text, using the same markers.
+    
+    <<FAQ_TITLE>>
+    ${thread.name}
+  
+    <<FAQ_CONTENT>>
+    ${thread.content}
+    `.trim()
+
+    const translation = (await this.promptGPT(combinedPrompt, 'gpt-4o')) ?? ''
+    const titleMatch = translation.match(
+      /<<FAQ_TITLE>>\s*([\s\S]*?)\s*<<FAQ_CONTENT>>/
+    )
+    const contentMatch = translation.match(/<<FAQ_CONTENT>>\s*([\s\S]*)/)
+    const translatedTitle = titleMatch?.[1].trim() ?? ''
+    const translatedContent = contentMatch?.[1].trim() ?? ''
+
+    if (!translatedTitle || !translatedContent) return thread
+
+    thread.name = translatedTitle
+    thread.content = translatedContent
+
+    return thread
   }
 }
 
