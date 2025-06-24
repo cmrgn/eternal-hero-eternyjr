@@ -11,6 +11,8 @@ export type Locale = {
   }
 }
 
+export type LanguageCode = Locale['languageCode']
+
 export const LOCALES: Locale[] = [
   {
     crowdin: true,

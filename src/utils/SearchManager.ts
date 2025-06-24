@@ -11,7 +11,7 @@ import Fuse, { type FuseResult } from 'fuse.js'
 import { PINECONE_API_KEY } from '../constants/config'
 import type { ResolvedThread } from './FAQManager'
 import { logger } from './logger'
-import type { Locale } from '../constants/i18n'
+import type { LanguageCode, Locale } from '../constants/i18n'
 
 export type PineconeMetadata = {
   entry_question: string
@@ -26,7 +26,7 @@ export type PineconeEntry = {
   chunk_text: string
 } & PineconeMetadata
 
-export type PineconeNamespace = Locale['languageCode']
+export type PineconeNamespace = LanguageCode
 
 type Hit = SearchRecordsResponse['result']['hits'][number]
 type SearchResultVector = Hit & { fields: PineconeMetadata }
