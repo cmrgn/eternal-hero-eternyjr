@@ -58,9 +58,9 @@ export class SearchManager {
 
   constructor(client: Client) {
     this.client = client
-    this.index = new Pinecone({ apiKey: PINECONE_API_KEY ?? '_' })
-      .index(this.#INDEX_NAME)
-      .namespace('en')
+    this.index = new Pinecone({ apiKey: PINECONE_API_KEY ?? '_' }).index(
+      this.#INDEX_NAME
+    )
 
     this.altFuse = new Fuse(
       [
@@ -125,7 +125,7 @@ export class SearchManager {
   // Perform a vector search with Pinecone, with immediate reranking for better
   // results.
   async searchVector(query: string, limit = 1) {
-    const response = await this.index.searchRecords({
+    const response = await this.index.namespace('en').searchRecords({
       query: { topK: limit, inputs: { text: query } },
       rerank: {
         model: 'bge-reranker-v2-m3',
