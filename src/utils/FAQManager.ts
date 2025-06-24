@@ -13,8 +13,6 @@ import { DISCORD_SERVER_ID, TEST_SERVER_ID } from '../constants/discord'
 import { IS_DEV } from '../constants/config'
 import { logger } from './logger'
 
-const FAQ_FORUM_NAME = '❓│faq-guide'
-
 export type ResolvedThread = {
   id: string
   name: string
@@ -25,6 +23,8 @@ export type ResolvedThread = {
 }
 
 export class FAQManager {
+  #FORUM_NAME = '❓│faq-guide'
+
   client: Client
   guildId: string
   #threads: AnyThreadChannel[]
@@ -91,7 +91,9 @@ export class FAQManager {
   }
 
   getFAQForum(guild: Guild) {
-    const faq = guild.channels.cache.find(({ name }) => name === FAQ_FORUM_NAME)
+    const faq = guild.channels.cache.find(
+      ({ name }) => name === this.#FORUM_NAME
+    )
     if (!faq) throw new Error('Could not find the FAQ forum.')
     return faq as ForumChannel
   }

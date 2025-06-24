@@ -42,7 +42,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply({ flags })
 
-  const englishQuery = await localizationManager.translateToEnglish(query)
+  const englishQuery =
+    (await localizationManager.translateToEnglish(query)) ?? query
   const { results } = await searchManager.search(englishQuery, 'VECTOR', 1)
   const [result] = results
 
