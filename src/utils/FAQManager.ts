@@ -99,16 +99,11 @@ export class FAQManager {
   }
 
   async onThreadCreate(thread: AnyThreadChannel) {
-    const { parentId, guild } = thread
+    const { parentId, guild, id } = thread
     const belongsToFAQ = parentId === this.getFAQForum(guild)?.id
     if (belongsToFAQ) {
       this.cacheThreads()
-      const searchManager = this.client.searchManager
-      const resolvedThread = await this.resolveThread(thread)
-      const record = searchManager.prepareForIndexing(resolvedThread)
-      const id = record.id
-      await searchManager.index.namespace('en').upsertRecords([record])
-      logger.info('INDEXING', { action: 'CREATE', id, namespace: 'en' })
+      await this.client.searchManager.unindexThread(id, 'en')
     }
   }
 
@@ -116,7 +111,7 @@ export class FAQManager {
     const belongsToFAQ = parentId === this.getFAQForum(guild)?.id
     if (belongsToFAQ) {
       this.cacheThreads()
-      await this.client.searchManager.unindexThread(id)
+      await this.client.searchManager.unindexThread(id, 'en')
     }
   }
 
@@ -126,7 +121,7 @@ export class FAQManager {
     const belongsToFAQ = parentId === this.getFAQForum(guild)?.id
     if (belongsToFAQ && prevName !== nextName) {
       this.cacheThreads()
-      await this.client.searchManager.indexThread(next)
+      await this.client.searchManager.indexThread(next, 'en')
     }
   }
 
@@ -147,7 +142,7 @@ export class FAQManager {
     const belongsToFAQ = thread.parent?.id === this.getFAQForum(guild)?.id
     if (!belongsToFAQ) return
 
-    await this.client.searchManager.indexThread(thread)
+    await this.client.searchManager.indexThread(thread, 'en')
   }
 
   getThreadTags(thread: AnyThreadChannel) {

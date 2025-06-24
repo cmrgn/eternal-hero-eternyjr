@@ -11,6 +11,7 @@ import Fuse, { type FuseResult } from 'fuse.js'
 import { PINECONE_API_KEY } from '../constants/config'
 import type { ResolvedThread } from './FAQManager'
 import { logger } from './logger'
+import type { Locale } from '../constants/i18n'
 
 export type PineconeMetadata = {
   entry_question: string
@@ -24,6 +25,8 @@ export type PineconeEntry = {
   id: string
   chunk_text: string
 } & PineconeMetadata
+
+export type PineconeNamespace = Locale['languageCode']
 
 type Hit = SearchRecordsResponse['result']['hits'][number]
 type SearchResultVector = Hit & { fields: PineconeMetadata }
@@ -97,6 +100,7 @@ export class SearchManager {
   async search(
     query: string,
     type: SearchType,
+    namespace: PineconeNamespace,
     limit = 1
   ): Promise<{ query: string; results: SearchResult[] }> {
     if (!PINECONE_API_KEY && type === 'VECTOR') {
@@ -108,7 +112,7 @@ export class SearchManager {
 
     if (type === 'VECTOR') {
       try {
-        const hits = await this.searchVector(query, limit)
+        const hits = await this.searchVector(query, namespace, limit)
         return {
           query,
           results: hits.filter(this.isHitRelevant).map(this.normalizeResult),
@@ -118,7 +122,7 @@ export class SearchManager {
           'Vector search failed; falling back to fuzzy search.',
           error
         )
-        return this.search(query, 'FUZZY', limit)
+        return this.search(query, 'FUZZY', namespace, limit)
       }
     }
 
@@ -138,8 +142,8 @@ export class SearchManager {
 
   // Perform a vector search with Pinecone, with immediate reranking for better
   // results.
-  async searchVector(query: string, limit = 1) {
-    const response = await this.index.namespace('en').searchRecords({
+  async searchVector(query: string, namespace: PineconeNamespace, limit = 1) {
+    const response = await this.index.namespace(namespace).searchRecords({
       query: { topK: limit, inputs: { text: query } },
       rerank: {
         model: 'bge-reranker-v2-m3',
@@ -226,26 +230,26 @@ export class SearchManager {
     }
   }
 
-  async indexRecords(entries: PineconeEntry[]) {
+  async indexRecords(entries: PineconeEntry[], namespace: PineconeNamespace) {
     const count = entries.length
     while (entries.length) {
       const batch = entries.splice(0, 90)
-      await this.index.namespace('en').upsertRecords(batch)
+      await this.index.namespace(namespace).upsertRecords(batch)
     }
     return count
   }
 
-  async indexThread(thread: AnyThreadChannel) {
+  async indexThread(thread: AnyThreadChannel, namespace: PineconeNamespace) {
     const threadId = thread.id
     const resolvedThread = await this.client.faqManager.resolveThread(thread)
     const record = this.prepareForIndexing(resolvedThread)
-    await this.indexRecords([record])
-    logger.info('INDEXING', { action: 'UPSERT', id: threadId, namespace: 'en' })
+    await this.indexRecords([record], namespace)
+    logger.info('INDEXING', { action: 'UPSERT', id: threadId, namespace })
   }
 
-  async unindexThread(threadId: string) {
-    await this.index.namespace('en').deleteOne(threadId)
-    logger.info('INDEXING', { action: 'DELETE', id: threadId, namespace: 'en' })
+  async unindexThread(threadId: string, namespace: PineconeNamespace) {
+    await this.index.namespace(namespace).deleteOne(threadId)
+    logger.info('INDEXING', { action: 'DELETE', id: threadId, namespace })
   }
 }
 

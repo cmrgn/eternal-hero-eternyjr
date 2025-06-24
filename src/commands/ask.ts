@@ -44,7 +44,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const englishQuery =
     (await localizationManager.translateToEnglish(query)) ?? query
-  const { results } = await searchManager.search(englishQuery, 'VECTOR', 1)
+  const { results } = await searchManager.search(
+    englishQuery,
+    'VECTOR',
+    'en',
+    1
+  )
   const [result] = results
 
   if (!result) {

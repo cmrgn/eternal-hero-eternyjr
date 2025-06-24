@@ -51,7 +51,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const method = (options.getString('method') ?? 'FUZZY') as SearchType
 
   const embed = createEmbed().setTitle(`FAQ search: “${keyword}”`)
-  const search = await client.searchManager.search(keyword, method, 5)
+  const search = await client.searchManager.search(keyword, method, 'en', 5)
 
   if (search.results.length > 0) {
     if (method === 'FUZZY' && search.query !== keyword) {

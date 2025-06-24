@@ -32,7 +32,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const count = entries.length
 
   // Index all the threads into Pinecone
-  await searchManager.indexRecords(entries)
+  await searchManager.indexRecords(entries, 'en')
 
   // Acknowledge the indexation
   await interaction.editReply({
