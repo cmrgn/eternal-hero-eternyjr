@@ -10,6 +10,8 @@ import { logger } from '../utils/logger'
 import { LOCALES } from '../constants/i18n'
 import type { ResolvedThread } from '../utils/FAQManager'
 import type { PineconeNamespace } from '../utils/SearchManager'
+import { withRetries } from '../utils/withRetries'
+import { sendAlert } from '../utils/sendAlert'
 
 export const scope = 'OFFICIAL'
 
@@ -36,17 +38,6 @@ const discordEditLimiter = new Bottleneck({
   reservoirRefreshInterval: 5000, // Every 5 seconds
 })
 
-const notify = discordEditLimiter.wrap(
-  (
-    interaction: ChatInputCommandInteraction,
-    thread: ResolvedThread,
-    namespace: PineconeNamespace
-  ) =>
-    interaction.editReply({
-      content: `Indexing _“${thread.name}”_ in namespace \`${namespace}\`.`,
-    })
-)
-
 export async function execute(interaction: ChatInputCommandInteraction) {
   logger.command(interaction)
 
@@ -54,33 +45,53 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const language = interaction.options.getString('language') ?? 'en'
   const { faqManager, searchManager, localizationManager } = interaction.client
-  const concurrency = 2
   const namespace = language // Replace with whatever else for testing
 
   // Retrive the content for every thread in the FAQ
   const threadsWithContent = await Promise.all(
     faqManager.threads.map(thread => faqManager.resolveThread(thread))
   )
+  const total = threadsWithContent.length
+
+  const notify = discordEditLimiter.wrap(
+    (thread: ResolvedThread, index: number) =>
+      interaction.editReply({
+        content: `Indexing (${index + 1}/${total}) _“${thread.name}”_ in namespace \`${namespace}\`.`,
+      })
+  )
+
+  async function indexThread(thread: ResolvedThread) {
+    const localizedThread =
+      language !== 'en'
+        ? await localizationManager.translateThread(thread, language)
+        : thread
+    if (localizedThread)
+      await searchManager.indexThread(localizedThread, namespace)
+  }
+
+  async function safeIndexThread([index, thread]: [number, ResolvedThread]) {
+    const retryOptions = { retries: 5, backoffMs: 3000, label: thread.name }
+    try {
+      await withRetries(async () => {
+        await notify(thread, index)
+        await indexThread(thread)
+      }, retryOptions)
+    } catch (error) {
+      await sendAlert(
+        interaction,
+        `Could not index “${thread.name}” (${thread.id}) in namespace ${namespace}, even after several attempts.
+        \`\`\`${error}\`\`\``
+      )
+    }
+  }
 
   // Iterate over all threads with the given concurrency, and for each thread,
   // translate it if the expected language is not English, and upsert it into
   // the relevant Pinecone namespace
-  await pMap(
-    threadsWithContent,
-    async thread => {
-      await notify(interaction, thread, namespace)
-      const localizedThread =
-        language !== 'en'
-          ? await localizationManager.translateThread(thread, language)
-          : thread
-      if (!localizedThread) return
-      await searchManager.indexThread(localizedThread, namespace)
-    },
-    { concurrency }
-  )
+  await pMap(threadsWithContent.entries(), safeIndexThread, { concurrency: 3 })
 
   // Acknowledge the indexation
   return interaction.editReply({
-    content: `Finished indexing **${threadsWithContent.length} threads** in namespace \`${namespace}\`.`,
+    content: `Finished indexing **${total} threads** in namespace \`${namespace}\`.`,
   })
 }
