@@ -5,6 +5,8 @@ import {
   ForumChannel,
   type Client,
   type AnyThreadChannel,
+  type Message,
+  type PartialMessage,
 } from 'discord.js'
 
 import { DISCORD_SERVER_ID, TEST_SERVER_ID } from '../constants/discord'
@@ -132,6 +134,31 @@ export class FAQManager {
     }
   }
 
+  async onMessageUpdate(
+    _: Message | PartialMessage,
+    newMessage: Message | PartialMessage
+  ) {
+    if (newMessage.partial) newMessage = await newMessage.fetch()
+
+    const { guild } = newMessage
+    if (!guild) return
+
+    // Retrieve the thread the message belongs to, abort if not found
+    const thread = await guild?.channels.fetch(newMessage.id).catch(() => null)
+    if (!thread?.isThread()) return
+
+    // Make sure the parent of the thread is the FAQ forum, abort if not
+    const belongsToFAQ = thread.parent?.id === this.getFAQForum(guild)?.id
+    if (!belongsToFAQ) return
+
+    const searchManager = this.client.searchManager
+    const resolvedThread = await this.resolveThread(thread)
+    const record = this.client.searchManager.prepareForIndexing(resolvedThread)
+    const id = thread.id
+    await searchManager.index.namespace('en').upsertRecords([record])
+    logger.info('INDEXING', { action: 'UPDATE', id, namespace: 'en' })
+  }
+
   getThreadTags(thread: AnyThreadChannel) {
     if (!(thread.parent instanceof ForumChannel)) {
       return []
@@ -164,6 +191,7 @@ export class FAQManager {
     this.client.on(Events.ThreadCreate, this.onThreadCreate.bind(this))
     this.client.on(Events.ThreadDelete, this.onThreadDelete.bind(this))
     this.client.on(Events.ThreadUpdate, this.onThreadUpdate.bind(this))
+    this.client.on(Events.MessageUpdate, this.onMessageUpdate.bind(this))
   }
 }
 

@@ -1,4 +1,4 @@
-import { Client, Collection, GatewayIntentBits } from 'discord.js'
+import { Client, Collection, GatewayIntentBits, Partials } from 'discord.js'
 
 import { commands } from './commands'
 import { initGiveawayManager } from './utils/GiveawayManager'
@@ -14,6 +14,7 @@ export const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent,
   ],
+  partials: [Partials.Message, Partials.Channel],
 })
 
 client.commands = new Collection()
