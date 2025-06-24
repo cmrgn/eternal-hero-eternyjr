@@ -10,6 +10,7 @@ import Fuse, { type FuseResult } from 'fuse.js'
 
 import { PINECONE_API_KEY } from '../constants/config'
 import type { ResolvedThread } from './FAQManager'
+import { logger } from './logger'
 
 export type PineconeMetadata = {
   entry_question: string
@@ -232,6 +233,19 @@ export class SearchManager {
       await this.index.namespace('en').upsertRecords(batch)
     }
     return count
+  }
+
+  async indexThread(thread: AnyThreadChannel) {
+    const threadId = thread.id
+    const resolvedThread = await this.client.faqManager.resolveThread(thread)
+    const record = this.prepareForIndexing(resolvedThread)
+    await this.indexRecords([record])
+    logger.info('INDEXING', { action: 'UPSERT', id: threadId, namespace: 'en' })
+  }
+
+  async unindexThread(threadId: string) {
+    await this.index.namespace('en').deleteOne(threadId)
+    logger.info('INDEXING', { action: 'DELETE', id: threadId, namespace: 'en' })
   }
 }
 

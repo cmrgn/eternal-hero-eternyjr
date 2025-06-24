@@ -114,23 +114,17 @@ export class FAQManager {
     const belongsToFAQ = parentId === this.getFAQForum(guild)?.id
     if (belongsToFAQ) {
       this.cacheThreads()
-      const searchManager = this.client.searchManager
-      await searchManager.index.namespace('en').deleteOne(id)
-      logger.info('INDEXING', { action: 'DELETE', id, namespace: 'en' })
+      await this.client.searchManager.unindexThread(id)
     }
   }
 
   async onThreadUpdate(prev: AnyThreadChannel, next: AnyThreadChannel) {
     const { parentId, guild, name: prevName } = prev
-    const { name: nextName, id } = next
+    const { name: nextName } = next
     const belongsToFAQ = parentId === this.getFAQForum(guild)?.id
     if (belongsToFAQ && prevName !== nextName) {
       this.cacheThreads()
-      const searchManager = this.client.searchManager
-      const resolvedThread = await this.resolveThread(next)
-      const record = searchManager.prepareForIndexing(resolvedThread)
-      await searchManager.index.namespace('en').upsertRecords([record])
-      logger.info('INDEXING', { action: 'UPDATE', id, namespace: 'en' })
+      await this.client.searchManager.indexThread(next)
     }
   }
 
@@ -144,19 +138,14 @@ export class FAQManager {
     if (!guild) return
 
     // Retrieve the thread the message belongs to, abort if not found
-    const thread = await guild?.channels.fetch(newMessage.id).catch(() => null)
+    const thread = await guild.channels.fetch(newMessage.id).catch(() => null)
     if (!thread?.isThread()) return
 
     // Make sure the parent of the thread is the FAQ forum, abort if not
     const belongsToFAQ = thread.parent?.id === this.getFAQForum(guild)?.id
     if (!belongsToFAQ) return
 
-    const searchManager = this.client.searchManager
-    const resolvedThread = await this.resolveThread(thread)
-    const record = this.client.searchManager.prepareForIndexing(resolvedThread)
-    const id = thread.id
-    await searchManager.index.namespace('en').upsertRecords([record])
-    logger.info('INDEXING', { action: 'UPDATE', id, namespace: 'en' })
+    await this.client.searchManager.indexThread(thread)
   }
 
   getThreadTags(thread: AnyThreadChannel) {
