@@ -1,5 +1,6 @@
 import { Events } from 'discord.js'
 import { loadModule } from 'cld3-asm'
+import 'dotenv/config'
 
 import { client } from './client'
 import { DISCORD_TOKEN } from './constants/config'

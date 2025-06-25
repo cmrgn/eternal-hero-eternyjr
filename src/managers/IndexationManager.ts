@@ -12,6 +12,7 @@ import { type LanguageCode, LOCALES } from '../constants/i18n'
 import { IS_DEV, PINECONE_API_KEY } from '../constants/config'
 import { logger } from '../utils/logger'
 import { withRetries } from '../utils/withRetries'
+import pMap from 'p-map'
 
 export class IndexationManager {
   // This is the name of the index on Pinecone
@@ -44,26 +45,32 @@ export class IndexationManager {
     }
   }
 
-  getNamespaceName(namespace: PineconeNamespace) {
-    return this.#namespacePrefix + namespace
+  resolveNamespaceName(namespaceName: PineconeNamespace) {
+    return this.#namespacePrefix + namespaceName
   }
 
-  getNamespace(namespace: PineconeNamespace) {
-    return this.index.namespace(this.getNamespaceName(namespace))
+  resolveNamespace(namespaceName: PineconeNamespace) {
+    return this.index.namespace(this.resolveNamespaceName(namespaceName))
   }
 
-  async indexRecords(entries: PineconeEntry[], namespace: PineconeNamespace) {
+  async indexRecords(
+    entries: PineconeEntry[],
+    namespaceName: PineconeNamespace
+  ) {
     const count = entries.length
+    const namespace = this.resolveNamespace(namespaceName)
+
     while (entries.length) {
       const batch = entries.splice(0, 90)
-      await this.getNamespace(namespace).upsertRecords(batch)
+      await namespace.upsertRecords(batch)
     }
+
     return count
   }
 
   async indexThread(
     thread: AnyThreadChannel | ResolvedThread,
-    namespace: PineconeNamespace
+    namespaceName: PineconeNamespace
   ) {
     const threadId = thread.id
     const isResolved = 'isResolved' in thread && thread.isResolved
@@ -71,24 +78,38 @@ export class IndexationManager {
       ? thread
       : await this.client.faqManager.resolveThread(thread)
     const record = this.prepareForIndexing(resolvedThread)
-    await this.indexRecords([record], namespace)
-    logger.info('INDEXING', { action: 'UPSERT', id: threadId, namespace })
+    await this.indexRecords([record], namespaceName)
+
+    logger.info('INDEXING', {
+      action: 'UPSERT',
+      id: threadId,
+      namespace: this.resolveNamespaceName(namespaceName),
+    })
   }
 
-  async indexThreadInAllLanguages(thread: ResolvedThread) {
+  async indexThreadInAllLanguages(thread: ResolvedThread, concurrency = 3) {
     const { crowdinManager } = this.client
     const translations = await crowdinManager.fetchAllProjectTranslations()
-    for (const { isOnCrowdin, languageCode } of LOCALES) {
-      if (!isOnCrowdin && languageCode !== 'en') continue
-      const indexThread = this.threadIndexer(languageCode, translations)
-      await indexThread(thread)
-    }
+
+    await pMap(
+      LOCALES,
+      async ({ isOnCrowdin, languageCode }) => {
+        if (!isOnCrowdin && languageCode !== 'en') return
+        const indexThread = this.threadIndexer(languageCode, translations)
+        await indexThread(thread)
+      },
+      { concurrency }
+    )
   }
 
-  async unindexThread(threadId: string, namespace: PineconeNamespace) {
+  async unindexThread(threadId: string, namespaceName: PineconeNamespace) {
     try {
-      await this.getNamespace(namespace).deleteOne(threadId)
-      logger.info('INDEXING', { action: 'DELETE', id: threadId, namespace })
+      await this.resolveNamespace(namespaceName).deleteOne(threadId)
+      logger.info('INDEXING', {
+        action: 'DELETE',
+        id: threadId,
+        namespace: this.resolveNamespaceName(namespaceName),
+      })
     } catch (error) {
       // Unindexing may fail with a 404 if the resource didn’t exist in the
       // index to begin with
@@ -97,18 +118,21 @@ export class IndexationManager {
     }
   }
 
-  async unindexThreadInAllLanguages(threadId: string) {
-    for (const { isOnCrowdin, languageCode } of LOCALES) {
-      if (!isOnCrowdin) continue
-      await this.unindexThread(threadId, languageCode)
-    }
+  async unindexThreadInAllLanguages(threadId: string, concurrency = 3) {
+    await pMap(
+      LOCALES,
+      async ({ isOnCrowdin, languageCode }) => {
+        if (!isOnCrowdin && languageCode !== 'en') return
+        await this.unindexThread(threadId, languageCode)
+      },
+      { concurrency }
+    )
   }
 
   threadIndexer(
     language: LanguageCode,
     translations: LocalizationItem[],
     options?: {
-      namespace?: PineconeNamespace
       events?: {
         onThread?: (thread: ResolvedThread) => void
         onTranslationFailure?: (thread: ResolvedThread, reason: string) => void
@@ -118,7 +142,6 @@ export class IndexationManager {
   ) {
     const { retries = 5, backoffMs = 3000 } = options?.backoff ?? {}
     const { events } = options ?? {}
-    const namespace = options?.namespace ?? language
 
     return (thread: ResolvedThread) => {
       return withRetries(
@@ -126,7 +149,7 @@ export class IndexationManager {
           await events?.onThread?.(thread)
 
           if (language === 'en') {
-            await this.indexThread(thread, namespace)
+            await this.indexThread(thread, language)
           } else {
             const response =
               await this.client.localizationManager.translateThread(
@@ -140,7 +163,7 @@ export class IndexationManager {
                 name: response.name,
                 content: response.content,
               }
-              await this.indexThread(localizedThread, namespace)
+              await this.indexThread(localizedThread, language)
             } else {
               events?.onTranslationFailure?.(thread, response.reason)
             }

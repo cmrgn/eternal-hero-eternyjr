@@ -1,5 +1,4 @@
 import {
-  type ThreadChannel,
   type Guild,
   Events,
   ForumChannel,

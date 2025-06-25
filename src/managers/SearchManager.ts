@@ -96,7 +96,7 @@ export class SearchManager {
   async search(
     query: string,
     type: SearchType,
-    namespace: PineconeNamespace,
+    namespaceName: PineconeNamespace,
     limit = 1
   ): Promise<{ query: string; results: SearchResult[] }> {
     if (!PINECONE_API_KEY && type === 'VECTOR') {
@@ -108,7 +108,7 @@ export class SearchManager {
 
     if (type === 'VECTOR') {
       try {
-        const hits = await this.searchVector(query, namespace, limit)
+        const hits = await this.searchVector(query, namespaceName, limit)
         return {
           query,
           results: hits.filter(this.isHitRelevant).map(this.normalizeResult),
@@ -118,7 +118,7 @@ export class SearchManager {
           'Vector search failed; falling back to fuzzy search.',
           error
         )
-        return this.search(query, 'FUZZY', namespace, limit)
+        return this.search(query, 'FUZZY', namespaceName, limit)
       }
     }
 
@@ -138,15 +138,21 @@ export class SearchManager {
 
   // Perform a vector search with Pinecone, with immediate reranking for better
   // results.
-  async searchVector(query: string, namespace: PineconeNamespace, limit = 1) {
-    const response = await this.index.getNamespace(namespace).searchRecords({
-      query: { topK: limit, inputs: { text: query } },
-      rerank: {
-        model: 'bge-reranker-v2-m3',
-        topN: limit,
-        rankFields: ['chunk_text'],
-      },
-    })
+  async searchVector(
+    query: string,
+    namespaceName: PineconeNamespace,
+    limit = 1
+  ) {
+    const response = await this.index
+      .resolveNamespace(namespaceName)
+      .searchRecords({
+        query: { topK: limit, inputs: { text: query } },
+        rerank: {
+          model: 'bge-reranker-v2-m3',
+          topN: limit,
+          rankFields: ['chunk_text'],
+        },
+      })
 
     return response.result.hits as SearchResultVector[]
   }
