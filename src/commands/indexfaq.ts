@@ -21,7 +21,7 @@ export const data = new SlashCommandBuilder()
       .setDescription('Translation language')
       .setChoices(
         Object.values(LOCALES)
-          .filter(locale => locale.isOnCrowdin)
+          .filter(locale => locale.isOnCrowdin || locale.languageCode === 'en')
           .map(locale => ({
             name: locale.languageName,
             value: locale.languageCode,
