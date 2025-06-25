@@ -117,32 +117,47 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       \`\`\`${error}\`\`\``
     )
 
+  // When indexing the English FAQ, there is no need for translation via
+  // ChatGPT, which is why the whole concurrency exists in the first place.
+  // It can safely be done in a single action (which will be batched in the
+  // manager to respect Pinecone’s limits.)
+  if (crowdinCode === 'en') {
+    await indexationManager.indexRecords(
+      threadsWithContent.map(thread =>
+        indexationManager.prepareForIndexing(thread)
+      ),
+      crowdinCode
+    )
+  }
+
   // Iterate over all threads with the given concurrency, and for each thread,
   // translate it if the expected language is not English, and upsert it into
   // the relevant Pinecone namespace
-  logger.logCommand(interaction, 'Processing all threads')
-  await pMap(
-    threadsWithContent.entries(),
-    async ([index, thread]) => {
-      const events = {
-        onThread: (thread: ResolvedThread) => notify(thread, index),
-        onTranslationFailure,
-      }
+  else {
+    logger.logCommand(interaction, 'Processing all threads')
+    await pMap(
+      threadsWithContent.entries(),
+      async ([index, thread]) => {
+        const events = {
+          onThread: (thread: ResolvedThread) => notify(thread, index),
+          onTranslationFailure,
+        }
 
-      const translateAndIndex = indexationManager.threadIndexer(
-        crowdinCode,
-        translations,
-        { events }
-      )
+        const translateAndIndex = indexationManager.threadIndexer(
+          crowdinCode,
+          translations,
+          { events }
+        )
 
-      try {
-        await translateAndIndex(thread)
-      } catch (error) {
-        await onIndexationFailure(thread, error)
-      }
-    },
-    { concurrency: 3 }
-  )
+        try {
+          await translateAndIndex(thread)
+        } catch (error) {
+          await onIndexationFailure(thread, error)
+        }
+      },
+      { concurrency: 3 }
+    )
+  }
 
   return interaction.editReply({
     content: `Finished indexing **${total} threads** in namespace \`${crowdinCode}\`.`,
