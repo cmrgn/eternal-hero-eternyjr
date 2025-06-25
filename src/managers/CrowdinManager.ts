@@ -194,7 +194,7 @@ export class CrowdinManager {
   }
 
   async waitForBuild(buildId: number) {
-    this.#log('info', 'Waiting for build to finish')
+    this.#log('info', 'Waiting for build to finish', { buildId })
 
     let status = 'inProgress'
     while (status === 'inProgress') {
@@ -209,7 +209,7 @@ export class CrowdinManager {
   }
 
   async downloadBuildArtefact(buildId: number) {
-    this.#log('info', 'Downloading build artefact')
+    this.#log('info', 'Downloading build artefact', { buildId })
 
     // Retrieve the URL to download the zip file with all CSV translation files
     const { data } = await this.crowdin.translationsApi.downloadTranslations(
