@@ -1,10 +1,8 @@
 import { bold, channelMention, type GuildMember } from 'discord.js'
 
-import { type Locale, LOCALES } from '../constants/i18n'
+import { type Locale, LOCALES, ENGLISH_LOCALE } from '../constants/i18n'
 import type { EnsuredInteraction } from './messageCreate'
 
-// biome-ignore lint/style/noNonNullAssertion: <explanation>
-const ENGLISH_LOCALE = LOCALES.find(locale => locale.languageCode === 'en')!
 const I18N_ROLES = LOCALES.map(locale => locale.role)
 
 const looksLikePlayerId = (message: string) => {
