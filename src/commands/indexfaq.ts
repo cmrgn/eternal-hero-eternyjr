@@ -10,6 +10,7 @@ import type { ResolvedThread } from '../managers/FAQManager'
 import { logger } from '../utils/logger'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { sendAlert } from '../utils/sendAlert'
+import { IS_DEV } from '../constants/config'
 
 export const scope = 'OFFICIAL'
 
@@ -96,12 +97,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   // If ChatGPT fails to translate something, report it in the #alert channels
   // of the test server to debug it
-  const onTranslationFailure = (thread: ResolvedThread, reason: string) =>
-    sendAlert(
-      interaction,
-      `ChatGPT failed to translate thread “${thread.name}” (${thread.id}) into ${crowdinCode}.
-      > ${reason.replace(/\n/g, '\n> ')}`
-    )
+  const onTranslationFailure = (thread: ResolvedThread, reason: string) => {
+    const error = [
+      `ChatGPT failed to translate thread “${thread.name}” (${thread.id}) into ${crowdinCode}.`,
+      `> ${reason.replace(/\n/g, '\n> ')}`,
+    ].join('\n')
+
+    if (IS_DEV) console.warn(interaction, error)
+    else sendAlert(interaction, error)
+  }
 
   // If the indexation fails for any reason despite the exponential backoff
   // retries, report it in the #alert channels of the test server to debug it
