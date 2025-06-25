@@ -9,6 +9,7 @@ import Fuse, { type FuseResult } from 'fuse.js'
 
 import { PINECONE_API_KEY } from '../constants/config'
 import type { LanguageCode } from '../constants/i18n'
+import type { IndexationManager } from './IndexationManager'
 
 export type PineconeMetadata = {
   entry_question: string
@@ -66,13 +67,13 @@ export class SearchManager {
   // This is the name of the index on Pinecone
   #INDEX_NAME = 'faq-index'
 
-  index: Index<RecordMetadata>
+  index: IndexationManager
   client: Client
   altFuse: Fuse<{ from: string; to: string }>
 
   constructor(client: Client) {
     this.client = client
-    this.index = this.client.indexationManager.index
+    this.index = this.client.indexationManager
 
     this.altFuse = new Fuse(
       [
@@ -138,7 +139,7 @@ export class SearchManager {
   // Perform a vector search with Pinecone, with immediate reranking for better
   // results.
   async searchVector(query: string, namespace: PineconeNamespace, limit = 1) {
-    const response = await this.index.namespace(namespace).searchRecords({
+    const response = await this.index.getNamespace(namespace).searchRecords({
       query: { topK: limit, inputs: { text: query } },
       rerank: {
         model: 'bge-reranker-v2-m3',

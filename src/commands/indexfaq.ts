@@ -71,11 +71,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const translations = await fetchTranslationsIfNeeded(interaction)
   const threadsWithContent = await fetchFAQContent(interaction)
   const total = threadsWithContent.length
+  const namespace = indexationManager.getNamespaceName(language)
 
   const notify = discordEditLimiter.wrap(
     (thread: ResolvedThread, index: number) =>
       interaction.editReply({
-        content: `Indexing (${index + 1}/${total}) _“${thread.name}”_ in namespace \`${language}\`.`,
+        content: `Indexing (${index + 1}/${total}) _“${thread.name}”_ in namespace \`${namespace}\`.`,
       })
   )
 
@@ -89,7 +90,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const onIndexationFailure = (thread: ResolvedThread, error: unknown) =>
     sendAlert(
       interaction,
-      `Could not index “${thread.name}” (${thread.id}) in namespace ${language}, even after several attempts.
+      `Could not index “${thread.name}” (${thread.id}) in namespace ${namespace}, even after several attempts.
       \`\`\`${error}\`\`\``
     )
 
@@ -107,7 +108,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       const safelyIndex = indexationManager.threadIndexer(
         language,
         translations,
-        events
+        { events, namespace }
       )
 
       try {
@@ -120,6 +121,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   )
 
   return interaction.editReply({
-    content: `Finished indexing **${total} threads** in namespace \`${language}\`.`,
+    content: `Finished indexing **${total} threads** in namespace \`${namespace}\`.`,
   })
 }

@@ -9,20 +9,26 @@ import type { ResolvedThread } from './FAQManager'
 import type { PineconeEntry, PineconeNamespace } from './SearchManager'
 import type { LocalizationItem } from './LocalizationManager'
 import { type LanguageCode, LOCALES } from '../constants/i18n'
-import { PINECONE_API_KEY } from '../constants/config'
+import { IS_DEV, PINECONE_API_KEY } from '../constants/config'
 import { logger } from '../utils/logger'
 import { withRetries } from '../utils/withRetries'
 
-class IndexationManager {
+export class IndexationManager {
   // This is the name of the index on Pinecone
-  #INDEX_NAME = 'faq-index'
+  #indexName = 'faq-index'
+
+  // This is intended to avoid polluting the production indexes during
+  // development; this will create the same indexes as production, but prefixed
+  // with this prefix
+  #namespacePrefix = IS_DEV ? 'test-' : ''
+
   index: Index<RecordMetadata>
   client: Client
 
   constructor(client: Client) {
     this.client = client
     this.index = new Pinecone({ apiKey: PINECONE_API_KEY ?? '_' }).index(
-      this.#INDEX_NAME
+      this.#indexName
     )
   }
 
@@ -38,11 +44,19 @@ class IndexationManager {
     }
   }
 
+  getNamespaceName(namespace: PineconeNamespace) {
+    return this.#namespacePrefix + namespace
+  }
+
+  getNamespace(namespace: PineconeNamespace) {
+    return this.index.namespace(this.getNamespaceName(namespace))
+  }
+
   async indexRecords(entries: PineconeEntry[], namespace: PineconeNamespace) {
     const count = entries.length
     while (entries.length) {
       const batch = entries.splice(0, 90)
-      await this.index.namespace(namespace).upsertRecords(batch)
+      await this.getNamespace(namespace).upsertRecords(batch)
     }
     return count
   }
@@ -73,7 +87,7 @@ class IndexationManager {
 
   async unindexThread(threadId: string, namespace: PineconeNamespace) {
     try {
-      await this.index.namespace(namespace).deleteOne(threadId)
+      await this.getNamespace(namespace).deleteOne(threadId)
       logger.info('INDEXING', { action: 'DELETE', id: threadId, namespace })
     } catch (error) {
       // Unindexing may fail with a 404 if the resource didn’t exist in the
@@ -93,22 +107,26 @@ class IndexationManager {
   threadIndexer(
     language: LanguageCode,
     translations: LocalizationItem[],
-    events?: {
-      onThread?: (thread: ResolvedThread) => void
-      onTranslationFailure?: (thread: ResolvedThread, reason: string) => void
-    },
-    {
-      retries = 5,
-      backoffMs = 3000,
-    }: { retries?: number; backoffMs?: number } = {}
+    options?: {
+      namespace?: PineconeNamespace
+      events?: {
+        onThread?: (thread: ResolvedThread) => void
+        onTranslationFailure?: (thread: ResolvedThread, reason: string) => void
+      }
+      backoff?: { retries?: number; backoffMs?: number }
+    }
   ) {
+    const { retries = 5, backoffMs = 3000 } = options?.backoff ?? {}
+    const { events } = options ?? {}
+    const namespace = options?.namespace ?? language
+
     return (thread: ResolvedThread) => {
       return withRetries(
         async () => {
           await events?.onThread?.(thread)
 
           if (language === 'en') {
-            await this.indexThread(thread, language)
+            await this.indexThread(thread, namespace)
           } else {
             const response =
               await this.client.localizationManager.translateThread(
@@ -122,7 +140,7 @@ class IndexationManager {
                 name: response.name,
                 content: response.content,
               }
-              await this.indexThread(localizedThread, language)
+              await this.indexThread(localizedThread, namespace)
             } else {
               events?.onTranslationFailure?.(thread, response.reason)
             }
