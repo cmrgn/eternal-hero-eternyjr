@@ -65,10 +65,6 @@ const FUZZY_SEARCH_OPTIONS = {
 }
 
 export class SearchManager {
-  // This is the name of the index on Pinecone
-  #INDEX_NAME = 'faq-index'
-
-  index: IndexationManager
   client: Client
   altFuse: Fuse<{ from: string; to: string }>
 
@@ -79,7 +75,6 @@ export class SearchManager {
     this.#log('info', 'Instantiating client')
 
     this.client = client
-    this.index = this.client.indexationManager
 
     this.altFuse = new Fuse(
       [
@@ -151,7 +146,7 @@ export class SearchManager {
     namespaceName: PineconeNamespace,
     limit = 1
   ) {
-    const response = await this.index
+    const response = await this.client.indexationManager
       .resolveNamespace(namespaceName)
       .searchRecords({
         query: { topK: limit, inputs: { text: query } },
