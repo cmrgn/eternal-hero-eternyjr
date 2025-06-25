@@ -7,6 +7,7 @@ import {
 import { logger } from '../utils/logger'
 import type { PineconeMetadata } from '../managers/SearchManager'
 import { ENGLISH_LANGUAGE_OBJECT, LANGUAGE_OBJECTS } from '../constants/i18n'
+import { createEmbed } from '../utils/createEmbed'
 
 export const scope = 'OFFICIAL'
 
@@ -40,6 +41,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const visible = options.getBoolean('visible') ?? false
   const raw = options.getBoolean('raw') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
+  const embed = createEmbed(false)
+  embed.setTitle(`Asked: “${query}”`)
 
   await interaction.deferReply({ flags })
 
@@ -48,10 +51,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   if (!crowdinCode) {
     logger.command(interaction, 'Aborting due to lack of guessed language')
-    return interaction.editReply({
-      content:
-        'Unfortunately, the language could not be guessed from your query.',
-    })
+    embed.setDescription(
+      'Unfortunately, the language could not be guessed from your query.'
+    )
+    return interaction.editReply({ embeds: [embed] })
   }
 
   logger.command(interaction, 'Performing the search', { crowdinCode })
@@ -70,20 +73,34 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     )
     const localizedError = languageObject?.messages.no_results
     const error = localizedError ?? ENGLISH_LANGUAGE_OBJECT.messages.no_results
-    return interaction.editReply({ content: error })
+    embed.setDescription(error)
+    return interaction.editReply({ embeds: [embed] })
   }
 
-  const { entry_question: question, entry_answer: answer } =
-    result.fields as PineconeMetadata
+  const {
+    entry_question: question,
+    entry_answer: answer,
+    entry_url: url,
+    entry_indexed_at: indexedAt,
+  } = result.fields as PineconeMetadata
+  const timestamp = `<t:${Math.round(new Date(indexedAt).valueOf() / 1000)}:d>`
+
+  embed.addFields({ name: 'Source', value: url, inline: true })
+  embed.addFields({ name: 'Indexed on', value: timestamp, inline: true })
 
   if (raw) {
     logger.command(interaction, 'Returning a raw answer', { crowdinCode })
-    return interaction.editReply({ content: answer })
+    embed.setDescription(answer)
+
+    return interaction.editReply({ embeds: [embed] })
   }
 
   const context = { question, answer }
+
   logger.command(interaction, 'Summarizing the answer', { crowdinCode })
   const localizedAnswer = await localizationManager.summarize(query, context)
 
-  return interaction.editReply({ content: localizedAnswer ?? answer })
+  embed.setDescription(localizedAnswer ?? answer)
+
+  return interaction.editReply({ embeds: [embed] })
 }

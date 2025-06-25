@@ -111,7 +111,7 @@ export class LocalizationManager {
     systemPrompt = SYSTEM_PROMPT,
     model = this.#gptModel
   ) {
-    this.#log('info', 'Prompting ChatGPT', { userPrompt, model })
+    this.#log('info', 'Prompting ChatGPT', { model })
 
     const response = await this.openai.chat.completions.create({
       model,
