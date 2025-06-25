@@ -5,6 +5,7 @@ import { formatUser } from './formatUser'
 
 const command = (
   interaction: ChatInputCommandInteraction,
+  message: string,
   extra?: Record<PropertyKey, unknown>
 ) => {
   const guild = interaction.guild
@@ -12,11 +13,11 @@ const command = (
     channel => channel.id === interaction.channelId
   )
 
-  console.log('COMMAND', {
+  console.log(`[${interaction.commandName}]`, message, {
     ...extra,
-    user: formatUser(interaction.user),
-    channel: { name: channel?.name, id: interaction.channelId },
-    command: interaction.commandName,
+    userId: interaction.user.id,
+    guildId: interaction.guildId,
+    channelId: channel?.id,
     arguments: interaction.options.data,
   })
 }
@@ -37,4 +38,21 @@ const info = (label: string, extra?: Record<PropertyKey, unknown>) => {
   console.log(label, extra)
 }
 
-export const logger = { command, info, giveaway, utils: { formatUser } }
+export const LOG_SEVERITIES = ['info', 'warn', 'error'] as const
+
+const log =
+  (scope: string, severityThreshold: number) =>
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  (type: (typeof LOG_SEVERITIES)[number], message: string, ...args: any[]) => {
+    if (LOG_SEVERITIES.indexOf(type) >= severityThreshold)
+      console[type](`[${scope}]`, message, ...args)
+  }
+
+export const logger = {
+  LOG_SEVERITIES,
+  log,
+  command,
+  info,
+  giveaway,
+  utils: { formatUser },
+}

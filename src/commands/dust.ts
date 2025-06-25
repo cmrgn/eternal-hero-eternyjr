@@ -65,7 +65,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const essences = interaction.options.getInteger('divine_essences') ?? 0
   const clanBonds = interaction.options.getInteger('clan_bonds') ?? 0
 
-  logger.command(interaction)
+  logger.command(interaction, 'Starting command execution')
 
   const legKeysViaBonds = Math.floor(clanBonds / 1500)
   const totalLegKeys = legKeys + legKeysViaBonds

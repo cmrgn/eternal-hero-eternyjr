@@ -19,7 +19,11 @@ type DiscordMessage = OmitPartialGroupDMChannel<
 export class LeaderboardManager {
   client: Client
 
+  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
+  #log = logger.log('LeaderboardManager', this.#severityThreshold)
+
   constructor(client: Client) {
+    this.#log('info', 'Instantiating manager')
     this.client = client
   }
 
@@ -29,6 +33,8 @@ export class LeaderboardManager {
     guildId: string
     increment?: number
   }) {
+    this.#log('info', 'Registering contribution', options)
+
     const { userId, guildId, channelId, increment = 1 } = options
     try {
       await pool.query(
@@ -57,6 +63,8 @@ export class LeaderboardManager {
   }
 
   async getLeaderboard(guildId: string, limit: number) {
+    this.#log('info', 'Retrieving leaderboard', { guildId, limit })
+
     const { rows } = await pool.query(
       `
         SELECT user_id, contribution_count
@@ -77,6 +85,13 @@ export class LeaderboardManager {
 
       if (!member || !guildId || !content) return
       if (shouldIgnoreInteraction(message)) return
+
+      this.#log('info', 'Handling contribution', {
+        type: event === Events.MessageCreate ? 'insertion' : 'deletion',
+        guildId,
+        channelId,
+        messageId: message.id,
+      })
 
       // Perform a quick and cheap check to figure out whether the message
       // contains any link whatsoever, otherwise return early.
@@ -122,6 +137,13 @@ export class LeaderboardManager {
       client.faqManager.links.some(link => newMessage.content?.includes(link))
 
     if (hadOldMessageLinks !== hasNewMessageLinks) {
+      this.#log('info', 'Handling contribution', {
+        type: 'edition',
+        guildId,
+        channelId,
+        messageId: newMessage.id,
+      })
+
       const hasRemovedLinks = hadOldMessageLinks && !hasNewMessageLinks
       const hasAddedLinks = !hadOldMessageLinks && hasNewMessageLinks
       const increment = hasRemovedLinks ? -1 : hasAddedLinks ? +1 : 0
@@ -132,6 +154,8 @@ export class LeaderboardManager {
   }
 
   bindEvents() {
+    this.#log('info', 'Binding events onto the manager instance')
+
     // Look for FAQ links in any message in order to maintain the FAQ leaderboard.
     this.client.on(Events.MessageCreate, this.faqLinksOnCreate.bind(this))
     this.client.on(Events.MessageDelete, this.faqLinksOnDelete.bind(this))

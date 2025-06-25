@@ -26,7 +26,11 @@ export class IndexationManager {
   index: Index<RecordMetadata>
   client: Client
 
+  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
+  #log = logger.log('IndexationManager', this.#severityThreshold)
+
   constructor(client: Client) {
+    this.#log('info', 'Instantiating manager')
     this.client = client
     this.index = new Pinecone({ apiKey: PINECONE_API_KEY ?? '_' }).index(
       this.#indexName
@@ -59,6 +63,7 @@ export class IndexationManager {
   ) {
     const count = entries.length
     const namespace = this.resolveNamespace(namespaceName)
+    this.#log('info', 'Indexing entries', { count, namespace })
 
     while (entries.length) {
       const batch = entries.splice(0, 90)
@@ -72,24 +77,24 @@ export class IndexationManager {
     thread: AnyThreadChannel | ResolvedThread,
     namespaceName: PineconeNamespace
   ) {
-    const threadId = thread.id
+    this.#log('info', 'Indexing thread', { action: 'UPSERT', id: thread.id })
+
     const isResolved = 'isResolved' in thread && thread.isResolved
     const resolvedThread = isResolved
       ? thread
       : await this.client.faqManager.resolveThread(thread)
     const record = this.prepareForIndexing(resolvedThread)
     await this.indexRecords([record], namespaceName)
-
-    logger.info('INDEXING', {
-      action: 'UPSERT',
-      id: threadId,
-      namespace: this.resolveNamespaceName(namespaceName),
-    })
   }
 
   async indexThreadInAllLanguages(thread: ResolvedThread, concurrency = 3) {
     const { crowdinManager } = this.client
     const translations = await crowdinManager.fetchAllProjectTranslations()
+    this.#log('info', 'Indexing thread in all languages', {
+      action: 'UPSERT',
+      id: thread.id,
+      concurrency,
+    })
 
     await pMap(
       LOCALES,
@@ -104,12 +109,12 @@ export class IndexationManager {
 
   async unindexThread(threadId: string, namespaceName: PineconeNamespace) {
     try {
-      await this.resolveNamespace(namespaceName).deleteOne(threadId)
-      logger.info('INDEXING', {
+      this.#log('info', 'Indexing thread', {
         action: 'DELETE',
         id: threadId,
         namespace: this.resolveNamespaceName(namespaceName),
       })
+      await this.resolveNamespace(namespaceName).deleteOne(threadId)
     } catch (error) {
       // Unindexing may fail with a 404 if the resource didn’t exist in the
       // index to begin with
@@ -119,6 +124,12 @@ export class IndexationManager {
   }
 
   async unindexThreadInAllLanguages(threadId: string, concurrency = 3) {
+    this.#log('info', 'Indexing thread in all languages', {
+      action: 'DELETE',
+      id: threadId,
+      concurrency,
+    })
+
     await pMap(
       LOCALES,
       async ({ isOnCrowdin, languageCode }) => {
@@ -175,6 +186,8 @@ export class IndexationManager {
   }
 
   bindEvents() {
+    this.#log('info', 'Binding events onto the manager instance')
+
     this.client.faqManager.on(
       Events.ThreadCreate,
       this.indexThreadInAllLanguages.bind(this)

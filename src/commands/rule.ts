@@ -66,7 +66,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const number = rule.split(': ')[0]
   const message = RULES[rule as keyof typeof RULES]
 
-  logger.command(interaction)
+  logger.command(interaction, 'Starting command execution')
 
   return interaction.reply(
     `${user ? `${userMention(user.id)} ` : ''}${bold(number)}: ${message}`

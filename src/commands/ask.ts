@@ -30,7 +30,7 @@ export const data = new SlashCommandBuilder()
   .setDescription('Ask the FAQ')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.command(interaction)
+  logger.command(interaction, 'Starting command execution')
 
   const { options, client } = interaction
   const { searchManager, localizationManager } = client

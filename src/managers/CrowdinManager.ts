@@ -38,14 +38,18 @@ export class CrowdinManager {
   #lastFetchedAt = 0
   #cacheTTL = 15 * 60 * 1000 // 15 minutes
 
+  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
+  #log = logger.log('CrowdinManager', this.#severityThreshold)
+
   constructor(client: Client) {
+    this.#log('info', 'Instantiating manager')
     // @ts-expect-error
     this.crowdin = new Crowdin.default({ token: CROWDIN_TOKEN ?? '' })
     this.client = client
   }
 
   async getProject() {
-    logger.info('CROWDIN', { endPoint: 'projectsGroupsApi.listProjects' })
+    this.#log('info', 'Resolving project')
     const projects = await this.crowdin.projectsGroupsApi.listProjects()
     const project = projects.data.find(
       project => project.data.identifier === this.#projectIdentifier
@@ -56,6 +60,8 @@ export class CrowdinManager {
   }
 
   async cacheCrowdinStrings(strings: SourceStringsModel.String[]) {
+    this.#log('info', 'Caching strings')
+
     const values: string[] = []
     const params: (string | number | SourceStringsModel.PluralText)[] = []
 
@@ -78,23 +84,29 @@ export class CrowdinManager {
   }
 
   async getProjectProgress() {
-    logger.info('CROWDIN', {
-      endPoint: 'translationStatusApi.getProjectProgress',
-    })
+    this.#log('info', 'Getting project progress')
+
     const { data: projectProgress } =
       await this.crowdin.translationStatusApi.getProjectProgress(
         this.#projectId
       )
+
     return projectProgress
   }
 
   async getLanguage(locale: string) {
+    this.#log('info', 'Getting language')
+
     const { targetLanguages: languages } = await this.getProject()
+
     return languages.find(language => language.id === locale)
   }
 
   async getStringTranslationsForAllLanguages(stringId: StringId) {
+    this.#log('info', 'Getting all translations from string', { stringId })
+
     const { targetLanguages: languages } = await this.getProject()
+
     return this.getStringTranslations(stringId, languages)
   }
 
@@ -102,14 +114,8 @@ export class CrowdinManager {
     stringId: StringId,
     languages: LanguagesModel.Language[]
   ) {
-    logger.info('CROWDIN', {
-      endPoint: 'stringTranslationsApi.listStringTranslations',
-      params: {
-        projectId: this.#projectId,
-        stringId,
-        languages: languages.length,
-      },
-    })
+    this.#log('info', 'Getting string translations from string', { stringId })
+
     return Promise.all(
       languages.map(language =>
         this.getProjectStringTranslation(stringId, language)
@@ -118,6 +124,8 @@ export class CrowdinManager {
   }
 
   async getStringItem(identifier: string) {
+    this.#log('info', 'Getting string item', { identifier })
+
     const { rows } = await pool.query(
       'SELECT string_id, text FROM crowdin_strings WHERE identifier = $1',
       [identifier]
@@ -126,7 +134,7 @@ export class CrowdinManager {
     const result: { string_id: StringId; text: string } | undefined = rows[0]
 
     if (!result) {
-      const strings = await this.getProjectStrings(this.#projectId)
+      const strings = await this.getProjectStrings()
       await this.cacheCrowdinStrings(strings)
 
       return strings.find(string => string.identifier === identifier)
@@ -139,6 +147,8 @@ export class CrowdinManager {
     stringId: StringId,
     language: LanguagesModel.Language
   ) {
+    this.#log('info', 'Getting string translation', { stringId, language })
+
     const outcome =
       await this.crowdin.stringTranslationsApi.listStringTranslations(
         this.#projectId,
@@ -149,19 +159,16 @@ export class CrowdinManager {
     return { language, translation: outcome.data[0] }
   }
 
-  async getProjectStrings(projectId: number) {
+  async getProjectStrings() {
+    this.#log('info', 'Getting project strings')
+
     const allStrings: SourceStringsModel.String[] = []
     let offset = 0
     const limit = 500 // Max limit per request
 
-    logger.info('CROWDIN', {
-      endPoint: 'sourceStringsApi.listProjectStrings',
-      params: { projectId, limit },
-    })
-
     while (true) {
       const { data } = await this.crowdin.sourceStringsApi.listProjectStrings(
-        projectId,
+        this.#projectId,
         { limit, offset }
       )
 
@@ -174,6 +181,8 @@ export class CrowdinManager {
   }
 
   async buildProject() {
+    this.#log('info', 'Building project')
+
     const {
       data: { id: buildId },
     } = await this.crowdin.translationsApi.buildProject(this.#projectId)
@@ -182,6 +191,8 @@ export class CrowdinManager {
   }
 
   async waitForBuild(buildId: number) {
+    this.#log('info', 'Waiting for build to finish')
+
     let status = 'inProgress'
     while (status === 'inProgress') {
       const { data } = await this.crowdin.translationsApi.checkBuildStatus(
@@ -195,6 +206,8 @@ export class CrowdinManager {
   }
 
   async downloadBuildArtefact(buildId: number) {
+    this.#log('info', 'Downloading build artefact')
+
     // Retrieve the URL to download the zip file with all CSV translation files
     const { data } = await this.crowdin.translationsApi.downloadTranslations(
       this.#projectId,
@@ -228,6 +241,8 @@ export class CrowdinManager {
   }
 
   async fetchAllProjectTranslations(forceRefresh = false) {
+    this.#log('info', 'Fetching all project translations')
+
     const now = Date.now()
 
     if (
@@ -235,6 +250,7 @@ export class CrowdinManager {
       this.#cachedTranslations &&
       now - this.#lastFetchedAt < this.#cacheTTL
     ) {
+      this.#log('info', 'Reading all project translations from cache')
       return this.#cachedTranslations
     }
 

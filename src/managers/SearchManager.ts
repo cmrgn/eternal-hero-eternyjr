@@ -10,6 +10,7 @@ import Fuse, { type FuseResult } from 'fuse.js'
 import { PINECONE_API_KEY } from '../constants/config'
 import type { LanguageCode } from '../constants/i18n'
 import type { IndexationManager } from './IndexationManager'
+import { logger } from '../utils/logger'
 
 export type PineconeMetadata = {
   entry_question: string
@@ -71,7 +72,12 @@ export class SearchManager {
   client: Client
   altFuse: Fuse<{ from: string; to: string }>
 
+  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
+  #log = logger.log('LeaderboardManager', this.#severityThreshold)
+
   constructor(client: Client) {
+    this.#log('info', 'Instantiating client')
+
     this.client = client
     this.index = this.client.indexationManager
 
@@ -99,6 +105,8 @@ export class SearchManager {
     namespaceName: PineconeNamespace,
     limit = 1
   ): Promise<{ query: string; results: SearchResult[] }> {
+    this.#log('info', 'Peforming search', { query, type, namespaceName, limit })
+
     if (!PINECONE_API_KEY && type === 'VECTOR') {
       type = 'FUZZY'
       console.log(

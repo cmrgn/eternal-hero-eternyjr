@@ -23,7 +23,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (!channel) throw new Error('Could not retrieve channel.')
   if (!channel.isSendable()) throw new Error('Could not send in channel.')
 
-  logger.command(interaction)
+  logger.command(interaction, 'Starting command execution')
 
   await channel.send(message)
   await interaction.reply({ content: 'Sent.', flags: Ephemeral })

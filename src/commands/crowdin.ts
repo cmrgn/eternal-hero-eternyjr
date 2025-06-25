@@ -72,10 +72,12 @@ export const data = new SlashCommandBuilder()
   .setDescription('Interact with Crowdin')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.command(interaction)
-
   const { guildId, options } = interaction
   if (!guildId) return
+
+  logger.command(interaction, 'Starting command execution', {
+    subcommand: options.getSubcommand(),
+  })
 
   if (options.getSubcommand() === 'progress') {
     return commandProgress(interaction)

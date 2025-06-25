@@ -7,6 +7,7 @@ import { OPENAI_API_KEY } from '../constants/config'
 import { type LanguageCode, LOCALES } from '../constants/i18n'
 import type { ResolvedThread } from './FAQManager'
 import { cleanUpTranslation } from '../utils/cleanUpTranslation'
+import { logger } from '../utils/logger'
 
 const LOCALIZATION_PROMPT = `
 You are a translation bot specifically for the game Eternal Hero, so the way you translate game terms is important.
@@ -18,15 +19,16 @@ export type LocalizationItem = {
 }
 
 export class LocalizationManager {
-  #GPT_MODEL = 'gpt-3.5-turbo'
+  #gptModel = 'gpt-3.5-turbo'
   openai: OpenAI
   client: Client
 
-  #cachedTranslations: LocalizationItem[] | null = null
-  #lastFetchedAt = 0
-  #cacheTTL = 15 * 60 * 1000 // 15 minutes
+  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
+  #log = logger.log('LeaderboardManager', this.#severityThreshold)
 
   constructor(client: Client) {
+    this.#log('info', 'Instantiating manager')
+
     if (!OPENAI_API_KEY) {
       throw new Error('Missing environment variable OPENAI_API_KEY; aborting.')
     }
@@ -40,6 +42,7 @@ export class LocalizationManager {
   }
 
   guessLanguage(userInput: string): LanguageCode | null {
+    this.#log('info', 'Guessing language', { userInput })
     const guess = this.client.languageIdentifier.findLanguage(userInput)
     if (guess.probability < 0.9) return null
     if (guess.language === 'und') return null
@@ -47,7 +50,9 @@ export class LocalizationManager {
     return guess.language
   }
 
-  async promptGPT(userPrompt: string, model = this.#GPT_MODEL) {
+  async promptGPT(userPrompt: string, model = this.#gptModel) {
+    this.#log('info', 'Prompting ChatGPT', { userPrompt, model })
+
     const res = await this.openai.chat.completions.create({
       model,
       messages: [
@@ -60,6 +65,8 @@ export class LocalizationManager {
   }
 
   translateToEnglish(originalText: string) {
+    this.#log('info', 'Translating to English', { originalText })
+
     return this.promptGPT(`
     ${LOCALIZATION_PROMPT}
     Translate the following text to English unless it is already in English, in which case return it as is.
@@ -68,6 +75,8 @@ export class LocalizationManager {
   }
 
   translateFromEnglish(answerText: string, testSentence: string) {
+    this.#log('info', 'Translating from English', { answerText, testSentence })
+
     return this.promptGPT(`
     ${LOCALIZATION_PROMPT}
     Translate the following text to the language used in the test sentence “${testSentence}”, unless that sentence is in English, in which case return the text as is.
@@ -79,6 +88,11 @@ export class LocalizationManager {
     userQuestion: string,
     matchedFAQ: { question: string; answer: string }
   ) {
+    this.#log('info', 'Translating from English and rephrasing', {
+      userQuestion,
+      threadName: matchedFAQ.question,
+    })
+
     return this.promptGPT(`
     The player asked: “${userQuestion}”
     
@@ -101,6 +115,12 @@ export class LocalizationManager {
     | { status: 'FAILURE'; reason: string }
     | { status: 'SUCCESS'; name: string; content: string }
   > {
+    this.#log('info', 'Translating thread', {
+      id: thread.id,
+      language,
+      translationCount: translations.length,
+    })
+
     const content = `${thread.name}\n${thread.content}`
     const glossary = this.buildGlossaryForEntry(content, translations, language)
       .map(({ source, target }) => `- ${source} → ${target}`)
@@ -131,8 +151,15 @@ export class LocalizationManager {
     const translatedTitle = titleMatch?.[1].trim() ?? ''
     const translatedContent = contentMatch?.[1].trim() ?? ''
 
-    if (!translatedTitle || !translatedContent)
+    if (!translatedTitle || !translatedContent) {
+      this.#log('error', 'Failed to translate thread', {
+        id: thread.id,
+        language,
+        reason: response,
+      })
+
       return { status: 'FAILURE', reason: response }
+    }
 
     return {
       status: 'SUCCESS',
@@ -147,6 +174,11 @@ export class LocalizationManager {
     language: LanguageCode,
     { maxTerms = 100, scoreCutoff = -100 } = {}
   ) {
+    this.#log('info', 'Building glossary for thread', {
+      language,
+      translationCount: translations.length,
+    })
+
     const haystack = cleanUpTranslation(content)
     const scored: { source: string; target: string; score: number }[] = []
     const seen = new Set<string>()

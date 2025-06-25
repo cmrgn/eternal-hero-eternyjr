@@ -67,7 +67,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }))
     )
 
-    logger.command(interaction, {
+    logger.command(interaction, 'Starting command execution', {
       results: search.results.map(result => ({
         name: result.fields.entry_question,
         score: result._score,

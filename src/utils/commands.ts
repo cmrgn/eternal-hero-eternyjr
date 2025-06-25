@@ -18,11 +18,11 @@ export async function deployCommands(guildId: string) {
     .map(command => command.data)
 
   try {
-    console.log('Reloading bot commands for guild', guildId)
+    console.log('[Discord] Reloading bot commands', { guildId })
     await rest.put(endpoint, { body })
-    console.log('Successfully reloaded bot commands for guild', guildId)
+    console.log('[Discord] Successfully reloaded bot commands', { guildId })
   } catch (error) {
-    console.error('Failed to reload bot commands for guild', guildId, error)
+    console.error('[Discord] Failed to reload bot commands', { guildId }, error)
   }
 }
 

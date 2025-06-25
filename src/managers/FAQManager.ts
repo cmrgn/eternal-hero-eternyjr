@@ -42,7 +42,11 @@ export class FAQManager {
     [Events.ThreadDelete]: [] as OnThreadEvents[Events.ThreadDelete][],
   }
 
+  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
+  #log = logger.log('FAQManager', this.#severityThreshold)
+
   constructor(client: Client) {
+    this.#log('info', 'Instantiating manager')
     this.client = client
     // Force `guildId` to `DISCORD_SERVER_ID` to test with the real FAQ, even
     // of the test server
@@ -83,6 +87,7 @@ export class FAQManager {
   }
 
   async cacheThreads() {
+    this.#log('info', 'Caching threads on the manager instance')
     this.#threads = await this.fetchThreads()
     this.#links = [
       ...this.#threads.map(thread => thread.url),
@@ -98,6 +103,7 @@ export class FAQManager {
   }
 
   async getGuild() {
+    this.#log('info', 'Getting guild object')
     const { guilds } = this.client
     return guilds.cache.get(this.guildId) ?? (await guilds.fetch(this.guildId))
   }
@@ -114,7 +120,7 @@ export class FAQManager {
     const archivedThreads = Array.from(archivedThreadRes.threads.values())
     const threads = [...activeThreads, ...archivedThreads]
 
-    logger.info('FETCH_THREADS', {
+    this.#log('info', 'Fetching all FAQ threads', {
       active: activeThreads.length,
       archived: archivedThreads.length,
       total: threads.length,
@@ -124,6 +130,7 @@ export class FAQManager {
   }
 
   getFAQForum(guild: Guild) {
+    this.#log('info', 'Getting FAQ forum')
     const faq = guild.channels.cache.find(
       ({ name }) => name === this.#FORUM_NAME
     )
@@ -137,6 +144,7 @@ export class FAQManager {
 
   async onThreadCreate(thread: AnyThreadChannel) {
     if (this.belongsToFAQ(thread)) {
+      this.#log('info', 'Responding to thread creation', { id: thread.id })
       this.cacheThreads()
       const resolvedThread = await this.resolveThread(thread)
       for (const listener of this.#listeners[Events.ThreadCreate]) {
@@ -147,6 +155,7 @@ export class FAQManager {
 
   async onThreadDelete(thread: AnyThreadChannel) {
     if (this.belongsToFAQ(thread)) {
+      this.#log('info', 'Responding to thread deletion', { id: thread.id })
       this.cacheThreads()
       for (const listener of this.#listeners[Events.ThreadDelete]) {
         listener(thread.id)
@@ -156,6 +165,10 @@ export class FAQManager {
 
   async onThreadUpdate(prev: AnyThreadChannel, next: AnyThreadChannel) {
     if (this.belongsToFAQ(prev) && prev.name !== next.name) {
+      this.#log('info', 'Responding to thread update', {
+        id: next.id,
+        property: 'name',
+      })
       this.cacheThreads()
       const resolvedThread = await this.resolveThread(next)
       for (const listener of this.#listeners[Events.ThreadUpdate]) {
@@ -179,6 +192,10 @@ export class FAQManager {
 
     // Make sure the parent of the thread is the FAQ forum, abort if not
     if (this.belongsToFAQ({ parentId: thread.parent?.id ?? null, guild })) {
+      this.#log('info', 'Responding to thread update', {
+        id: thread.id,
+        property: 'content',
+      })
       const resolvedThread = await this.resolveThread(thread)
       for (const listener of this.#listeners[Events.ThreadUpdate]) {
         listener(resolvedThread)
@@ -204,6 +221,7 @@ export class FAQManager {
     thread: AnyThreadChannel | ResolvedThread
   ): Promise<ResolvedThread> {
     if ('isResolved' in thread && thread.isResolved) return thread
+    this.#log('info', 'Resolving thread', { id: thread.id })
 
     const firstMessage = await (
       thread as AnyThreadChannel
@@ -221,6 +239,7 @@ export class FAQManager {
   }
 
   bindEvents() {
+    this.#log('info', 'Binding events onto the manager instance')
     this.client.once(Events.ClientReady, this.cacheThreads.bind(this))
     this.client.on(Events.ThreadCreate, this.onThreadCreate.bind(this))
     this.client.on(Events.ThreadDelete, this.onThreadDelete.bind(this))

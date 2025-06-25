@@ -43,6 +43,10 @@ async function fetchTranslationsIfNeeded(
 
   if (language === 'en') return []
 
+  logger.command(interaction, 'Fetching translations from Crowdin', {
+    language,
+  })
+
   await interaction.editReply('Fetching translations from Crowdin…')
 
   // The reason we don’t fetch only the translations for the specific language
@@ -53,15 +57,19 @@ async function fetchTranslationsIfNeeded(
 }
 
 async function fetchFAQContent(interaction: ChatInputCommandInteraction) {
+  logger.command(interaction, 'Fetching FAQ content')
+
   const { faqManager } = interaction.client
+
   await interaction.editReply('Loading all FAQ threads…')
+
   return Promise.all(
     faqManager.threads.map(thread => faqManager.resolveThread(thread))
   )
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.command(interaction)
+  logger.command(interaction, 'Starting command execution')
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
@@ -92,6 +100,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       `Could not index “${thread.name}” (${thread.id}) in namespace ${language}, even after several attempts.
       \`\`\`${error}\`\`\``
     )
+
+  logger.command(interaction, 'Processing all threads')
 
   // Iterate over all threads with the given concurrency, and for each thread,
   // translate it if the expected language is not English, and upsert it into

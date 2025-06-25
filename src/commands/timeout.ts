@@ -43,13 +43,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const duration = interaction.options.getString('duration', true)
   const durationMs = ms(duration as StringValue)
 
-  logger.command(interaction)
+  logger.command(interaction, 'Starting command execution')
 
   if (!interaction.guild) throw new Error('Cannot retrieve guild.')
   if (!member) throw new Error('Cannot retrieve member.')
   if (durationMs === 0) throw new Error('Cannot time out a user for 0ms.')
 
   // Time out the user
+  logger.command(interaction, 'Timing out member')
   await member.timeout(durationMs, `Violating rule ${rule}`)
 
   // biome-ignore lint/style/noNonNullAssertion: <explanation>
@@ -62,7 +63,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const message = `${userMention(member.id)} was timed out for ${ms(durationMs)} for violating ${bold(number.toLocaleLowerCase())} (${label}).`
 
   // Announce the timeout
-  if (moderation?.isSendable()) await moderation.send(message)
+  if (moderation?.isSendable()) {
+    logger.command(interaction, 'Announcing timeout')
+    await moderation.send(message)
+  }
 
   // Confirm the timeout action was taken
   return interaction.reply({ content: message, flags: MessageFlags.Ephemeral })
