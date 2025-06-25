@@ -76,7 +76,12 @@ export class SearchManager {
     namespaceName: PineconeNamespace,
     limit = 1
   ): Promise<{ query: string; results: SearchResult[] }> {
-    this.#log('info', 'Peforming search', { query, type, namespaceName, limit })
+    this.#log('info', 'Performing search', {
+      query,
+      type,
+      namespaceName,
+      limit,
+    })
 
     if (!PINECONE_API_KEY && type === 'VECTOR') {
       type = 'FUZZY'
