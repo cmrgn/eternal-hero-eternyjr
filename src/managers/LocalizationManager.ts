@@ -61,7 +61,9 @@ export class LocalizationManager {
   }
 
   guessLanguageWithCld3(userInput: string) {
-    this.#log('info', 'Guessing language with cld3', { userInput })
+    // Commenting out this log since this function is called on *every* *single*
+    // message posted on Discord. This is too verbose and pollutes the logs.
+    // this.#log('info', 'Guessing language with cld3', { userInput })
 
     const guess = this.client.languageIdentifier.findLanguage(userInput)
 
