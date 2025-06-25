@@ -42,7 +42,7 @@ export type LocalizationItem = {
 }
 
 export class LocalizationManager {
-  #gptModel = 'gpt-3.5-turbo'
+  #gptModel = 'gpt-4o'
   openai: OpenAI
   client: Client
 
@@ -82,8 +82,7 @@ export class LocalizationManager {
         `You must respond with one of: ${CROWDIN_CODES}.`,
         'Only respond with UNSUPPORTED if there are no recognizable cues whatsoever.',
         'Do not explain your answer. Respond with a single code only.',
-      ].join('\n'),
-      'gpt-4o'
+      ].join('\n')
     )
 
     const context = { guess: response, userInput, cld3: guess }
@@ -172,10 +171,7 @@ export class LocalizationManager {
       },
     ]
     const response = await this.openai.chat.completions.create({
-      // GPT-4o is a much more consistent model for returning correct JSON. It
-      // has a lower rate of failure than GPT-3.5 which tends to replace quotes
-      // with quotation marks, etc.
-      model: 'gpt-4o',
+      model: this.#gptModel,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },
