@@ -225,7 +225,7 @@ export class LocalizationManager {
       `${thread.name}\n${thread.content}`,
       translations,
       crowdinCode,
-      { maxTerms: 50, scoreCutoff: -50 }
+      { maxTerms: 50, scoreCutoff: -25 }
     )
       .map(({ source, target }) => `- ${source} → ${target}`)
       .join('\n')
@@ -315,36 +315,54 @@ export class LocalizationManager {
   }
 
   buildGlossaryForEntry(
-    content: string,
-    translations: LocalizationItem[],
+    nameAndContent: string,
+    localizationItems: LocalizationItem[],
     crowdinCode: CrowdinCode,
-    { maxTerms = 100, scoreCutoff = -100 } = {}
+    { maxTerms = 100, scoreCutoff = -50 } = {}
   ) {
     this.#log('info', 'Building glossary for thread', {
       crowdinCode,
-      translationCount: translations.length,
+      translationCount: localizationItems.length,
     })
 
-    const haystack = cleanUpTranslation(content)
+    const haystack = cleanUpTranslation(nameAndContent)
     const scored: { source: string; target: string; score: number }[] = []
     const seen = new Set<string>()
 
-    for (const item of translations) {
+    for (const item of localizationItems) {
+      // This skip this localization item if the language translation is empty
       if (!(crowdinCode in item.translations)) continue
+
       const cleaned = cleanUpTranslation(item.translations.en)
       if (seen.has(cleaned)) continue
-      const match = fuzzysort.single(cleaned, haystack)
-      if (match && match.score >= scoreCutoff) {
-        scored.push({
-          source: cleaned,
-          target: cleanUpTranslation(item.translations[crowdinCode]),
-          score: match.score,
-        })
+
+      const target = cleanUpTranslation(item.translations[crowdinCode])
+
+      // Hybrid matching logic
+      let isMatch = false
+      let score = 0
+
+      // For very short terms, use exact substring match and set the score to
+      // 0 to treat exact match as perfect score
+      if (cleaned.length <= 3) {
+        if (haystack.includes(cleaned)) {
+          isMatch = true
+          score = 0
+        }
+      } else {
+        const match = fuzzysort.single(cleaned, haystack)
+        if (match && match.score >= scoreCutoff) {
+          isMatch = true
+          score = match.score
+        }
+      }
+
+      if (isMatch) {
+        scored.push({ source: cleaned, target, score })
         seen.add(cleaned)
       }
     }
 
-    // Sort by best match and limit count
     return scored.sort((a, b) => a.score - b.score).slice(0, maxTerms)
   }
 }
