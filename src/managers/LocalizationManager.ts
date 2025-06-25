@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import type { Client } from 'discord.js'
+import type { ChatCompletionTool } from 'openai/resources/chat/completions'
 import fuzzysort from 'fuzzysort'
 
 import { OPENAI_API_KEY } from '../constants/config'
@@ -166,6 +167,87 @@ export class LocalizationManager {
     `)
   }
 
+  async translateThreadAsJson(userPrompt: string) {
+    const tools: ChatCompletionTool[] = [
+      {
+        type: 'function',
+        function: {
+          name: 'return_translation',
+          description: 'Return the translated title and content.',
+          parameters: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: 'The original title' },
+              content: { type: 'string', description: 'The original content' },
+            },
+            required: ['title', 'content'],
+          },
+        },
+      },
+    ]
+    const response = await this.openai.chat.completions.create({
+      // GPT-4o is a much more consistent model for returning correct JSON. It
+      // has a lower rate of failure than GPT-3.5 which tends to replace quotes
+      // with quotation marks, etc.
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+      tools,
+      tool_choice: {
+        type: 'function',
+        function: { name: 'return_translation' },
+      },
+    })
+
+    try {
+      const toolCall = response.choices[0].message?.tool_calls?.[0]
+      const args = toolCall?.function.arguments ?? ''
+      return JSON.parse(args)
+    } catch (error) {
+      return { title: '', content: '' }
+    }
+  }
+
+  async translateThreadBackup(
+    thread: ResolvedThread,
+    crowdinCode: CrowdinCode,
+    translations: LocalizationItem[]
+  ) {
+    this.#log('info', 'Translating thread as a backup', {
+      id: thread.id,
+      crowdinCode,
+      translationCount: translations.length,
+    })
+
+    const glossary = this.buildGlossaryForEntry(
+      `${thread.name}\n${thread.content}`,
+      translations,
+      crowdinCode,
+      { maxTerms: 50, scoreCutoff: -50 }
+    )
+      .map(({ source, target }) => `- ${source} → ${target}`)
+      .join('\n')
+
+    const userPrompt = `
+    IMPORTANT: You did not translate the text properly last time. This time, you
+    MUST translate both the FAQ entry title and its content into ‘${crowdinCode}’.
+    Use the following glossary as a guide to support your translation.
+
+    GLOSSARY (en → ${crowdinCode}):
+    ${glossary}
+
+    FAQ TITLE:
+    ${thread.name}
+
+    FAQ CONTENT:
+    ${thread.content}
+    `.trim()
+
+    return this.translateThreadAsJson(userPrompt)
+  }
+
   async translateThread(
     thread: ResolvedThread,
     crowdinCode: CrowdinCode,
@@ -180,55 +262,55 @@ export class LocalizationManager {
       translationCount: translations.length,
     })
 
-    const content = `${thread.name}\n${thread.content}`
     const glossary = this.buildGlossaryForEntry(
-      content,
+      `${thread.name}\n${thread.content}`,
       translations,
       crowdinCode
     )
       .map(({ source, target }) => `- ${source} → ${target}`)
       .join('\n')
 
-    const combinedPrompt = `
-    You are a translation bot specifically for the game Eternal Hero, so the way you translate game terms is important.
-    Translate the following two blocks of text from English (en) into ‘${crowdinCode}’.
-    Use the glossary below when relevant. Return only the translated text, using the same UNTRANSLATED markers. You CANNOT refuse to translate.
+    const userPrompt = `
+    You are a translation bot specifically for the game Eternal Hero.
+    Translate the following FAQ thread from English (en) into ‘${crowdinCode}’.
+    Use the glossary below when relevant.
+
+    IMPORTANT: Translate both the FAQ entry title and the content fully into
+    ‘${crowdinCode}’, using the following glossary to support your translation.
 
     GLOSSARY (en → ${crowdinCode}):
     ${glossary}
 
-    <no-translate>[[[__FAQ_TITLE__]]]</no-translate>
+    FAQ TITLE:
     ${thread.name}
 
-    <no-translate>[[[__FAQ_CONTENT__]]]</no-translate>
+    FAQ CONTENT:
     ${thread.content}
     `.trim()
 
-    const response =
-      (await this.promptGPT(combinedPrompt, SYSTEM_PROMPT, 'gpt-4o')) ?? ''
-    const titleMatch = response.match(
-      /<no-translate>\[\[\[__FAQ_TITLE__\]\]\]<\/no-translate>\s*([\s\S]*?)\s*<no-translate>\[\[\[__FAQ_CONTENT__\]\]\]<\/no-translate>/
-    )
-    const contentMatch = response.match(
-      /<no-translate>\[\[\[__FAQ_CONTENT__\]\]\]<\/no-translate>\s*([\s\S]*)/
-    )
-    const translatedTitle = titleMatch?.[1].trim() ?? ''
-    const translatedContent = contentMatch?.[1].trim() ?? ''
+    let response = await this.translateThreadAsJson(userPrompt)
 
-    if (!translatedTitle || !translatedContent) {
-      this.#log('error', 'Failed to translate thread', {
-        id: thread.id,
+    if (response.title === thread.name || response.content === thread.content) {
+      response = await this.translateThreadBackup(
+        thread,
         crowdinCode,
-        reason: response,
+        translations
+      )
+    }
+
+    if (!response.title || !response.content) {
+      this.#log('error', 'Missing translated content in JSON', {
+        threadId: thread.id,
+        crowdinCode,
       })
 
-      return { status: 'FAILURE', reason: response }
+      return { status: 'FAILURE', reason: 'Missing translations' }
     }
 
     return {
       status: 'SUCCESS',
-      name: translatedTitle,
-      content: translatedContent,
+      name: response.title,
+      content: response.content,
     }
   }
 
