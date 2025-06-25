@@ -6,7 +6,6 @@ import { BASE_PROMPT } from './SearchManager'
 import { OPENAI_API_KEY } from '../constants/config'
 import { type LanguageCode, LOCALES } from '../constants/i18n'
 import type { ResolvedThread } from './FAQManager'
-import crowdin from '../utils/crowdin'
 import { cleanUpTranslation } from '../utils/cleanUpTranslation'
 
 const LOCALIZATION_PROMPT = `
@@ -169,27 +168,6 @@ export class LocalizationManager {
 
     // Sort by best match and limit count
     return scored.sort((a, b) => a.score - b.score).slice(0, maxTerms)
-  }
-
-  async fetchAllProjectTranslations(forceRefresh = false) {
-    const now = Date.now()
-
-    if (
-      !forceRefresh &&
-      this.#cachedTranslations &&
-      now - this.#lastFetchedAt < this.#cacheTTL
-    ) {
-      return this.#cachedTranslations
-    }
-
-    const buildId = await crowdin.buildProject()
-    await crowdin.waitForBuild(buildId)
-    const data = await crowdin.downloadBuildArtefact(buildId)
-
-    this.#cachedTranslations = data
-    this.#lastFetchedAt = now
-
-    return data
   }
 }
 

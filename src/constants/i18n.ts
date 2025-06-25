@@ -1,5 +1,5 @@
 export type Locale = {
-  crowdin: boolean
+  isOnCrowdin: boolean
   languageCode: string /* ISO 639-1 */
   languageName: string
   role: string
@@ -15,7 +15,7 @@ export type LanguageCode = Locale['languageCode']
 
 export const LOCALES: Locale[] = [
   {
-    crowdin: true,
+    isOnCrowdin: true,
     languageCode: 'de',
     languageName: 'Deutsch',
     role: 'de | Deutsch',
@@ -30,7 +30,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: false,
+    isOnCrowdin: false,
     languageCode: 'en',
     languageName: 'English',
     role: 'en | English',
@@ -45,7 +45,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: false,
+    isOnCrowdin: false,
     languageCode: 'es',
     languageName: 'Español',
     role: 'es | Español',
@@ -60,7 +60,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: true,
+    isOnCrowdin: true,
     languageCode: 'fr',
     languageName: 'Français',
     role: 'fr | Français',
@@ -75,7 +75,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: true,
+    isOnCrowdin: true,
     languageCode: 'it',
     languageName: 'Italiano',
     role: 'it | Italiano',
@@ -90,7 +90,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: true,
+    isOnCrowdin: true,
     languageCode: 'ja',
     languageName: '日本語',
     role: 'jp | 日本語',
@@ -105,7 +105,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: true,
+    isOnCrowdin: true,
     languageCode: 'kr',
     languageName: '한국어',
     role: 'kr | 한국어',
@@ -120,7 +120,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: false,
+    isOnCrowdin: false,
     languageCode: 'tl',
     languageName: 'Filipino',
     role: 'ph | Filipino',
@@ -135,7 +135,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: true,
+    isOnCrowdin: true,
     languageCode: 'pl',
     languageName: 'Polski',
     role: 'pol | Polski',
@@ -150,7 +150,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: true,
+    isOnCrowdin: true,
     languageCode: 'pt',
     languageName: 'Português',
     role: 'pt-br | Português',
@@ -165,7 +165,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: true,
+    isOnCrowdin: true,
     languageCode: 'ru',
     languageName: 'Русский',
     role: 'ru | Русский',
@@ -180,7 +180,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: false,
+    isOnCrowdin: false,
     languageCode: 'th',
     languageName: 'ภาษาไทย',
     role: 'th | ภาษาไทย',
@@ -195,7 +195,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: true,
+    isOnCrowdin: true,
     languageCode: 'tr',
     languageName: 'Türkçe',
     role: 'tr | Türkçe',
@@ -210,7 +210,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: true,
+    isOnCrowdin: true,
     languageCode: 'vi',
     languageName: 'Tiếng Việt',
     role: 'vn | Tiếng Việt',
@@ -225,7 +225,7 @@ export const LOCALES: Locale[] = [
     },
   },
   {
-    crowdin: true,
+    isOnCrowdin: true,
     languageCode: 'zh',
     languageName: '汉语',
     role: 'zh | 汉语',

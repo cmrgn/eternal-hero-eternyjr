@@ -8,10 +8,9 @@ import type {
   ResponseObject,
   StringTranslationsModel,
   TranslationStatusModel,
-} from '@crowdin/crowdin-api-client'
+} from '../managers/CrowdinManager'
 
 import { logger } from '../utils/logger'
-import crowdin, { CROWDIN_PROJECT_ID } from '../utils/crowdin'
 import { LOCALES } from '../constants/i18n'
 
 export const scope = 'OFFICIAL'
@@ -28,7 +27,7 @@ export const data = new SlashCommandBuilder()
           .setDescription('Translation language')
           .setChoices(
             Object.values(LOCALES)
-              .filter(locale => locale.crowdin)
+              .filter(locale => locale.isOnCrowdin)
               .map(locale => ({
                 name: locale.languageName,
                 value: locale.languageCode,
@@ -57,7 +56,7 @@ export const data = new SlashCommandBuilder()
           .setDescription('Translation language')
           .setChoices(
             Object.values(LOCALES)
-              .filter(locale => locale.crowdin)
+              .filter(locale => locale.isOnCrowdin)
               .map(locale => ({
                 name: locale.languageName,
                 value: locale.languageCode,
@@ -89,14 +88,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
 async function commandProgress(interaction: ChatInputCommandInteraction) {
   const { options } = interaction
+  const { crowdinManager } = interaction.client
   const locale = options.getString('language') ?? ''
   const visible = options.getBoolean('visible') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
 
-  const { data: projectProgress } =
-    await crowdin.client.translationStatusApi.getProjectProgress(
-      CROWDIN_PROJECT_ID
-    )
+  const projectProgress = await crowdinManager.getProjectProgress()
 
   const header = '**Translation progress:**\n'
   const footer =
@@ -135,6 +132,7 @@ function formatLanguageProgress({
 
 async function commandTerm(interaction: ChatInputCommandInteraction) {
   const { options } = interaction
+  const { crowdinManager } = interaction.client
   const key = options.getString('key', true)
   const locale = options.getString('language') ?? ''
   const visible = options.getBoolean('visible') ?? false
@@ -142,7 +140,7 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply({ flags })
 
-  const string = await crowdin.getStringItem(key)
+  const string = await crowdinManager.getStringItem(key)
 
   if (!string) {
     return interaction.editReply({
@@ -151,16 +149,17 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
   }
 
   if (locale) {
-    const language = await crowdin.getLanguage(locale)
+    const language = await crowdinManager.getLanguage(locale)
 
     if (!language) {
       const error = `Could not find language object for \`${locale}\`.`
       return interaction.editReply({ content: error })
     }
 
-    const [translation] = await crowdin.getStringTranslations(string.id, [
-      language,
-    ])
+    const [translation] = await crowdinManager.getStringTranslations(
+      string.id,
+      [language]
+    )
 
     const content = `
 Translations for term \`${key}\`:
@@ -170,9 +169,8 @@ Translations for term \`${key}\`:
     return interaction.editReply({ content })
   }
 
-  const translations = await crowdin.getStringTranslationsForAllLanguages(
-    string.id
-  )
+  const translations =
+    await crowdinManager.getStringTranslationsForAllLanguages(string.id)
 
   const filled = translations.filter(
     ({ translation }) =>

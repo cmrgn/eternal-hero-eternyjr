@@ -7,6 +7,7 @@ import { initLeaderboardManager } from './managers/LeaderboardManager'
 import { initSearchManager } from './managers/SearchManager'
 import { initLocalizationManager } from './managers/LocalizationManager'
 import { initIndexationManager } from './managers/IndexationManager'
+import { initCrowdinManager } from './managers/CrowdinManager'
 
 export const client = new Client({
   intents: [
@@ -30,3 +31,4 @@ client.leaderboardManager = initLeaderboardManager(client)
 client.searchManager = initSearchManager(client)
 client.indexationManager = initIndexationManager(client)
 client.localizationManager = initLocalizationManager(client)
+client.crowdinManager = initCrowdinManager(client)

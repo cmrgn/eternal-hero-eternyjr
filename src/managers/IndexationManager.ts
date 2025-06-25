@@ -62,10 +62,10 @@ class IndexationManager {
   }
 
   async indexThreadInAllLanguages(thread: ResolvedThread) {
-    const { localizationManager } = this.client
-    const translations = await localizationManager.fetchAllProjectTranslations()
-    for (const { crowdin, languageCode } of LOCALES) {
-      if (!crowdin && languageCode !== 'en') continue
+    const { crowdinManager } = this.client
+    const translations = await crowdinManager.fetchAllProjectTranslations()
+    for (const { isOnCrowdin, languageCode } of LOCALES) {
+      if (!isOnCrowdin && languageCode !== 'en') continue
       const indexThread = this.threadIndexer(languageCode, translations)
       await indexThread(thread)
     }
@@ -84,8 +84,8 @@ class IndexationManager {
   }
 
   async unindexThreadInAllLanguages(threadId: string) {
-    for (const { crowdin, languageCode } of LOCALES) {
-      if (!crowdin) continue
+    for (const { isOnCrowdin, languageCode } of LOCALES) {
+      if (!isOnCrowdin) continue
       await this.unindexThread(threadId, languageCode)
     }
   }

@@ -21,7 +21,7 @@ export const data = new SlashCommandBuilder()
       .setDescription('Translation language')
       .setChoices(
         Object.values(LOCALES)
-          .filter(locale => locale.crowdin)
+          .filter(locale => locale.isOnCrowdin)
           .map(locale => ({
             name: locale.languageName,
             value: locale.languageCode,
@@ -49,7 +49,7 @@ async function fetchTranslationsIfNeeded(
   // is that it’s not the way Crowdin works: to get all translations, you need
   // to build and download the project which comes as bunch of CSV files with
   // all the translations for all the languages in them.
-  return interaction.client.localizationManager.fetchAllProjectTranslations()
+  return interaction.client.crowdinManager.fetchAllProjectTranslations()
 }
 
 async function fetchFAQContent(interaction: ChatInputCommandInteraction) {
