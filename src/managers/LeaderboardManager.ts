@@ -156,7 +156,8 @@ export class LeaderboardManager {
   bindEvents() {
     this.#log('info', 'Binding events onto the manager instance')
 
-    // Look for FAQ links in any message in order to maintain the FAQ leaderboard.
+    // Look for FAQ links in any message in order to maintain the FAQ
+    // leaderboard.
     this.client.on(Events.MessageCreate, this.faqLinksOnCreate.bind(this))
     this.client.on(Events.MessageDelete, this.faqLinksOnDelete.bind(this))
     this.client.on(Events.MessageUpdate, this.faqLinksOnUpdate.bind(this))

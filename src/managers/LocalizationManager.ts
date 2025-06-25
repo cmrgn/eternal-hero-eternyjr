@@ -9,10 +9,6 @@ import type { ResolvedThread } from './FAQManager'
 import { cleanUpTranslation } from '../utils/cleanUpTranslation'
 import { logger } from '../utils/logger'
 
-const LOCALIZATION_PROMPT = `
-You are a translation bot specifically for the game Eternal Hero, so the way you translate game terms is important.
-`
-
 const SYSTEM_PROMPT = `
 Sole purpose:
 - You are a friendly bot for the mobile game called Eternal Hero: Action RPG.
@@ -42,10 +38,9 @@ export type LocalizationItem = {
 }
 
 export class LocalizationManager {
-  #gptModel = 'gpt-4o'
-  openai: OpenAI
   client: Client
-
+  openai: OpenAI
+  #gptModel = 'gpt-4o'
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('LeaderboardManager', this.#severityThreshold)
 
@@ -66,7 +61,9 @@ export class LocalizationManager {
 
   async guessCrowdinLocale(userInput: string): Promise<CrowdinCode | null> {
     this.#log('info', 'Guessing language', { userInput })
+
     const guess = this.client.languageIdentifier.findLanguage(userInput)
+
     if (
       guess.probability >= 0.9 &&
       guess.language !== 'und' &&
@@ -170,6 +167,7 @@ export class LocalizationManager {
         },
       },
     ]
+
     const response = await this.openai.chat.completions.create({
       model: this.#gptModel,
       messages: [
@@ -186,6 +184,7 @@ export class LocalizationManager {
     try {
       const toolCall = response.choices[0].message?.tool_calls?.[0]
       const args = toolCall?.function.arguments ?? ''
+
       return JSON.parse(args)
     } catch (error) {
       return { title: '', content: '' }
@@ -285,6 +284,7 @@ export class LocalizationManager {
     if (!response.title || !response.content) {
       this.#log('error', 'Missing translated content in JSON', {
         threadId: thread.id,
+        name: thread.name,
         crowdinCode,
       })
 

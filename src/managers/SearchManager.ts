@@ -18,18 +18,16 @@ export type PineconeMetadata = {
   entry_indexed_at: string
   entry_url: string
 }
-
 export type PineconeEntry = {
   id: string
   chunk_text: string
 } & PineconeMetadata
-
 export type PineconeNamespace = CrowdinCode
 
 type Hit = SearchRecordsResponse['result']['hits'][number]
 type SearchResultVector = Hit & { fields: PineconeMetadata }
 type SearchResultFuse = FuseResult<AnyThreadChannel>
-export type SearchResult = SearchResultVector
+type SearchResult = SearchResultVector
 export type SearchType = 'VECTOR' | 'FUZZY'
 
 const FUZZY_SEARCH_OPTIONS = {
@@ -43,7 +41,6 @@ const FUZZY_SEARCH_OPTIONS = {
 export class SearchManager {
   client: Client
   altFuse: Fuse<{ from: string; to: string }>
-
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('LeaderboardManager', this.#severityThreshold)
 
@@ -51,7 +48,6 @@ export class SearchManager {
     this.#log('info', 'Instantiating client')
 
     this.client = client
-
     this.altFuse = new Fuse(
       [
         { from: 'error token', to: 'invalid token error' },
@@ -85,7 +81,8 @@ export class SearchManager {
 
     if (!PINECONE_API_KEY && type === 'VECTOR') {
       type = 'FUZZY'
-      console.log(
+      this.#log(
+        'warn',
         'Missing environment variable PINECONE_API_KEY; falling back to Fuzzy search.'
       )
     }
@@ -93,28 +90,30 @@ export class SearchManager {
     if (type === 'VECTOR') {
       try {
         const hits = await this.searchVector(query, namespaceName, limit)
-        return {
-          query,
-          results: hits.filter(this.isHitRelevant).map(this.normalizeResult),
-        }
+        const results = hits
+          .filter(this.isHitRelevant)
+          .map(this.normalizeResult)
+
+        return { query, results }
       } catch (error) {
-        console.warn(
+        this.#log(
+          'warn',
           'Vector search failed; falling back to fuzzy search.',
           error
         )
+
         return this.search(query, 'FUZZY', namespaceName, limit)
       }
     }
 
     if (type === 'FUZZY') {
       const hits = this.searchFuzzy(query)
-      return {
-        query: hits.keyword,
-        results: hits.results
-          .filter(this.isHitRelevant)
-          .slice(0, limit)
-          .map(this.normalizeResult),
-      }
+      const results = hits.results
+        .filter(this.isHitRelevant)
+        .slice(0, limit)
+        .map(this.normalizeResult)
+
+      return { query: hits.keyword, results }
     }
 
     return { query, results: [] }

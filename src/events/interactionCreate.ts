@@ -1,6 +1,7 @@
 import { MessageFlags, type Interaction } from 'discord.js'
 
 import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
+import { logger } from '../utils/logger'
 
 export async function onInteractionCreate(interaction: Interaction) {
   // Abort if this interaction is coming from a bot, as this shouldn’t happen.
@@ -17,7 +18,11 @@ export async function onInteractionCreate(interaction: Interaction) {
   } catch (error) {
     const message = 'There was an error while executing this command.'
     const { Ephemeral } = MessageFlags
-    console.error(error)
+    logger.command(
+      interaction,
+      'There was an error while executing this command.',
+      { error }
+    )
     if (interaction.replied || interaction.deferred)
       await interaction.followUp({ content: message, flags: Ephemeral })
     else await interaction.reply({ content: message, flags: Ephemeral })
