@@ -50,7 +50,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ flags })
 
   logger.logCommand(interaction, 'Guessing the input’s language')
-  const crowdinCode = await localizationManager.guessCrowdinLocale(query)
+  const crowdinCode = await localizationManager.guessCrowdinLanguage(query)
 
   if (!crowdinCode) {
     logger.logCommand(interaction, 'Aborting due to lack of guessed language')

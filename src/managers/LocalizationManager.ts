@@ -1,14 +1,13 @@
 import OpenAI from 'openai'
 import type { Client } from 'discord.js'
 import type { ChatCompletionTool } from 'openai/resources/chat/completions'
-import fuzzysort from 'fuzzysort'
+import nlp from 'compromise'
 
 import { OPENAI_API_KEY } from '../constants/config'
 import { type CrowdinCode, CROWDIN_CODES } from '../constants/i18n'
 import type { ResolvedThread } from './FAQManager'
 import { cleanUpTranslation } from '../utils/cleanUpTranslation'
 import { logger } from '../utils/logger'
-import nlp from 'compromise'
 import { regexTest } from '../utils/regexTest'
 
 const SYSTEM_PROMPT = `
@@ -61,8 +60,8 @@ export class LocalizationManager {
     return CROWDIN_CODES.includes(language as CrowdinCode)
   }
 
-  async guessCrowdinLocale(userInput: string): Promise<CrowdinCode | null> {
-    this.#log('info', 'Guessing language', { userInput })
+  guessLanguageWithCld3(userInput: string) {
+    this.#log('info', 'Guessing language with cld3', { userInput })
 
     const guess = this.client.languageIdentifier.findLanguage(userInput)
 
@@ -74,6 +73,12 @@ export class LocalizationManager {
       return guess.language
     }
 
+    return null
+  }
+
+  async guessLanguageWithChatGPT(userInput: string) {
+    this.#log('info', 'Guessing language with ChatGPT', { userInput })
+
     const response = await this.promptGPT(
       userInput,
       [
@@ -84,7 +89,7 @@ export class LocalizationManager {
       ].join('\n')
     )
 
-    const context = { guess: response, userInput, cld3: guess }
+    const context = { guess: response, userInput }
 
     if (!response) {
       this.#log('warn', 'ChatGPT could not guess the locale', context)
@@ -102,6 +107,13 @@ export class LocalizationManager {
     }
 
     return response ?? null
+  }
+
+  guessCrowdinLanguage(userInput: string) {
+    return (
+      this.guessLanguageWithCld3(userInput) ??
+      this.guessLanguageWithChatGPT(userInput)
+    )
   }
 
   async promptGPT(
@@ -209,7 +221,7 @@ export class LocalizationManager {
       `${thread.name}\n${thread.content}`,
       translations,
       crowdinCode,
-      { maxTerms: 50, scoreCutoff: -25 }
+      { maxTerms: 50 }
     )
       .map(({ source, target }) => `- ${source} → ${target}`)
       .join('\n')

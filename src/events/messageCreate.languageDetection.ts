@@ -32,9 +32,7 @@ export async function languageDetection(
   const isInRelevantCategory = INCLUDED_CATEGORY_IDS.includes(channel.parentId)
   if (!isTestChannel && !isInRelevantCategory) return
 
-  return
-  const crowdinCode =
-    await client.localizationManager.guessCrowdinLocale(content)
+  const crowdinCode = client.localizationManager.guessLanguageWithCld3(content)
 
   // If the guessed language is not unknown or unreliable, return early as it’s
   // better to have a false negative than a false positive.

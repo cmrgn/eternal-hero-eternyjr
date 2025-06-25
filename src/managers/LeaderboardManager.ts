@@ -88,6 +88,7 @@ export class LeaderboardManager {
         guildId,
         channelId,
         messageId: message.id,
+        userId: message.member?.user.id,
       })
 
       // Perform a quick and cheap check to figure out whether the message
@@ -139,6 +140,7 @@ export class LeaderboardManager {
         guildId,
         channelId,
         messageId: newMessage.id,
+        userId: newMessage.member?.user.id,
       })
 
       const hasRemovedLinks = hadOldMessageLinks && !hasNewMessageLinks
