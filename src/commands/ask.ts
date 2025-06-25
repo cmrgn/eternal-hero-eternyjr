@@ -24,11 +24,13 @@ export const data = new SlashCommandBuilder()
       .setName('raw')
       .setDescription('Whether to skip rephrasing by ChatGPT')
   )
+  /*
   .addBooleanOption(option =>
     option
       .setName('visible')
       .setDescription('Whether it should show for everyone')
   )
+  */
   .setDescription('Ask the FAQ')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -38,7 +40,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const { searchManager, localizationManager } = client
 
   const query = options.getString('question', true)
-  const visible = options.getBoolean('visible') ?? false
+  // @TODO: bring back the visibility option after the beta phase
+  const visible = true // options.getBoolean('visible') ?? false
   const raw = options.getBoolean('raw') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
   const embed = createEmbed(false)
