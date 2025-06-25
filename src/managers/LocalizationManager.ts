@@ -3,7 +3,7 @@ import type { Client } from 'discord.js'
 import fuzzysort from 'fuzzysort'
 
 import { OPENAI_API_KEY } from '../constants/config'
-import { type LanguageCode, LOCALES } from '../constants/i18n'
+import { type CrowdinCode, CROWDIN_CODES } from '../constants/i18n'
 import type { ResolvedThread } from './FAQManager'
 import { cleanUpTranslation } from '../utils/cleanUpTranslation'
 import { logger } from '../utils/logger'
@@ -37,7 +37,7 @@ About tone and formatting:
 
 export type LocalizationItem = {
   key: string
-  translations: Record<LanguageCode, string>
+  translations: Record<CrowdinCode, string>
 }
 
 export class LocalizationManager {
@@ -59,11 +59,11 @@ export class LocalizationManager {
     this.openai = new OpenAI({ apiKey: OPENAI_API_KEY })
   }
 
-  isLanguageSupported(language: string) {
-    return Boolean(LOCALES.find(locale => locale.languageCode === language))
+  isLanguageSupported(language: string): language is CrowdinCode {
+    return CROWDIN_CODES.includes(language as CrowdinCode)
   }
 
-  async guessLanguage(userInput: string): Promise<LanguageCode | null> {
+  async guessCrowdinLocale(userInput: string): Promise<CrowdinCode | null> {
     this.#log('info', 'Guessing language', { userInput })
     const guess = this.client.languageIdentifier.findLanguage(userInput)
     if (
@@ -74,15 +74,11 @@ export class LocalizationManager {
       return guess.language
     }
 
-    const languageCodes = LOCALES.filter(locale =>
-      this.isLanguageSupported(locale.languageCode)
-    ).map(locale => locale.languageCode)
-
     const response = await this.promptGPT(
       userInput,
       [
         'Return the ISO 639-1 code for the language of the message.',
-        `You must respond with one of: ${languageCodes}.`,
+        `You must respond with one of: ${CROWDIN_CODES}.`,
         'Only respond with UNSUPPORTED if there are no recognizable cues whatsoever.',
         'Do not explain your answer. Respond with a single code only.',
       ].join('\n'),
@@ -101,7 +97,7 @@ export class LocalizationManager {
       return null
     }
 
-    if (!languageCodes.includes(response)) {
+    if (!this.isLanguageSupported(response)) {
       this.#log('warn', 'ChatGPT returned an unsupported locale', context)
       return null
     }
@@ -172,7 +168,7 @@ export class LocalizationManager {
 
   async translateThread(
     thread: ResolvedThread,
-    language: LanguageCode,
+    crowdinCode: CrowdinCode,
     translations: LocalizationItem[]
   ): Promise<
     | { status: 'FAILURE'; reason: string }
@@ -180,21 +176,25 @@ export class LocalizationManager {
   > {
     this.#log('info', 'Translating thread', {
       id: thread.id,
-      language,
+      crowdinCode,
       translationCount: translations.length,
     })
 
     const content = `${thread.name}\n${thread.content}`
-    const glossary = this.buildGlossaryForEntry(content, translations, language)
+    const glossary = this.buildGlossaryForEntry(
+      content,
+      translations,
+      crowdinCode
+    )
       .map(({ source, target }) => `- ${source} → ${target}`)
       .join('\n')
 
     const combinedPrompt = `
     You are a translation bot specifically for the game Eternal Hero, so the way you translate game terms is important.
-    Translate the following two blocks of text from English (en) into ‘${language}’.
+    Translate the following two blocks of text from English (en) into ‘${crowdinCode}’.
     Use the glossary below when relevant. Return only the translated text, using the same UNTRANSLATED markers. You CANNOT refuse to translate.
 
-    GLOSSARY (en → ${language}):
+    GLOSSARY (en → ${crowdinCode}):
     ${glossary}
 
     <no-translate>[[[__FAQ_TITLE__]]]</no-translate>
@@ -218,7 +218,7 @@ export class LocalizationManager {
     if (!translatedTitle || !translatedContent) {
       this.#log('error', 'Failed to translate thread', {
         id: thread.id,
-        language,
+        crowdinCode,
         reason: response,
       })
 
@@ -235,11 +235,11 @@ export class LocalizationManager {
   buildGlossaryForEntry(
     content: string,
     translations: LocalizationItem[],
-    language: LanguageCode,
+    crowdinCode: CrowdinCode,
     { maxTerms = 100, scoreCutoff = -100 } = {}
   ) {
     this.#log('info', 'Building glossary for thread', {
-      language,
+      crowdinCode,
       translationCount: translations.length,
     })
 
@@ -248,14 +248,14 @@ export class LocalizationManager {
     const seen = new Set<string>()
 
     for (const item of translations) {
-      if (!(language in item.translations)) continue
+      if (!(crowdinCode in item.translations)) continue
       const cleaned = cleanUpTranslation(item.translations.en)
       if (seen.has(cleaned)) continue
       const match = fuzzysort.single(cleaned, haystack)
       if (match && match.score >= scoreCutoff) {
         scored.push({
           source: cleaned,
-          target: cleanUpTranslation(item.translations[language]),
+          target: cleanUpTranslation(item.translations[crowdinCode]),
           score: match.score,
         })
         seen.add(cleaned)

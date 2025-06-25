@@ -8,7 +8,7 @@ import Bottleneck from 'bottleneck'
 
 import type { ResolvedThread } from '../managers/FAQManager'
 import { logger } from '../utils/logger'
-import { LOCALES } from '../constants/i18n'
+import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { sendAlert } from '../utils/sendAlert'
 
 export const scope = 'OFFICIAL'
@@ -20,11 +20,14 @@ export const data = new SlashCommandBuilder()
       .setName('language')
       .setDescription('Translation language')
       .setChoices(
-        Object.values(LOCALES)
-          .filter(locale => locale.isOnCrowdin || locale.languageCode === 'en')
-          .map(locale => ({
-            name: locale.languageName,
-            value: locale.languageCode,
+        Object.values(LANGUAGE_OBJECTS)
+          .filter(
+            languageObject =>
+              languageObject.isOnCrowdin || languageObject.crowdinCode === 'en'
+          )
+          .map(languageObject => ({
+            name: languageObject.languageName,
+            value: languageObject.crowdinCode,
           }))
       )
   )
@@ -39,12 +42,13 @@ const discordEditLimiter = new Bottleneck({
 async function fetchTranslationsIfNeeded(
   interaction: ChatInputCommandInteraction
 ) {
-  const language = interaction.options.getString('language') ?? 'en'
+  const crowdinCode = (interaction.options.getString('language') ??
+    'en') as CrowdinCode
 
-  if (language === 'en') return []
+  if (crowdinCode === 'en') return []
 
   logger.command(interaction, 'Fetching translations from Crowdin', {
-    language,
+    language: crowdinCode,
   })
 
   await interaction.editReply('Fetching translations from Crowdin…')
@@ -76,7 +80,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const { client, options } = interaction
   const { indexationManager } = client
-  const language = options.getString('language') ?? 'en'
+  const crowdinCode = (options.getString('language') ?? 'en') as CrowdinCode
   const translations = await fetchTranslationsIfNeeded(interaction)
   const threadsWithContent = await fetchFAQContent(interaction)
   const total = threadsWithContent.length
@@ -86,7 +90,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const notify = discordEditLimiter.wrap(
     (thread: ResolvedThread, index: number) =>
       interaction.editReply({
-        content: `Indexing (${index + 1}/${total}) _“${thread.name}”_ in namespace \`${language}\`.`,
+        content: `Indexing (${index + 1}/${total}) _“${thread.name}”_ in namespace \`${crowdinCode}\`.`,
       })
   )
 
@@ -95,7 +99,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const onTranslationFailure = (thread: ResolvedThread, reason: string) =>
     sendAlert(
       interaction,
-      `ChatGPT failed to translate thread “${thread.name}” (${thread.id}) into ${language}.
+      `ChatGPT failed to translate thread “${thread.name}” (${thread.id}) into ${crowdinCode}.
       > ${reason.replace(/\n/g, '\n> ')}`
     )
 
@@ -104,7 +108,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const onIndexationFailure = (thread: ResolvedThread, error: unknown) =>
     sendAlert(
       interaction,
-      `Could not index “${thread.name}” (${thread.id}) in namespace ${language}, even after several attempts.
+      `Could not index “${thread.name}” (${thread.id}) in namespace ${crowdinCode}, even after several attempts.
       \`\`\`${error}\`\`\``
     )
 
@@ -121,7 +125,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }
 
       const translateAndIndex = indexationManager.threadIndexer(
-        language,
+        crowdinCode,
         translations,
         { events }
       )
@@ -136,6 +140,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   )
 
   return interaction.editReply({
-    content: `Finished indexing **${total} threads** in namespace \`${language}\`.`,
+    content: `Finished indexing **${total} threads** in namespace \`${crowdinCode}\`.`,
   })
 }

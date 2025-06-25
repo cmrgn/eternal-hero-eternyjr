@@ -8,7 +8,7 @@ import {
 import type { ResolvedThread } from './FAQManager'
 import type { PineconeEntry, PineconeNamespace } from './SearchManager'
 import type { LocalizationItem } from './LocalizationManager'
-import { type LanguageCode, LOCALES } from '../constants/i18n'
+import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { IS_DEV, PINECONE_API_KEY } from '../constants/config'
 import { logger } from '../utils/logger'
 import { withRetries } from '../utils/withRetries'
@@ -100,10 +100,10 @@ export class IndexationManager {
     })
 
     await pMap(
-      LOCALES,
-      async ({ isOnCrowdin, languageCode }) => {
-        if (!isOnCrowdin && languageCode !== 'en') return
-        const indexThread = this.threadIndexer(languageCode, translations)
+      LANGUAGE_OBJECTS,
+      async ({ isOnCrowdin, crowdinCode }) => {
+        if (!isOnCrowdin && crowdinCode !== 'en') return
+        const indexThread = this.threadIndexer(crowdinCode, translations)
         await indexThread(thread)
       },
       { concurrency }
@@ -134,17 +134,17 @@ export class IndexationManager {
     })
 
     await pMap(
-      LOCALES,
-      async ({ isOnCrowdin, languageCode }) => {
-        if (!isOnCrowdin && languageCode !== 'en') return
-        await this.unindexThread(threadId, languageCode)
+      LANGUAGE_OBJECTS,
+      async ({ isOnCrowdin, crowdinCode }) => {
+        if (!isOnCrowdin && crowdinCode !== 'en') return
+        await this.unindexThread(threadId, crowdinCode)
       },
       { concurrency }
     )
   }
 
   threadIndexer(
-    language: LanguageCode,
+    language: CrowdinCode,
     translations: LocalizationItem[],
     options?: {
       events?: {

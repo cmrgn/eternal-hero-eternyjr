@@ -6,7 +6,7 @@ import {
 
 import { logger } from '../utils/logger'
 import type { PineconeMetadata } from '../managers/SearchManager'
-import { ENGLISH_LOCALE, LOCALES } from '../constants/i18n'
+import { ENGLISH_LANGUAGE_OBJECT, LANGUAGE_OBJECTS } from '../constants/i18n'
 
 export const scope = 'OFFICIAL'
 
@@ -44,9 +44,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ flags })
 
   logger.command(interaction, 'Guessing the input’s language')
-  const language = await localizationManager.guessLanguage(query)
+  const crowdinCode = await localizationManager.guessCrowdinLocale(query)
 
-  if (!language) {
+  if (!crowdinCode) {
     logger.command(interaction, 'Aborting due to lack of guessed language')
     return interaction.editReply({
       content:
@@ -54,15 +54,22 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     })
   }
 
-  logger.command(interaction, 'Performing the search', { language })
-  const { results } = await searchManager.search(query, 'VECTOR', language, 1)
+  logger.command(interaction, 'Performing the search', { crowdinCode })
+  const { results } = await searchManager.search(
+    query,
+    'VECTOR',
+    crowdinCode,
+    1
+  )
   const [result] = results
 
   if (!result) {
-    logger.command(interaction, 'Returning a lack of results', { language })
-    const locale = LOCALES.find(locale => locale.languageCode === language)
-    const localizedError = locale?.messages.no_results
-    const error = localizedError ?? ENGLISH_LOCALE.messages.no_results
+    logger.command(interaction, 'Returning a lack of results', { crowdinCode })
+    const languageObject = LANGUAGE_OBJECTS.find(
+      languageObject => languageObject.crowdinCode === crowdinCode
+    )
+    const localizedError = languageObject?.messages.no_results
+    const error = localizedError ?? ENGLISH_LANGUAGE_OBJECT.messages.no_results
     return interaction.editReply({ content: error })
   }
 
@@ -70,12 +77,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     result.fields as PineconeMetadata
 
   if (raw) {
-    logger.command(interaction, 'Returning a raw answer', { language })
+    logger.command(interaction, 'Returning a raw answer', { crowdinCode })
     return interaction.editReply({ content: answer })
   }
 
   const context = { question, answer }
-  logger.command(interaction, 'Summarizing the answer', { language })
+  logger.command(interaction, 'Summarizing the answer', { crowdinCode })
   const localizedAnswer = await localizationManager.summarize(query, context)
 
   return interaction.editReply({ content: localizedAnswer ?? answer })

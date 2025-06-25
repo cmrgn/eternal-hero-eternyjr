@@ -11,8 +11,8 @@ import fetch from 'node-fetch'
 import { CROWDIN_TOKEN } from '../constants/config'
 import { logger } from '../utils/logger'
 import { pool } from '../utils/pg'
-import type { LanguageCode } from '../constants/i18n'
 import type { LocalizationItem } from './LocalizationManager'
+import type { CrowdinCode } from '../constants/i18n'
 
 export type {
   LanguagesModel,
@@ -23,7 +23,7 @@ export type {
 
 type StringId = SourceStringsModel.String['id']
 
-export type CrowdinItem = Record<LanguageCode, string> & {
+export type CrowdinItem = Record<CrowdinCode, string> & {
   Key: string
   Context?: string
 }
@@ -55,6 +55,7 @@ export class CrowdinManager {
       project => project.data.identifier === this.#projectIdentifier
     )
     if (!project) throw new Error('Cannot find Crowdin project.')
+    console.log(project.data.targetLanguages)
 
     return project.data
   }
@@ -94,12 +95,14 @@ export class CrowdinManager {
     return projectProgress
   }
 
-  async getLanguage(locale: string) {
-    this.#log('info', 'Getting language')
+  async getLanguageObject(crowdinCode: CrowdinCode) {
+    this.#log('info', 'Getting language object')
 
-    const { targetLanguages: languages } = await this.getProject()
+    const { targetLanguages: languageObjects } = await this.getProject()
 
-    return languages.find(language => language.id === locale)
+    return languageObjects.find(
+      languageObject => languageObject.id === crowdinCode
+    )
   }
 
   async getStringTranslationsForAllLanguages(stringId: StringId) {

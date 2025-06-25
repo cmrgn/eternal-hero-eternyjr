@@ -1,22 +1,14 @@
-export type Locale = {
-  isOnCrowdin: boolean
-  languageCode: string /* ISO 639-1 */
-  languageName: string
-  role: string
-  channel: string
-  messages: {
-    discord_linking: string
-    internationalization: string
-    no_results: string
-  }
-}
+export type LanguageObject = (typeof LANGUAGE_OBJECTS)[number]
+export type Language = LanguageObject['twoLettersCode']
+export type CrowdinCode = LanguageObject['crowdinCode']
+export type Locale = LanguageObject['locale']
 
-export type LanguageCode = Locale['languageCode']
-
-export const LOCALES: Locale[] = [
+export const LANGUAGE_OBJECTS = [
   {
     isOnCrowdin: true,
-    languageCode: 'de',
+    twoLettersCode: 'de' as const,
+    crowdinCode: 'de' as const,
+    locale: 'de-DE' as const,
     languageName: 'Deutsch',
     role: 'de | Deutsch',
     channel: 'de-deutsch',
@@ -31,7 +23,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: false,
-    languageCode: 'en',
+    twoLettersCode: 'en' as const,
+    crowdinCode: 'en' as const,
+    locale: 'en-EN' as const,
     languageName: 'English',
     role: 'en | English',
     channel: 'en-english',
@@ -46,7 +40,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: false,
-    languageCode: 'es',
+    twoLettersCode: 'es' as const,
+    crowdinCode: 'es' as const,
+    locale: 'es-ES' as const,
     languageName: 'Español',
     role: 'es | Español',
     channel: 'es-español',
@@ -61,7 +57,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: true,
-    languageCode: 'fr',
+    twoLettersCode: 'fr' as const,
+    crowdinCode: 'fr' as const,
+    locale: 'fr-FR' as const,
     languageName: 'Français',
     role: 'fr | Français',
     channel: 'fr-français',
@@ -76,7 +74,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: true,
-    languageCode: 'it',
+    twoLettersCode: 'it' as const,
+    crowdinCode: 'it' as const,
+    locale: 'it-IT' as const,
     languageName: 'Italiano',
     role: 'it | Italiano',
     channel: 'it-italiano',
@@ -91,7 +91,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: true,
-    languageCode: 'ja',
+    twoLettersCode: 'ja' as const,
+    crowdinCode: 'ja' as const,
+    locale: 'ja-JP' as const,
     languageName: '日本語',
     role: 'jp | 日本語',
     channel: 'jp-日本語',
@@ -106,7 +108,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: true,
-    languageCode: 'kr',
+    twoLettersCode: 'kr' as const,
+    crowdinCode: 'kr' as const,
+    locale: 'ko-KR' as const,
     languageName: '한국어',
     role: 'kr | 한국어',
     channel: 'kr-한국어',
@@ -121,7 +125,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: false,
-    languageCode: 'tl',
+    twoLettersCode: 'tl' as const,
+    crowdinCode: 'tl' as const,
+    locale: 'tl-PH' as const,
     languageName: 'Filipino',
     role: 'ph | Filipino',
     channel: 'ph-filipino',
@@ -136,7 +142,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: true,
-    languageCode: 'pl',
+    twoLettersCode: 'pl' as const,
+    crowdinCode: 'pl' as const,
+    locale: 'pl-PL' as const,
     languageName: 'Polski',
     role: 'pol | Polski',
     channel: 'pl-polski',
@@ -151,7 +159,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: true,
-    languageCode: 'pt',
+    twoLettersCode: 'pt' as const,
+    crowdinCode: 'pt-BR' as const,
+    locale: 'pt-BR' as const,
     languageName: 'Português',
     role: 'pt-br | Português',
     channel: 'pt-br-português',
@@ -166,7 +176,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: true,
-    languageCode: 'ru',
+    twoLettersCode: 'ru' as const,
+    crowdinCode: 'ru' as const,
+    locale: 'ru-RU' as const,
     languageName: 'Русский',
     role: 'ru | Русский',
     channel: 'ru-русский',
@@ -181,7 +193,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: false,
-    languageCode: 'th',
+    twoLettersCode: 'th' as const,
+    crowdinCode: 'th' as const,
+    locale: 'th-TH' as const,
     languageName: 'ภาษาไทย',
     role: 'th | ภาษาไทย',
     channel: 'th-ภาษาไทย',
@@ -196,7 +210,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: true,
-    languageCode: 'tr',
+    twoLettersCode: 'tr' as const,
+    crowdinCode: 'tr' as const,
+    locale: 'tr-TR' as const,
     languageName: 'Türkçe',
     role: 'tr | Türkçe',
     channel: 'tr-türkçe',
@@ -211,7 +227,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: true,
-    languageCode: 'vi',
+    twoLettersCode: 'vi' as const,
+    crowdinCode: 'vi' as const,
+    locale: 'vi-VN' as const,
     languageName: 'Tiếng Việt',
     role: 'vn | Tiếng Việt',
     channel: 'vn-tiếng-việt',
@@ -226,7 +244,9 @@ export const LOCALES: Locale[] = [
   },
   {
     isOnCrowdin: true,
-    languageCode: 'zh',
+    twoLettersCode: 'zh' as const,
+    crowdinCode: 'zh-CN' as const,
+    locale: 'zh-CN' as const,
     languageName: '汉语',
     role: 'zh | 汉语',
     channel: 'zh-汉语',
@@ -240,9 +260,12 @@ export const LOCALES: Locale[] = [
     },
   },
 ]
+export const LOCALES = LANGUAGE_OBJECTS.map(object => object.locale)
+export const LANGUAGES = LANGUAGE_OBJECTS.map(object => object.twoLettersCode)
+export const CROWDIN_CODES = LANGUAGE_OBJECTS.map(object => object.crowdinCode)
 
 export const MIN_LENGTH_LANGUAGE_DETECTION_THRESHOLD = 40
 // biome-ignore lint/style/noNonNullAssertion: <explanation>
-export const ENGLISH_LOCALE = LOCALES.find(
-  locale => locale.languageCode === 'en'
+export const ENGLISH_LANGUAGE_OBJECT = LANGUAGE_OBJECTS.find(
+  locale => locale.twoLettersCode === 'en'
 )!

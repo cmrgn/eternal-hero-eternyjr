@@ -11,7 +11,7 @@ import type {
 } from '../managers/CrowdinManager'
 
 import { logger } from '../utils/logger'
-import { LOCALES } from '../constants/i18n'
+import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { splitMarkdownList } from '../utils/splitMarkdownList'
 
 export const scope = 'OFFICIAL'
@@ -27,11 +27,11 @@ export const data = new SlashCommandBuilder()
           .setName('language')
           .setDescription('Translation language')
           .setChoices(
-            Object.values(LOCALES)
-              .filter(locale => locale.isOnCrowdin)
-              .map(locale => ({
-                name: locale.languageName,
-                value: locale.languageCode,
+            Object.values(LANGUAGE_OBJECTS)
+              .filter(languageObject => languageObject.isOnCrowdin)
+              .map(languageObject => ({
+                name: languageObject.languageName,
+                value: languageObject.crowdinCode,
               }))
           )
       )
@@ -56,11 +56,11 @@ export const data = new SlashCommandBuilder()
           .setName('language')
           .setDescription('Translation language')
           .setChoices(
-            Object.values(LOCALES)
-              .filter(locale => locale.isOnCrowdin)
-              .map(locale => ({
-                name: locale.languageName,
-                value: locale.languageCode,
+            Object.values(LANGUAGE_OBJECTS)
+              .filter(languageObject => languageObject.isOnCrowdin)
+              .map(languageObject => ({
+                name: languageObject.languageName,
+                value: languageObject.crowdinCode,
               }))
           )
       )
@@ -92,7 +92,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 async function commandProgress(interaction: ChatInputCommandInteraction) {
   const { options } = interaction
   const { crowdinManager } = interaction.client
-  const locale = options.getString('language') ?? ''
+  const crowdinCode = options.getString('language') as CrowdinCode | undefined
   const visible = options.getBoolean('visible') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
 
@@ -103,15 +103,17 @@ async function commandProgress(interaction: ChatInputCommandInteraction) {
   const footer =
     '\n\n-# If you think your translation progress is not accurate, make sure you have saved your translations in Crowdin. Drafts do not count towards completion.'
 
-  if (locale) {
+  if (crowdinCode) {
     const languageData = projectProgress.find(
-      ({ data }) => data.languageId === locale
+      ({ data }) => data.languageId === crowdinCode
     )
 
     if (!languageData) {
-      logger.command(interaction, 'Missing language object', { locale })
+      logger.command(interaction, 'Missing language object', {
+        locale: crowdinCode,
+      })
       return interaction.reply({
-        content: `Could not find language object for \`${locale}\`.`,
+        content: `Could not find language object for \`${crowdinCode}\`.`,
         flags: MessageFlags.Ephemeral,
       })
     }
@@ -139,7 +141,7 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
   const { options } = interaction
   const { crowdinManager } = interaction.client
   const key = options.getString('key', true)
-  const locale = options.getString('language') ?? ''
+  const crowdinCode = options.getString('language') as CrowdinCode | undefined
   const visible = options.getBoolean('visible') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
 
@@ -155,18 +157,20 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
     })
   }
 
-  if (locale) {
-    const language = await crowdinManager.getLanguage(locale)
+  if (crowdinCode) {
+    const languageObject = await crowdinManager.getLanguageObject(crowdinCode)
 
-    if (!language) {
-      logger.command(interaction, 'Missing language object', { locale })
-      const error = `Could not find language object for \`${locale}\`.`
+    if (!languageObject) {
+      logger.command(interaction, 'Missing language object', {
+        locale: crowdinCode,
+      })
+      const error = `Could not find language object for \`${crowdinCode}\`.`
       return interaction.editReply({ content: error })
     }
 
     const [translation] = await crowdinManager.getStringTranslations(
       string.id,
-      [language]
+      [languageObject]
     )
 
     const content = `
@@ -211,14 +215,14 @@ ${
 }
 
 function formatTranslation({
-  language,
+  language: crowdinLanguageObject,
   translation,
 }: {
   language: LanguagesModel.Language
   translation: ResponseObject<StringTranslationsModel.StringTranslation>
 }) {
   if (!translation) {
-    return `${formatLanguage(language)}:`
+    return `${formatLanguage(crowdinLanguageObject)}:`
   }
 
   const { data } = translation
@@ -236,9 +240,9 @@ function formatTranslation({
     nameMapping[userName as keyof typeof nameMapping] ?? userName
   const date = new Date(data.createdAt).valueOf() / 1000
 
-  return `${formatLanguage(language)}: _${data.text}_ (added on <t:${date}:d> by ${displayName})`
+  return `${formatLanguage(crowdinLanguageObject)}: _${data.text}_ (added on <t:${date}:d> by ${displayName})`
 }
 
-function formatLanguage(language: LanguagesModel.Language) {
-  return `${language.name} (\`${language.locale}\`)`
+function formatLanguage(crowdinLanguageObject: LanguagesModel.Language) {
+  return `${crowdinLanguageObject.name} (\`${crowdinLanguageObject.locale}\`)`
 }
