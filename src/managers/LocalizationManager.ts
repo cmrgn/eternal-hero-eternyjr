@@ -41,13 +41,48 @@ export class LocalizationManager {
     return Boolean(LOCALES.find(locale => locale.languageCode === language))
   }
 
-  guessLanguage(userInput: string): LanguageCode | null {
+  async guessLanguage(userInput: string): Promise<LanguageCode | null> {
     this.#log('info', 'Guessing language', { userInput })
     const guess = this.client.languageIdentifier.findLanguage(userInput)
-    if (guess.probability < 0.9) return null
-    if (guess.language === 'und') return null
-    if (!this.isLanguageSupported(guess.language)) return null
-    return guess.language
+    if (
+      guess.probability >= 0.9 &&
+      guess.language !== 'und' &&
+      this.isLanguageSupported(guess.language)
+    ) {
+      return guess.language
+    }
+
+    const languageCodes = LOCALES.filter(locale =>
+      this.isLanguageSupported(locale.languageCode)
+    ).map(locale => locale.languageCode)
+
+    const response = await this.promptGPT(`
+    You are a language detector. Your task is to return the ISO 639-1 locale of the user’s message.
+    Only respond with one of these supported codes:
+    ${languageCodes}
+
+    If the user’s message is not clearly in one of those or you can’t figure it out, respond with: UNSUPPORTED
+    Your response must be only the code or UNSUPPORTED — no explanations or punctuation.
+    `)
+
+    const context = { guess: response, userInput, cld3: guess }
+
+    if (!response) {
+      this.#log('warn', 'ChatGPT could not guess the locale', context)
+      return null
+    }
+
+    if (response === 'UNSUPPORTED') {
+      this.#log('warn', 'ChatGPT could not get a supported locale', context)
+      return null
+    }
+
+    if (!languageCodes.includes(response)) {
+      this.#log('warn', 'ChatGPT returned an unsupported locale', context)
+      return null
+    }
+
+    return response ?? null
   }
 
   async promptGPT(userPrompt: string, model = this.#gptModel) {
@@ -84,11 +119,11 @@ export class LocalizationManager {
     `)
   }
 
-  translateFromEnglishAndRephrase(
+  summarize(
     userQuestion: string,
     matchedFAQ: { question: string; answer: string }
   ) {
-    this.#log('info', 'Translating from English and rephrasing', {
+    this.#log('info', 'Summarizing', {
       userQuestion,
       threadName: matchedFAQ.question,
     })
