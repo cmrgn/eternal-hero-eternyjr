@@ -31,6 +31,7 @@ export const data = new SlashCommandBuilder()
             value: languageObject.crowdinCode,
           }))
       )
+      .setRequired(true)
   )
   .setDescription('Index the FAQ in Pinecone')
 
