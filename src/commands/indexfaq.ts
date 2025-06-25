@@ -71,6 +71,7 @@ async function fetchFAQContent(interaction: ChatInputCommandInteraction) {
 export async function execute(interaction: ChatInputCommandInteraction) {
   logger.command(interaction, 'Starting command execution')
 
+  // This command can take a long time, so it needs to be handled asynchronously
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
   const { client, options } = interaction
@@ -80,6 +81,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const threadsWithContent = await fetchFAQContent(interaction)
   const total = threadsWithContent.length
 
+  // This function is responsible for reporting the current progress by editing
+  // the original message while respecting Discord’s rate limits
   const notify = discordEditLimiter.wrap(
     (thread: ResolvedThread, index: number) =>
       interaction.editReply({
@@ -87,6 +90,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       })
   )
 
+  // If ChatGPT fails to translate something, report it in the #alert channels
+  // of the test server to debug it
   const onTranslationFailure = (thread: ResolvedThread, reason: string) =>
     sendAlert(
       interaction,
@@ -94,6 +99,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       > ${reason.replace(/\n/g, '\n> ')}`
     )
 
+  // If the indexation fails for any reason despite the exponential backoff
+  // retries, report it in the #alert channels of the test server to debug it
   const onIndexationFailure = (thread: ResolvedThread, error: unknown) =>
     sendAlert(
       interaction,
@@ -101,11 +108,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       \`\`\`${error}\`\`\``
     )
 
-  logger.command(interaction, 'Processing all threads')
-
   // Iterate over all threads with the given concurrency, and for each thread,
   // translate it if the expected language is not English, and upsert it into
   // the relevant Pinecone namespace
+  logger.command(interaction, 'Processing all threads')
   await pMap(
     threadsWithContent.entries(),
     async ([index, thread]) => {
@@ -114,14 +120,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         onTranslationFailure,
       }
 
-      const safelyIndex = indexationManager.threadIndexer(
+      const translateAndIndex = indexationManager.threadIndexer(
         language,
         translations,
         { events }
       )
 
       try {
-        await safelyIndex(thread)
+        await translateAndIndex(thread)
       } catch (error) {
         await onIndexationFailure(thread, error)
       }

@@ -16,16 +16,19 @@ export const data = new SlashCommandBuilder()
   .setDescription('Say something via the bot')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const { channel, options } = interaction
-  const { Ephemeral } = MessageFlags
+  logger.command(interaction, 'Starting command execution')
+
+  const { options, channel } = interaction
   const message = options.getString('message', true)
 
   if (!channel) throw new Error('Could not retrieve channel.')
   if (!channel.isSendable()) throw new Error('Could not send in channel.')
 
-  logger.command(interaction, 'Starting command execution')
-
+  // Send the message in the channel
   await channel.send(message)
-  await interaction.reply({ content: 'Sent.', flags: Ephemeral })
+
+  // Acknowledge the message was sent, and immediately delete acknowledgement
+  // (since it’s required by Discord but unnecessary for the user)
+  await interaction.reply({ content: 'Sent.', flags: MessageFlags.Ephemeral })
   await interaction.deleteReply()
 }

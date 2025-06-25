@@ -12,6 +12,7 @@ import type {
 
 import { logger } from '../utils/logger'
 import { LOCALES } from '../constants/i18n'
+import { splitMarkdownList } from '../utils/splitMarkdownList'
 
 export const scope = 'OFFICIAL'
 
@@ -95,6 +96,7 @@ async function commandProgress(interaction: ChatInputCommandInteraction) {
   const visible = options.getBoolean('visible') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
 
+  logger.command(interaction, 'Getting project progress')
   const projectProgress = await crowdinManager.getProjectProgress()
 
   const header = '**Translation progress:**\n'
@@ -107,6 +109,7 @@ async function commandProgress(interaction: ChatInputCommandInteraction) {
     )
 
     if (!languageData) {
+      logger.command(interaction, 'Missing language object', { locale })
       return interaction.reply({
         content: `Could not find language object for \`${locale}\`.`,
         flags: MessageFlags.Ephemeral,
@@ -142,9 +145,11 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply({ flags })
 
+  logger.command(interaction, 'Getting string object')
   const string = await crowdinManager.getStringItem(key)
 
   if (!string) {
+    logger.command(interaction, 'Missing string object', { key })
     return interaction.editReply({
       content: `Could not find translation object for \`${key}\`.`,
     })
@@ -154,6 +159,7 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
     const language = await crowdinManager.getLanguage(locale)
 
     if (!language) {
+      logger.command(interaction, 'Missing language object', { locale })
       const error = `Could not find language object for \`${locale}\`.`
       return interaction.editReply({ content: error })
     }
@@ -171,6 +177,9 @@ Translations for term \`${key}\`:
     return interaction.editReply({ content })
   }
 
+  logger.command(interaction, 'Getting all translations for string', {
+    id: string.id,
+  })
   const translations =
     await crowdinManager.getStringTranslationsForAllLanguages(string.id)
 
@@ -199,25 +208,6 @@ ${
   for (const response of responses) {
     await interaction.followUp({ content: response, flags })
   }
-}
-
-function splitMarkdownList(message: string, maxLength = 2000): string[] {
-  const lines = message.split('\n')
-  const chunks: string[] = []
-  let current = ''
-
-  for (const line of lines) {
-    const candidate = current + (current ? '\n' : '') + line
-    if (candidate.length > maxLength) {
-      if (current) chunks.push(current)
-      current = line
-    } else {
-      current = candidate
-    }
-  }
-
-  if (current) chunks.push(current)
-  return chunks
 }
 
 function formatTranslation({

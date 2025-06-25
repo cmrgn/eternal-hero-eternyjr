@@ -58,14 +58,14 @@ export const data = new SlashCommandBuilder()
   .setDescription('Estimate the amount of dust you have across resources')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+  logger.command(interaction, 'Starting command execution')
+
   const rareKeys = interaction.options.getInteger('rare_keys') ?? 0
   const epicKeys = interaction.options.getInteger('epic_keys') ?? 0
   const legKeys = interaction.options.getInteger('legendary_keys') ?? 0
   const rawDust = interaction.options.getInteger('raw_dust') ?? 0
   const essences = interaction.options.getInteger('divine_essences') ?? 0
   const clanBonds = interaction.options.getInteger('clan_bonds') ?? 0
-
-  logger.command(interaction, 'Starting command execution')
 
   const legKeysViaBonds = Math.floor(clanBonds / 1500)
   const totalLegKeys = legKeys + legKeysViaBonds

@@ -53,16 +53,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.command(interaction, 'Timing out member')
   await member.timeout(durationMs, `Violating rule ${rule}`)
 
+  // Retrieve the moderation channel
   // biome-ignore lint/style/noNonNullAssertion: <explanation>
   const channels = interaction.guild!.channels
   const moderation = channels.cache.find(
     channel => channel.name === '🔨│moderation'
   )
 
+  // Prepare the moderation message
   const [number, label] = rule.split(': ')
   const message = `${userMention(member.id)} was timed out for ${ms(durationMs)} for violating ${bold(number.toLocaleLowerCase())} (${label}).`
 
-  // Announce the timeout
+  // Announce the timeout in the moderation channel
   if (moderation?.isSendable()) {
     logger.command(interaction, 'Announcing timeout')
     await moderation.send(message)

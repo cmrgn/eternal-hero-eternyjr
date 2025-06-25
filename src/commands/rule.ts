@@ -61,12 +61,12 @@ export const data = new SlashCommandBuilder()
   .setContexts(InteractionContextType.Guild)
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+  logger.command(interaction, 'Starting command execution')
+
   const rule = interaction.options.getString('rule', true)
   const user = interaction.options.getUser('user')
   const number = rule.split(': ')[0]
   const message = RULES[rule as keyof typeof RULES]
-
-  logger.command(interaction, 'Starting command execution')
 
   return interaction.reply(
     `${user ? `${userMention(user.id)} ` : ''}${bold(number)}: ${message}`

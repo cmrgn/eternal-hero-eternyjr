@@ -41,16 +41,16 @@ export const data = new SlashCommandBuilder()
   .setDescription('Search the FAQ')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  if (!interaction) throw new Error('Could not retrieve guild.')
+  logger.command(interaction, 'Starting command execution')
 
   const { client, guildId, channelId, member, options } = interaction
-
   const visible = options.getBoolean('visible') ?? false
   const user = options.getUser('user')
   const keyword = options.getString('keyword', true)
   const method = (options.getString('method') ?? 'FUZZY') as SearchType
-
   const embed = createEmbed().setTitle(`FAQ search: “${keyword}”`)
+
+  logger.command(interaction, 'Performing search')
   const search = await client.searchManager.search(keyword, method, 'en', 5)
 
   if (search.results.length > 0) {
@@ -67,7 +67,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }))
     )
 
-    logger.command(interaction, 'Starting command execution', {
+    logger.command(interaction, 'Reporting search results', {
       results: search.results.map(result => ({
         name: result.fields.entry_question,
         score: result._score,
@@ -76,10 +76,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     if (visible && member && guildId) {
       const userId = member.user.id
+      logger.command(interaction, 'Recording contribution')
       client.leaderboardManager.register({ userId, channelId, guildId })
     }
   } else {
     const message = `A ${method.toLowerCase()} search for _“${keyword}”_ yielded no results.`
+    logger.command(interaction, 'Sending empty search alert')
     await sendAlert(
       interaction,
       method === 'VECTOR'
