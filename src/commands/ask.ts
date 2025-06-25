@@ -6,6 +6,7 @@ import {
 
 import { logger } from '../utils/logger'
 import type { PineconeMetadata } from '../managers/SearchManager'
+import { ENGLISH_LOCALE, LOCALES } from '../constants/i18n'
 
 export const scope = 'OFFICIAL'
 
@@ -42,32 +43,40 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply({ flags })
 
-  const englishQuery =
-    (await localizationManager.translateToEnglish(query)) ?? query
-  const { results } = await searchManager.search(
-    englishQuery,
-    'VECTOR',
-    'en',
-    1
-  )
+  logger.command(interaction, 'Guessing the input’s language')
+  const language = await localizationManager.guessLanguage(query)
+
+  if (!language) {
+    logger.command(interaction, 'Aborting due to lack of guessed language')
+    return interaction.editReply({
+      content:
+        'Unfortunately, the language could not be guessed from your query.',
+    })
+  }
+
+  logger.command(interaction, 'Performing the search', { language })
+  const { results } = await searchManager.search(query, 'VECTOR', language, 1)
   const [result] = results
 
   if (!result) {
-    return interaction.editReply({
-      content:
-        'Unfortunately, no relevant content was found for your question. Please try rephrasing it or ask a different question.',
-    })
+    logger.command(interaction, 'Returning a lack of results', { language })
+    const locale = LOCALES.find(locale => locale.languageCode === language)
+    const localizedError = locale?.messages.no_results
+    const error = localizedError ?? ENGLISH_LOCALE.messages.no_results
+    return interaction.editReply({ content: error })
   }
 
   const { entry_question: question, entry_answer: answer } =
     result.fields as PineconeMetadata
 
-  const localizedAnswer = raw
-    ? await localizationManager.translateFromEnglish(answer, query)
-    : await localizationManager.translateFromEnglishAndRephrase(query, {
-        question,
-        answer,
-      })
+  if (raw) {
+    logger.command(interaction, 'Returning a raw answer', { language })
+    return interaction.editReply({ content: answer })
+  }
+
+  const context = { question, answer }
+  logger.command(interaction, 'Summarizing the answer', { language })
+  const localizedAnswer = await localizationManager.summarize(query, context)
 
   return interaction.editReply({ content: localizedAnswer ?? answer })
 }
