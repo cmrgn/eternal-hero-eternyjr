@@ -97,14 +97,12 @@ class IndexationManager {
       onThread?: (thread: ResolvedThread) => void
       onTranslationFailure?: (thread: ResolvedThread, reason: string) => void
     },
-    options?: { retries?: number; backoffMs?: number; label?: string }
+    {
+      retries = 5,
+      backoffMs = 3000,
+    }: { retries?: number; backoffMs?: number } = {}
   ) {
     return (thread: ResolvedThread) => {
-      const {
-        retries = 5,
-        backoffMs = 3000,
-        label = thread.name,
-      } = options ?? {}
       return withRetries(
         async () => {
           await events?.onThread?.(thread)
@@ -119,16 +117,18 @@ class IndexationManager {
                 translations
               )
             if (response.status === 'SUCCESS') {
-              await this.indexThread(
-                { ...thread, name: response.name, content: response.content },
-                language
-              )
+              const localizedThread = {
+                ...thread,
+                name: response.name,
+                content: response.content,
+              }
+              await this.indexThread(localizedThread, language)
             } else {
               events?.onTranslationFailure?.(thread, response.reason)
             }
           }
         },
-        { retries, backoffMs, label }
+        { retries, backoffMs, label: thread.name }
       )
     }
   }
