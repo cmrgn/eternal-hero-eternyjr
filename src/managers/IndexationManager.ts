@@ -1,4 +1,4 @@
-import type { AnyThreadChannel, Client } from 'discord.js'
+import { Events, type AnyThreadChannel, type Client } from 'discord.js'
 import {
   Pinecone,
   type Index,
@@ -132,9 +132,25 @@ class IndexationManager {
       )
     }
   }
+
+  bindEvents() {
+    this.client.faqManager.on(
+      Events.ThreadCreate,
+      this.indexThreadInAllLanguages.bind(this)
+    )
+    this.client.faqManager.on(
+      Events.ThreadDelete,
+      this.unindexThreadInAllLanguages.bind(this)
+    )
+    this.client.faqManager.on(
+      Events.ThreadUpdate,
+      this.indexThreadInAllLanguages.bind(this)
+    )
+  }
 }
 
 export const initIndexationManager = (client: Client) => {
   const indexationManager = new IndexationManager(client)
+  indexationManager.bindEvents()
   return indexationManager
 }

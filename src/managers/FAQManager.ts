@@ -23,6 +23,12 @@ export type ResolvedThread = {
   url: string
 }
 
+export type OnThreadEvents = {
+  [Events.ThreadCreate]: (thread: ResolvedThread) => void
+  [Events.ThreadUpdate]: (thread: ResolvedThread) => void
+  [Events.ThreadDelete]: (threadId: string) => void
+}
+
 export class FAQManager {
   #FORUM_NAME = '❓│faq-guide'
 
@@ -30,6 +36,12 @@ export class FAQManager {
   guildId: string
   #threads: AnyThreadChannel[]
   #links: string[]
+
+  #listeners = {
+    [Events.ThreadCreate]: [] as OnThreadEvents[Events.ThreadCreate][],
+    [Events.ThreadUpdate]: [] as OnThreadEvents[Events.ThreadUpdate][],
+    [Events.ThreadDelete]: [] as OnThreadEvents[Events.ThreadDelete][],
+  }
 
   constructor(client: Client) {
     this.client = client
@@ -46,6 +58,27 @@ export class FAQManager {
 
   get links() {
     return this.#links
+  }
+
+  on(
+    eventName: Events.ThreadCreate | Events.ThreadDelete | Events.ThreadUpdate,
+    listener:
+      | OnThreadEvents[Events.ThreadCreate]
+      | OnThreadEvents[Events.ThreadDelete]
+      | OnThreadEvents[Events.ThreadUpdate]
+  ) {
+    if (eventName === Events.ThreadDelete)
+      this.#listeners[eventName].push(
+        listener as OnThreadEvents[Events.ThreadDelete]
+      )
+    if (eventName === Events.ThreadUpdate)
+      this.#listeners[eventName].push(
+        listener as OnThreadEvents[Events.ThreadUpdate]
+      )
+    if (eventName === Events.ThreadCreate)
+      this.#listeners[eventName].push(
+        listener as OnThreadEvents[Events.ThreadCreate]
+      )
   }
 
   async cacheThreads() {
@@ -104,26 +137,29 @@ export class FAQManager {
   async onThreadCreate(thread: AnyThreadChannel) {
     if (this.belongsToFAQ(thread)) {
       this.cacheThreads()
-      const { indexationManager } = this.client
       const resolvedThread = await this.resolveThread(thread)
-      await indexationManager.indexThreadInAllLanguages(resolvedThread)
+      for (const listener of this.#listeners[Events.ThreadCreate]) {
+        listener(resolvedThread)
+      }
     }
   }
 
   async onThreadDelete(thread: AnyThreadChannel) {
     if (this.belongsToFAQ(thread)) {
       this.cacheThreads()
-      const { indexationManager } = this.client
-      await indexationManager.unindexThreadInAllLanguages(thread.id)
+      for (const listener of this.#listeners[Events.ThreadDelete]) {
+        listener(thread.id)
+      }
     }
   }
 
   async onThreadUpdate(prev: AnyThreadChannel, next: AnyThreadChannel) {
     if (this.belongsToFAQ(prev) && prev.name !== next.name) {
       this.cacheThreads()
-      const { indexationManager } = this.client
       const resolvedThread = await this.resolveThread(next)
-      await indexationManager.indexThreadInAllLanguages(resolvedThread)
+      for (const listener of this.#listeners[Events.ThreadUpdate]) {
+        listener(resolvedThread)
+      }
     }
   }
 
@@ -142,9 +178,10 @@ export class FAQManager {
 
     // Make sure the parent of the thread is the FAQ forum, abort if not
     if (this.belongsToFAQ({ parentId: thread.parent?.id ?? null, guild })) {
-      const { indexationManager } = this.client
       const resolvedThread = await this.resolveThread(thread)
-      await indexationManager.indexThreadInAllLanguages(resolvedThread)
+      for (const listener of this.#listeners[Events.ThreadUpdate]) {
+        listener(resolvedThread)
+      }
     }
   }
 
