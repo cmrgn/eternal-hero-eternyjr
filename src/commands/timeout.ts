@@ -43,14 +43,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const duration = interaction.options.getString('duration', true)
   const durationMs = ms(duration as StringValue)
 
-  logger.command(interaction, 'Starting command execution')
+  logger.logCommand(interaction, 'Starting command execution')
 
   if (!interaction.guild) throw new Error('Cannot retrieve guild.')
   if (!member) throw new Error('Cannot retrieve member.')
   if (durationMs === 0) throw new Error('Cannot time out a user for 0ms.')
 
   // Time out the user
-  logger.command(interaction, 'Timing out member')
+  logger.logCommand(interaction, 'Timing out member')
   await member.timeout(durationMs, `Violating rule ${rule}`)
 
   // Retrieve the moderation channel
@@ -66,7 +66,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   // Announce the timeout in the moderation channel
   if (moderation?.isSendable()) {
-    logger.command(interaction, 'Announcing timeout')
+    logger.logCommand(interaction, 'Announcing timeout')
     await moderation.send(message)
   }
 

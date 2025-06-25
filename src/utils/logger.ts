@@ -1,9 +1,8 @@
 import type { Giveaway } from 'discord-giveaways'
 
 import type { ChatInputCommandInteraction } from 'discord.js'
-import { formatUser } from './formatUser'
 
-const command = (
+const logCommand = (
   interaction: ChatInputCommandInteraction,
   message: string,
   extra?: Record<PropertyKey, unknown>
@@ -22,22 +21,6 @@ const command = (
   })
 }
 
-const giveaway = (
-  giveaway: Giveaway,
-  action: string,
-  extra?: Record<PropertyKey, unknown>
-) => {
-  console.log('GIVEAWAY', {
-    ...extra,
-    giveaway: { id: giveaway.messageId },
-    action,
-  })
-}
-
-const info = (label: string, extra?: Record<PropertyKey, unknown>) => {
-  console.log(label, extra)
-}
-
 export const LOG_SEVERITIES = ['info', 'warn', 'error'] as const
 
 const log =
@@ -51,8 +34,5 @@ const log =
 export const logger = {
   LOG_SEVERITIES,
   log,
-  command,
-  info,
-  giveaway,
-  utils: { formatUser },
+  logCommand,
 }

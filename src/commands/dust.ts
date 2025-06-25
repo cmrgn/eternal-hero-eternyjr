@@ -58,7 +58,7 @@ export const data = new SlashCommandBuilder()
   .setDescription('Estimate the amount of dust you have across resources')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.command(interaction, 'Starting command execution')
+  logger.logCommand(interaction, 'Starting command execution')
 
   const rareKeys = interaction.options.getInteger('rare_keys') ?? 0
   const epicKeys = interaction.options.getInteger('epic_keys') ?? 0

@@ -48,7 +48,7 @@ async function fetchTranslationsIfNeeded(
 
   if (crowdinCode === 'en') return []
 
-  logger.command(interaction, 'Fetching translations from Crowdin', {
+  logger.logCommand(interaction, 'Fetching translations from Crowdin', {
     language: crowdinCode,
   })
 
@@ -62,7 +62,7 @@ async function fetchTranslationsIfNeeded(
 }
 
 async function fetchFAQContent(interaction: ChatInputCommandInteraction) {
-  logger.command(interaction, 'Fetching FAQ content')
+  logger.logCommand(interaction, 'Fetching FAQ content')
 
   const { faqManager } = interaction.client
 
@@ -74,7 +74,7 @@ async function fetchFAQContent(interaction: ChatInputCommandInteraction) {
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.command(interaction, 'Starting command execution')
+  logger.logCommand(interaction, 'Starting command execution')
 
   // This command can take a long time, so it needs to be handled asynchronously
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
@@ -119,7 +119,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   // Iterate over all threads with the given concurrency, and for each thread,
   // translate it if the expected language is not English, and upsert it into
   // the relevant Pinecone namespace
-  logger.command(interaction, 'Processing all threads')
+  logger.logCommand(interaction, 'Processing all threads')
   await pMap(
     threadsWithContent.entries(),
     async ([index, thread]) => {

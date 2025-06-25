@@ -41,7 +41,7 @@ export const data = new SlashCommandBuilder()
   .setDescription('Search the FAQ')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.command(interaction, 'Starting command execution')
+  logger.logCommand(interaction, 'Starting command execution')
 
   const { client, guildId, channelId, member, options } = interaction
   const visible = options.getBoolean('visible') ?? false
@@ -50,7 +50,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const method = (options.getString('method') ?? 'FUZZY') as SearchType
   const embed = createEmbed().setTitle(`FAQ search: “${keyword}”`)
 
-  logger.command(interaction, 'Performing search')
+  logger.logCommand(interaction, 'Performing search')
   const search = await client.searchManager.search(keyword, method, 'en', 5)
 
   if (search.results.length > 0) {
@@ -67,7 +67,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }))
     )
 
-    logger.command(interaction, 'Reporting search results', {
+    logger.logCommand(interaction, 'Reporting search results', {
       results: search.results.map(result => ({
         name: result.fields.entry_question,
         score: result._score,
@@ -76,12 +76,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     if (visible && member && guildId) {
       const userId = member.user.id
-      logger.command(interaction, 'Recording contribution')
+      logger.logCommand(interaction, 'Recording contribution')
       client.leaderboardManager.register({ userId, channelId, guildId })
     }
   } else {
     const message = `A ${method.toLowerCase()} search for _“${keyword}”_ yielded no results.`
-    logger.command(interaction, 'Sending empty search alert')
+    logger.logCommand(interaction, 'Sending empty search alert')
     await sendAlert(
       interaction,
       method === 'VECTOR'

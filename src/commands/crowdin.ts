@@ -76,7 +76,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const { guildId, options } = interaction
   if (!guildId) return
 
-  logger.command(interaction, 'Starting command execution', {
+  logger.logCommand(interaction, 'Starting command execution', {
     subcommand: options.getSubcommand(),
   })
 
@@ -96,7 +96,7 @@ async function commandProgress(interaction: ChatInputCommandInteraction) {
   const visible = options.getBoolean('visible') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
 
-  logger.command(interaction, 'Getting project progress')
+  logger.logCommand(interaction, 'Getting project progress')
   const projectProgress = await crowdinManager.getProjectProgress()
 
   const header = '**Translation progress:**\n'
@@ -109,7 +109,7 @@ async function commandProgress(interaction: ChatInputCommandInteraction) {
     )
 
     if (!languageData) {
-      logger.command(interaction, 'Missing language object', {
+      logger.logCommand(interaction, 'Missing language object', {
         locale: crowdinCode,
       })
       return interaction.reply({
@@ -147,11 +147,11 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply({ flags })
 
-  logger.command(interaction, 'Getting string object')
+  logger.logCommand(interaction, 'Getting string object')
   const string = await crowdinManager.getStringItem(key)
 
   if (!string) {
-    logger.command(interaction, 'Missing string object', { key })
+    logger.logCommand(interaction, 'Missing string object', { key })
     return interaction.editReply({
       content: `Could not find translation object for \`${key}\`.`,
     })
@@ -161,7 +161,7 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
     const languageObject = await crowdinManager.getLanguageObject(crowdinCode)
 
     if (!languageObject) {
-      logger.command(interaction, 'Missing language object', {
+      logger.logCommand(interaction, 'Missing language object', {
         locale: crowdinCode,
       })
       const error = `Could not find language object for \`${crowdinCode}\`.`
@@ -181,7 +181,7 @@ Translations for term \`${key}\`:
     return interaction.editReply({ content })
   }
 
-  logger.command(interaction, 'Getting all translations for string', {
+  logger.logCommand(interaction, 'Getting all translations for string', {
     id: string.id,
   })
   const translations =

@@ -21,14 +21,14 @@ export const data = new SlashCommandBuilder()
   .setDescription('Display the FAQ leaderboard')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.command(interaction, 'Starting command execution')
+  logger.logCommand(interaction, 'Starting command execution')
 
   const { guildId, client, options } = interaction
   const size = options.getInteger('size') ?? 5
 
   if (!guildId) return
 
-  logger.command(interaction, 'Retrieving leaderboard data')
+  logger.logCommand(interaction, 'Retrieving leaderboard data')
   const leaderboard = await client.leaderboardManager.getLeaderboard(
     guildId,
     size

@@ -32,7 +32,7 @@ export const data = new SlashCommandBuilder()
   .setDescription('Ask the FAQ')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.command(interaction, 'Starting command execution')
+  logger.logCommand(interaction, 'Starting command execution')
 
   const { options, client } = interaction
   const { searchManager, localizationManager } = client
@@ -46,18 +46,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply({ flags })
 
-  logger.command(interaction, 'Guessing the input’s language')
+  logger.logCommand(interaction, 'Guessing the input’s language')
   const crowdinCode = await localizationManager.guessCrowdinLocale(query)
 
   if (!crowdinCode) {
-    logger.command(interaction, 'Aborting due to lack of guessed language')
+    logger.logCommand(interaction, 'Aborting due to lack of guessed language')
     embed.setDescription(
       'Unfortunately, the language could not be guessed from your query.'
     )
     return interaction.editReply({ embeds: [embed] })
   }
 
-  logger.command(interaction, 'Performing the search', { crowdinCode })
+  logger.logCommand(interaction, 'Performing the search', { crowdinCode })
   const { results } = await searchManager.search(
     query,
     'VECTOR',
@@ -67,7 +67,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const [result] = results
 
   if (!result) {
-    logger.command(interaction, 'Returning a lack of results', { crowdinCode })
+    logger.logCommand(interaction, 'Returning a lack of results', {
+      crowdinCode,
+    })
     const languageObject = LANGUAGE_OBJECTS.find(
       languageObject => languageObject.crowdinCode === crowdinCode
     )
@@ -89,7 +91,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   embed.addFields({ name: 'Indexed on', value: timestamp, inline: true })
 
   if (raw) {
-    logger.command(interaction, 'Returning a raw answer', { crowdinCode })
+    logger.logCommand(interaction, 'Returning a raw answer', { crowdinCode })
     embed.setDescription(answer)
 
     return interaction.editReply({ embeds: [embed] })
@@ -97,7 +99,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const context = { question, answer, crowdinCode }
 
-  logger.command(interaction, 'Summarizing the answer', { crowdinCode })
+  logger.logCommand(interaction, 'Summarizing the answer', { crowdinCode })
   const localizedAnswer = await localizationManager.summarize(query, context)
 
   embed.setDescription(localizedAnswer ?? answer)

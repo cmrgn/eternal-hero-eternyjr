@@ -16,7 +16,7 @@ export const data = new SlashCommandBuilder()
   .setDescription('Say something via the bot')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.command(interaction, 'Starting command execution')
+  logger.logCommand(interaction, 'Starting command execution')
 
   const { options, channel } = interaction
   const message = options.getString('message', true)

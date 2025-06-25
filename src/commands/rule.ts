@@ -61,7 +61,7 @@ export const data = new SlashCommandBuilder()
   .setContexts(InteractionContextType.Guild)
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.command(interaction, 'Starting command execution')
+  logger.logCommand(interaction, 'Starting command execution')
 
   const rule = interaction.options.getString('rule', true)
   const user = interaction.options.getUser('user')

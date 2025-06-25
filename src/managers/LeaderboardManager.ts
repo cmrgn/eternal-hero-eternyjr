@@ -46,17 +46,14 @@ export class LeaderboardManager {
         `,
         [guildId, userId, increment]
       )
-      logger.info('FAQ_CONTRIBUTION', { status: 'success', increment, userId })
     } catch (error) {
       await sendAlert(
         { client: this.client, guildId, channelId, userId },
         `A link to the FAQ failed to be properly recorded in the database.\`\`\`${error}\`\`\``
       )
 
-      logger.info('FAQ_CONTRIBUTION', {
-        status: 'failure',
-        increment,
-        userId,
+      this.#log('error', 'Failed to record contribution', {
+        ...options,
         error,
       })
     }
