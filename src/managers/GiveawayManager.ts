@@ -27,7 +27,8 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
   async saveGiveaway(messageId: string, giveawayData: GiveawayData) {
     log('info', 'Saving a giveaway in the database', {
       messageId,
-      giveawayData,
+      channelId: giveawayData.channelId,
+      guildId: giveawayData.guildId,
     })
 
     await pool.query(

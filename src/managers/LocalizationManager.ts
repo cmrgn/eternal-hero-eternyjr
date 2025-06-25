@@ -8,6 +8,8 @@ import { type CrowdinCode, CROWDIN_CODES } from '../constants/i18n'
 import type { ResolvedThread } from './FAQManager'
 import { cleanUpTranslation } from '../utils/cleanUpTranslation'
 import { logger } from '../utils/logger'
+import nlp from 'compromise'
+import { regexTest } from '../utils/regexTest'
 
 const SYSTEM_PROMPT = `
 Sole purpose:
@@ -253,6 +255,8 @@ export class LocalizationManager {
       .map(({ source, target }) => `- ${source} → ${target}`)
       .join('\n')
 
+    console.log(glossary)
+
     const userPrompt = `
     You are a translation bot specifically for the game Eternal Hero.
     Translate the following FAQ thread from English (en) into ‘${crowdinCode}’.
@@ -302,7 +306,7 @@ export class LocalizationManager {
     nameAndContent: string,
     localizationItems: LocalizationItem[],
     crowdinCode: CrowdinCode,
-    { maxTerms = 100, scoreCutoff = -50 } = {}
+    { maxTerms = 100 } = {}
   ) {
     this.#log('info', 'Building glossary for thread', {
       crowdinCode,
@@ -313,41 +317,32 @@ export class LocalizationManager {
     const scored: { source: string; target: string; score: number }[] = []
     const seen = new Set<string>()
 
+    const doc = nlp(nameAndContent)
+    const nounPhrases = new Set(
+      doc.nouns().out('array').map(cleanUpTranslation)
+    )
+
     for (const item of localizationItems) {
-      // This skip this localization item if the language translation is empty
-      if (!(crowdinCode in item.translations)) continue
-
-      const cleaned = cleanUpTranslation(item.translations.en)
-      if (seen.has(cleaned)) continue
-
+      const source = cleanUpTranslation(item.translations.en)
       const target = cleanUpTranslation(item.translations[crowdinCode])
 
-      // Hybrid matching logic
-      let isMatch = false
-      let score = 0
+      if (seen.has(source)) continue
+      if (!source.trim()) continue
+      if (source.length < 3) continue
+      if (source.toLowerCase() === target.toLowerCase()) continue
 
-      // For very short terms, use exact substring match and set the score to
-      // 0 to treat exact match as perfect score
-      if (cleaned.length <= 3) {
-        if (haystack.includes(cleaned)) {
-          isMatch = true
-          score = 0
-        }
-      } else {
-        const match = fuzzysort.single(cleaned, haystack)
-        if (match && match.score >= scoreCutoff) {
-          isMatch = true
-          score = match.score
-        }
-      }
+      const isNoun = nounPhrases.has(source)
+      const isRegexMatch = regexTest(haystack, source)
+      const isSubstring = haystack.includes(source)
 
-      if (isMatch) {
-        scored.push({ source: cleaned, target, score })
-        seen.add(cleaned)
+      if (isNoun || isRegexMatch || isSubstring) {
+        const score = isNoun ? -100 : isRegexMatch ? -50 : 0
+        scored.push({ source, target, score })
+        seen.add(source)
       }
     }
 
-    return scored.sort((a, b) => a.score - b.score).slice(0, maxTerms)
+    return scored.slice(0, maxTerms)
   }
 }
 
