@@ -254,13 +254,6 @@ export class LocalizationManager {
     | { status: 'FAILURE'; reason: string }
     | { status: 'SUCCESS'; name: string; content: string }
   > {
-    this.#log('info', 'Translating thread', {
-      id: thread.id,
-      name: thread.name,
-      crowdinCode,
-      translationCount: translations.length,
-    })
-
     const glossary = this.buildGlossaryForEntry(
       `${thread.name}\n${thread.content}`,
       translations,
@@ -269,7 +262,12 @@ export class LocalizationManager {
       .map(({ source, target }) => `- ${source} → ${target}`)
       .join('\n')
 
-    console.log(glossary)
+    this.#log('info', 'Translating thread', {
+      id: thread.id,
+      name: thread.name,
+      crowdinCode,
+      glossarySize: glossary.length,
+    })
 
     const userPrompt = `
     You are a translation bot specifically for the game Eternal Hero.
