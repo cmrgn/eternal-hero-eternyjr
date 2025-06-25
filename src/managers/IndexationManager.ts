@@ -63,7 +63,10 @@ export class IndexationManager {
   ) {
     const count = entries.length
     const namespace = this.resolveNamespace(namespaceName)
-    this.#log('info', 'Indexing entries', { count, namespace })
+    this.#log('info', 'Indexing entries', {
+      count,
+      namespace: this.resolveNamespaceName(namespaceName),
+    })
 
     while (entries.length) {
       const batch = entries.splice(0, 90)
