@@ -13,7 +13,7 @@ const command = (
     channel => channel.id === interaction.channelId
   )
 
-  console.log(`[${interaction.commandName}]`, message, {
+  console.log(`[Command: ${interaction.commandName}]`, message, {
     ...extra,
     userId: interaction.user.id,
     guildId: interaction.guildId,
