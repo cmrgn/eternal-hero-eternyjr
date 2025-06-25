@@ -124,46 +124,32 @@ export class LocalizationManager {
     return response.choices[0].message?.content?.trim()
   }
 
-  translateToEnglish(originalText: string) {
-    this.#log('info', 'Translating to English', { originalText })
-
-    return this.promptGPT(`
-    ${LOCALIZATION_PROMPT}
-    Translate the following text to English unless it is already in English, in which case return it as is.
-    ${originalText}
-    `)
-  }
-
-  translateFromEnglish(answerText: string, testSentence: string) {
-    this.#log('info', 'Translating from English', { answerText, testSentence })
-
-    return this.promptGPT(`
-    ${LOCALIZATION_PROMPT}
-    Translate the following text to the language used in the test sentence “${testSentence}”, unless that sentence is in English, in which case return the text as is.
-    ${answerText}
-    `)
-  }
-
   summarize(
     userQuestion: string,
-    matchedFAQ: { question: string; answer: string }
+    context: { question: string; answer: string; crowdinCode: CrowdinCode }
   ) {
     this.#log('info', 'Summarizing', {
       userQuestion,
-      threadName: matchedFAQ.question,
+      threadName: context.question,
     })
 
     return this.promptGPT(`
     The player asked: “${userQuestion}”
-    
+
     Here is the best match from the FAQ:
-    Q: ${matchedFAQ.question}
-    A: ${matchedFAQ.answer}
-    
-    Respond helpfully in the language used by the player in their question.
-    When rephrasing the FAQ answer into a more digestible answer for the player, it is very important you do not take liberties with the content of the FAQ.
-    You must not change the meaning of the answer, and you must not add any information that is not in the FAQ.
-    Also be mindful about what appears like game terms, since their meaning can be subtle and matterns.
+    Q: ${context.question}
+    A: ${context.answer}
+
+    Your task is to help the player by summarizing the FAQ answer into a more
+    digestible response, while following these strict rules:
+
+    1. Respond in ${context.crowdinCode} (NOT in English).
+    2. Do not change the meaning of the answer in any way.
+    3. Do not add any information that is not explicitly present in the FAQ.
+    4. Do not remove important details that are part of the FAQ answer.
+    5. Be especially careful with game terms — their meaning is precise and important. When in doubt, copy the phrasing exactly rather than risk altering the meaning.
+
+    Keep the tone helpful, clear, and concise. Your goal is to make the FAQ answer more approachable, but never less accurate.
     `)
   }
 
@@ -217,6 +203,7 @@ export class LocalizationManager {
   ) {
     this.#log('info', 'Translating thread as a backup', {
       id: thread.id,
+      name: thread.name,
       crowdinCode,
       translationCount: translations.length,
     })
@@ -258,6 +245,7 @@ export class LocalizationManager {
   > {
     this.#log('info', 'Translating thread', {
       id: thread.id,
+      name: thread.name,
       crowdinCode,
       translationCount: translations.length,
     })

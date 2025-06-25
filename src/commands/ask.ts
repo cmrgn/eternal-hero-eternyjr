@@ -95,7 +95,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return interaction.editReply({ embeds: [embed] })
   }
 
-  const context = { question, answer }
+  const context = { question, answer, crowdinCode }
 
   logger.command(interaction, 'Summarizing the answer', { crowdinCode })
   const localizedAnswer = await localizationManager.summarize(query, context)
