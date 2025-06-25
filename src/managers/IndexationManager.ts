@@ -43,7 +43,7 @@ export class IndexationManager {
       chunk_text: `${entry.name}\n\n${entry.content}`,
       entry_question: entry.name,
       entry_answer: entry.content,
-      entry_date: entry.createdAt ?? '',
+      entry_indexed_at: new Date().toISOString(),
       entry_tags: entry.tags,
       entry_url: entry.url,
     }

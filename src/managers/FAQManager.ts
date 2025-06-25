@@ -16,7 +16,6 @@ export type ResolvedThread = {
   isResolved: true
   id: string
   name: string
-  createdAt: string
   content: string
   tags: string[]
   url: string
@@ -231,7 +230,6 @@ export class FAQManager {
       isResolved: true,
       id: thread.id,
       name: thread.name,
-      createdAt: thread.createdAt?.toString() ?? '',
       content: firstMessage?.content ?? '',
       tags: this.getThreadTags(thread as AnyThreadChannel),
       url: thread.url,

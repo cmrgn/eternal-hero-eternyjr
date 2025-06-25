@@ -15,7 +15,7 @@ export type PineconeMetadata = {
   entry_question: string
   entry_answer: string
   entry_tags: string[]
-  entry_date: string
+  entry_indexed_at: string
   entry_url: string
 }
 
@@ -195,7 +195,7 @@ export class SearchManager {
           entry_question: result.item.name,
           entry_answer: '',
           entry_tags: [],
-          entry_date: result.item.createdAt?.toISOString() ?? '',
+          entry_indexed_at: new Date().toISOString(),
           entry_url: result.item.url,
         },
       }
