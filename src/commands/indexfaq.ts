@@ -7,8 +7,9 @@ import pMap from 'p-map'
 import Bottleneck from 'bottleneck'
 
 import type { ResolvedThread } from '../managers/FAQManager'
-import { logger } from '../utils/logger'
+import type { PineconeNamespace } from '../managers/SearchManager'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
+import { logger } from '../utils/logger'
 import { sendAlert } from '../utils/sendAlert'
 import { IS_DEV } from '../constants/config'
 
@@ -92,7 +93,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const notify = discordEditLimiter.wrap(
     (thread: ResolvedThread, index: number) =>
       interaction.editReply({
-        content: `Indexing (${index + 1}/${total}) _“${thread.name}”_ in namespace \`${crowdinCode}\`.`,
+        content: [
+          'Indexing in progress…',
+          `- Namespace: \`${crowdinCode}\``,
+          `- Progress: ${Math.round(((index + 1) / total) * 100)}%`,
+          `- Current: _“${thread.name}”_`,
+        ].join('\n'),
       })
   )
 
