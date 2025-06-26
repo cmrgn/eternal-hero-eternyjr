@@ -7,7 +7,11 @@ import {
   DEEPL_GLOSSARY_ID,
   OPENAI_API_KEY,
 } from '../constants/config'
-import { type CrowdinCode, CROWDIN_CODES } from '../constants/i18n'
+import {
+  type CrowdinCode,
+  CROWDIN_CODES,
+  type Language,
+} from '../constants/i18n'
 import type { ResolvedThread } from './FAQManager'
 import { logger } from '../utils/logger'
 
@@ -174,11 +178,11 @@ export class LocalizationManager {
 
   async translateThread(
     thread: ResolvedThread,
-    crowdinCode: CrowdinCode
+    language: Language
   ): Promise<{ name: string; content: string }> {
     // Note: the `TargetLanguageCode` doesn’t list some languages code like `vi`
     // but they seem to be supported nicely, so it looks like a type problem.
-    const targetLangCode = crowdinCode as deepl.TargetLanguageCode
+    const targetLangCode = language as deepl.TargetLanguageCode
     const [name, content] = await this.deepl.translateText(
       [thread.name, thread.content],
       'en',

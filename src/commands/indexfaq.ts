@@ -119,6 +119,10 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
   const threadId = options.getString('thread_id', true)
   const crowdinCode = options.getString('language') as CrowdinCode | undefined
   const thread = (await client.channels.fetch(threadId)) as AnyThreadChannel
+  // biome-ignore lint/style/noNonNullAssertion: safe
+  const languageObject = LANGUAGE_OBJECTS.find(
+    languageObject => languageObject.crowdinCode === crowdinCode
+  )!
 
   await interaction.editReply(`Loading thread with ID \`${threadId}\`…`)
   const resolvedThread = await faqManager.resolveThread(thread)
@@ -130,7 +134,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
       )
       await indexationManager.translateAndIndexThread(
         resolvedThread,
-        crowdinCode
+        languageObject
       )
     } catch (error) {
       await onIndexationFailure(interaction, resolvedThread, error)
@@ -152,7 +156,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
           })
           await indexationManager.translateAndIndexThread(
             resolvedThread,
-            crowdinCode
+            languageObject
           )
         } catch (error) {
           await onIndexationFailure(interaction, resolvedThread, error)
@@ -172,6 +176,10 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
   const crowdinCode = options.getString('language', true) as CrowdinCode
   const threadsWithContent = await fetchFAQContent(interaction)
   const total = threadsWithContent.length
+  // biome-ignore lint/style/noNonNullAssertion: safe
+  const languageObject = LANGUAGE_OBJECTS.find(
+    languageObject => languageObject.crowdinCode === crowdinCode
+  )!
 
   // This function is responsible for reporting the current progress by editing
   // the original message while respecting Discord’s rate limits
@@ -213,7 +221,10 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
       async ([index, thread]) => {
         try {
           await notify(thread, index)
-          await indexationManager.translateAndIndexThread(thread, crowdinCode)
+          await indexationManager.translateAndIndexThread(
+            thread,
+            languageObject
+          )
         } catch (error) {
           await onIndexationFailure(interaction, thread, error)
         }

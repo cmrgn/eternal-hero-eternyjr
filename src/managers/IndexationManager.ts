@@ -7,7 +7,7 @@ import {
 
 import type { ResolvedThread } from './FAQManager'
 import type { PineconeEntry, PineconeNamespace } from './SearchManager'
-import type { CrowdinCode } from '../constants/i18n'
+import type { CrowdinCode, Language, LanguageObject } from '../constants/i18n'
 import { IS_DEV, PINECONE_API_KEY } from '../constants/config'
 import { logger } from '../utils/logger'
 import { withRetries } from '../utils/withRetries'
@@ -99,7 +99,7 @@ export class IndexationManager {
     })
 
     return this.client.crowdinManager.onCrowdinLanguages(
-      ({ crowdinCode }) => this.translateAndIndexThread(thread, crowdinCode),
+      language => this.translateAndIndexThread(thread, language),
       { concurrency }
     )
   }
@@ -135,7 +135,7 @@ export class IndexationManager {
 
   translateAndIndexThread(
     thread: ResolvedThread,
-    language: CrowdinCode,
+    { crowdinCode, twoLettersCode }: LanguageObject,
     options?: { retries?: number; backoffMs?: number }
   ) {
     const { retries = 3, backoffMs = 3000 } = options ?? {}
@@ -143,9 +143,9 @@ export class IndexationManager {
 
     return withRetries(
       async () => {
-        if (language === 'en') return this.indexThread(thread, language)
-        const response = await lm.translateThread(thread, language)
-        await this.indexThread({ ...thread, ...response }, language)
+        if (crowdinCode === 'en') return this.indexThread(thread, crowdinCode)
+        const response = await lm.translateThread(thread, twoLettersCode)
+        await this.indexThread({ ...thread, ...response }, crowdinCode)
       },
       { retries, backoffMs, label: thread.name }
     )
