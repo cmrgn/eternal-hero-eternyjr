@@ -135,16 +135,17 @@ export class IndexationManager {
 
   translateAndIndexThread(
     thread: ResolvedThread,
-    { crowdinCode, twoLettersCode }: LanguageObject,
+    languageObject: LanguageObject,
     options?: { retries?: number; backoffMs?: number }
   ) {
     const { retries = 3, backoffMs = 3000 } = options ?? {}
     const lm = this.client.localizationManager
+    const { crowdinCode } = languageObject
 
     return withRetries(
       async () => {
         if (crowdinCode === 'en') return this.indexThread(thread, crowdinCode)
-        const response = await lm.translateThread(thread, twoLettersCode)
+        const response = await lm.translateThread(thread, languageObject)
         await this.indexThread({ ...thread, ...response }, crowdinCode)
       },
       { retries, backoffMs, label: thread.name }

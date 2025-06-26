@@ -11,6 +11,7 @@ import {
   type CrowdinCode,
   CROWDIN_CODES,
   type Language,
+  type LanguageObject,
 } from '../constants/i18n'
 import type { ResolvedThread } from './FAQManager'
 import { logger } from '../utils/logger'
@@ -178,11 +179,16 @@ export class LocalizationManager {
 
   async translateThread(
     thread: ResolvedThread,
-    language: Language
+    languageObject: LanguageObject
   ): Promise<{ name: string; content: string }> {
+    this.#log('info', 'Translating thread with DeepL', {
+      threadId: thread.id,
+      targetLang: languageObject.deepLCode,
+    })
+
     // Note: the `TargetLanguageCode` doesn’t list some languages code like `vi`
     // but they seem to be supported nicely, so it looks like a type problem.
-    const targetLangCode = language as deepl.TargetLanguageCode
+    const targetLangCode = languageObject.deepLCode
     const [name, content] = await this.deepl.translateText(
       [thread.name, thread.content],
       'en',
