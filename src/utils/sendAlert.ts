@@ -6,7 +6,7 @@ import {
   userMention,
 } from 'discord.js'
 
-import { ALERT_CHANNEL_ID } from '../constants/discord'
+import { ALERT_CHANNEL_ID, TEST_SERVER_ID } from '../constants/discord'
 import { stripIndent } from './stripIndent'
 
 export type InteractionLike = {
@@ -22,6 +22,7 @@ export async function sendAlert(interaction: InteractionLike, message: string) {
   const userId = interaction.user?.id ?? interaction.userId
   const channel = await interaction.client.channels.fetch(ALERT_CHANNEL_ID)
   if (!channel?.isSendable()) return
+  if (interaction.guildId === TEST_SERVER_ID) return
 
   try {
     return channel.send(
