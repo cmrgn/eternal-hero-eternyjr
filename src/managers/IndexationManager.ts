@@ -7,7 +7,7 @@ import {
 
 import type { ResolvedThread } from './FAQManager'
 import type { PineconeEntry, PineconeNamespace } from './SearchManager'
-import type { CrowdinCode, Language, LanguageObject } from '../constants/i18n'
+import type { LanguageObject } from '../constants/i18n'
 import { IS_DEV, PINECONE_API_KEY } from '../constants/config'
 import { logger } from '../utils/logger'
 import { withRetries } from '../utils/withRetries'

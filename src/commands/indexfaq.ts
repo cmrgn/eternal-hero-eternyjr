@@ -119,16 +119,20 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
   const threadId = options.getString('thread_id', true)
   const crowdinCode = options.getString('language') as CrowdinCode | undefined
   const thread = (await client.channels.fetch(threadId)) as AnyThreadChannel
-  // biome-ignore lint/style/noNonNullAssertion: safe
-  const languageObject = LANGUAGE_OBJECTS.find(
-    languageObject => languageObject.crowdinCode === crowdinCode
-  )!
 
   await interaction.editReply(`Loading thread with ID \`${threadId}\`…`)
   const resolvedThread = await faqManager.resolveThread(thread)
 
   if (crowdinCode) {
     try {
+      const languageObject = LANGUAGE_OBJECTS.find(
+        languageObject => languageObject.crowdinCode === crowdinCode
+      )
+
+      if (!languageObject) {
+        throw new Error(`Could not retrieve language object for ${crowdinCode}`)
+      }
+
       await interaction.editReply(
         `Indexing thread with ID \`${threadId}\` in namespace \`${crowdinCode}\`…`
       )
@@ -143,13 +147,13 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
     await interaction.editReply('Indexing thread in all languages…')
 
     await crowdinManager.onCrowdinLanguages(
-      async ({ crowdinCode }, index, languages) => {
+      async (languageObject, index, languages) => {
         const progress = Math.round(((index + 1) / languages.length) * 100)
         try {
           await interaction.editReply({
             content: [
               `Indexing thread with ID \`${threadId}\` in progress…`,
-              `- Namespace: \`${crowdinCode}\``,
+              `- Namespace: \`${languageObject.crowdinCode}\``,
               `- Progress: ${progress}%`,
               `- Thread: _“${resolvedThread.name}”_`,
             ].join('\n'),
@@ -173,13 +177,16 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
 async function commandLanguage(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
   const { indexationManager } = client
-  const crowdinCode = options.getString('language', true) as CrowdinCode
+  const crowdinCode = options.getString('language', true)
   const threadsWithContent = await fetchFAQContent(interaction)
   const total = threadsWithContent.length
-  // biome-ignore lint/style/noNonNullAssertion: safe
   const languageObject = LANGUAGE_OBJECTS.find(
     languageObject => languageObject.crowdinCode === crowdinCode
-  )!
+  )
+
+  if (!languageObject) {
+    throw new Error(`Could not retrieve language object for ${crowdinCode}`)
+  }
 
   // This function is responsible for reporting the current progress by editing
   // the original message while respecting Discord’s rate limits
@@ -219,15 +226,8 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
     await pMap(
       threadsWithContent.entries(),
       async ([index, thread]) => {
-        try {
-          await notify(thread, index)
-          await indexationManager.translateAndIndexThread(
-            thread,
-            languageObject
-          )
-        } catch (error) {
-          await onIndexationFailure(interaction, thread, error)
-        }
+        await notify(thread, index)
+        await indexationManager.translateAndIndexThread(thread, languageObject)
       },
       { concurrency: 20 }
     )
