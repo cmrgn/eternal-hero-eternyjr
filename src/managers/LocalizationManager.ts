@@ -184,7 +184,7 @@ export class LocalizationManager {
       'en',
       targetLangCode,
       {
-        formality: 'less',
+        formality: 'prefer_less',
         modelType: 'quality_optimized',
         glossary: DEEPL_GLOSSARY_ID,
       }
