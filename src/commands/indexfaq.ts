@@ -229,9 +229,7 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
 async function commandDeepl(interaction: ChatInputCommandInteraction) {
   const { client } = interaction
   const { localizationManager, crowdinManager } = client
-  const translations = (
-    await crowdinManager.fetchAllProjectTranslations()
-  ).slice(0, 5)
+  const translations = await crowdinManager.fetchAllProjectTranslations()
   const languageObjects = LANGUAGE_OBJECTS.filter(object => object.isOnCrowdin)
 
   await Promise.all(
