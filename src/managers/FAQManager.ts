@@ -231,11 +231,18 @@ export class FAQManager {
       thread as AnyThreadChannel
     ).fetchStarterMessage()
 
+    const content = (firstMessage?.content ?? '')
+      // Removed the related entries footer from the message
+      .split(/> Related entr(?:y|ies):/)[0]
+      // Remove emojis
+      .replace(/<a?:\w+:\d+>/g, '')
+      .trim()
+
     return {
       isResolved: true,
       id: thread.id,
       name: thread.name,
-      content: firstMessage?.content ?? '',
+      content,
       tags: this.getThreadTags(thread as AnyThreadChannel),
       url: thread.url,
     }
