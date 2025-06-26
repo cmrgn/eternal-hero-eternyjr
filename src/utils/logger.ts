@@ -1,5 +1,3 @@
-import type { Giveaway } from 'discord-giveaways'
-
 import type { ChatInputCommandInteraction } from 'discord.js'
 
 const logCommand = (

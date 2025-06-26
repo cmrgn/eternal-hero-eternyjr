@@ -1,19 +1,15 @@
 import OpenAI from 'openai'
 import type { Client } from 'discord.js'
-import type { ChatCompletionTool } from 'openai/resources/chat/completions'
-import nlp from 'compromise'
+import * as deepl from 'deepl-node'
 
-import { OPENAI_API_KEY } from '../constants/config'
 import {
-  type CrowdinCode,
-  CROWDIN_CODES,
-  LANGUAGE_OBJECTS,
-} from '../constants/i18n'
+  DEEPL_API_KEY,
+  DEEPL_GLOSSARY_ID,
+  OPENAI_API_KEY,
+} from '../constants/config'
+import { type CrowdinCode, CROWDIN_CODES } from '../constants/i18n'
 import type { ResolvedThread } from './FAQManager'
-import { cleanUpTranslation } from '../utils/cleanUpTranslation'
 import { logger } from '../utils/logger'
-import { regexTest } from '../utils/regexTest'
-import { sendAlert } from '../utils/sendAlert'
 
 const SYSTEM_PROMPT = `
 Sole purpose:
@@ -46,6 +42,7 @@ export type LocalizationItem = {
 export class LocalizationManager {
   client: Client
   openai: OpenAI
+  deepl: deepl.DeepLClient
   #gptModel = 'gpt-4o'
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('LeaderboardManager', this.#severityThreshold)
@@ -57,8 +54,13 @@ export class LocalizationManager {
       throw new Error('Missing environment variable OPENAI_API_KEY; aborting.')
     }
 
+    if (!DEEPL_API_KEY) {
+      throw new Error('Missing environment variable DEEPL_API_KEY; aborting.')
+    }
+
     this.client = client
     this.openai = new OpenAI({ apiKey: OPENAI_API_KEY })
+    this.deepl = new deepl.DeepLClient(DEEPL_API_KEY)
   }
 
   isLanguageSupported(language: string): language is CrowdinCode {
@@ -170,179 +172,25 @@ export class LocalizationManager {
     `)
   }
 
-  async translateThreadAsJson(userPrompt: string) {
-    const tools: ChatCompletionTool[] = [
-      {
-        type: 'function',
-        function: {
-          name: 'return_translation',
-          description: 'Return the translated title and content.',
-          parameters: {
-            type: 'object',
-            properties: {
-              title: { type: 'string', description: 'The original title' },
-              content: { type: 'string', description: 'The original content' },
-            },
-            required: ['title', 'content'],
-          },
-        },
-      },
-    ]
-
-    const response = await this.openai.chat.completions.create({
-      model: this.#gptModel,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-      tools,
-      tool_choice: {
-        type: 'function',
-        function: { name: 'return_translation' },
-      },
-    })
-
-    try {
-      const toolCall = response.choices[0].message?.tool_calls?.[0]
-      const args = toolCall?.function.arguments ?? ''
-
-      return JSON.parse(args)
-    } catch (error) {
-      return { title: '', content: '' }
-    }
-  }
-
   async translateThread(
     thread: ResolvedThread,
-    crowdinCode: CrowdinCode,
-    translations: LocalizationItem[],
-    attempt = 1
+    crowdinCode: CrowdinCode
   ): Promise<{ name: string; content: string }> {
-    // ChatGPT is awfully resilient to translating things at times, and we need
-    // to force it to retry with a more agressive prompt. If after a few
-    // attempts it still didn’t work, abort.
-    if (attempt > 3) {
-      throw new Error(
-        `ChatGPT could not translate the thread afted ${attempt - 1} attempts.`
-      )
-    }
-
-    // Build a glossary, and reduce its size as the amount of retries grows in
-    // order to lower the prompt complexity and overwhelm the model less.
-    const terms = this.buildGlossaryForEntry(
-      `${thread.name}\n${thread.content}`,
-      translations,
-      crowdinCode,
-      { maxTerms: Math.round(200 / attempt) }
-    )
-
-    const emptyGlossary = terms.length === 0
-    const glossary = terms.reduce<Record<string, string>>(
-      (acc, key) => ({ ...acc, [key.source]: key.target }),
-      {}
-    )
-
-    this.#log('info', 'Translating thread', {
-      id: thread.id,
-      name: thread.name,
-      crowdinCode,
-      glossarySize: terms.length,
-      attempt,
-    })
-
-    const input = { name: thread.name, content: thread.content }
-    const languageName =
-      LANGUAGE_OBJECTS.find(object => object.crowdinCode === crowdinCode)
-        ?.languageName ?? crowdinCode
-
-    const basePrompt = [
-      `Translate this FAQ from English to ${languageName} (${crowdinCode}).`,
-      'You MUST translate everything — no English should remain. Return only the translation.',
-      emptyGlossary
-        ? ''
-        : 'If a term is listed in the “MUST-USE Term Translations”, you MUST use its translation exactly as written. If it’s not listed, translate it naturally.',
-      attempt === 1
-        ? null
-        : `You have been asked ${attempt === 2 ? 'once' : `${attempt - 1} times`} already and have FAILED to do so. This time, you MUST translate.`,
-    ]
-      .filter(Boolean)
-      .join('\n')
-
-    const userPrompt = [
-      basePrompt,
-      '',
-      emptyGlossary
-        ? ''
-        : `MUST-USE Term Translations (en → ${crowdinCode}):\n${JSON.stringify(glossary, null, 2)}`,
-      '',
-      'FAQ:',
-      JSON.stringify(input, null, 2),
-    ].join('\n')
-
-    let response = await this.translateThreadAsJson(userPrompt)
-    console.log(response)
-    const isTitleSame =
-      response.title.trim().toLowerCase() === thread.name.trim().toLowerCase()
-    const isContentSame =
-      response.content.trim().toLowerCase() ===
-      thread.content.trim().toLowerCase()
-
-    if (!response.title || !response.content || isTitleSame || isContentSame) {
-      response = await this.translateThread(
-        thread,
-        crowdinCode,
-        translations,
-        attempt + 1
-      )
-    }
-
-    return { name: response.title, content: response.content }
-  }
-
-  buildGlossaryForEntry(
-    nameAndContent: string,
-    localizationItems: LocalizationItem[],
-    crowdinCode: CrowdinCode,
-    { maxTerms = 100 } = {}
-  ) {
-    this.#log('info', 'Building glossary for thread', {
-      crowdinCode,
-      translationCount: localizationItems.length,
-    })
-
-    const haystack = cleanUpTranslation(nameAndContent)
-    const scored: { source: string; target: string; score: number }[] = []
-    const seen = new Set<string>()
-
-    const doc = nlp(nameAndContent)
-    const nounPhrases = new Set(
-      doc.nouns().out('array').map(cleanUpTranslation)
-    )
-
-    for (const item of localizationItems) {
-      if (!(crowdinCode in item.translations)) continue
-      if (!('en' in item.translations)) continue
-
-      const source = cleanUpTranslation(item.translations.en)
-      const target = cleanUpTranslation(item.translations[crowdinCode])
-
-      if (seen.has(source)) continue
-      if (!source.trim()) continue
-      if (source.length < 3) continue
-      if (source.toLowerCase() === target.toLowerCase()) continue
-
-      const isNoun = nounPhrases.has(source)
-      const isRegexMatch = regexTest(haystack, source)
-      const isSubstring = haystack.includes(source)
-
-      if (isNoun || isRegexMatch || isSubstring) {
-        const score = isNoun ? -100 : isRegexMatch ? -50 : 0
-        scored.push({ source, target, score })
-        seen.add(source)
+    // Note: the `TargetLanguageCode` doesn’t list some languages code like `vi`
+    // but they seem to be supported nicely, so it looks like a type problem.
+    const targetLangCode = crowdinCode as deepl.TargetLanguageCode
+    const [name, content] = await this.deepl.translateText(
+      [thread.name, thread.content],
+      'en',
+      targetLangCode,
+      {
+        formality: 'less',
+        modelType: 'quality_optimized',
+        glossary: DEEPL_GLOSSARY_ID,
       }
-    }
+    )
 
-    return scored.sort((a, b) => a.score - b.score).slice(0, maxTerms)
+    return { name: name.text, content: content.text }
   }
 }
 

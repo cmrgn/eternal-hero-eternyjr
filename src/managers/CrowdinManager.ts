@@ -7,6 +7,7 @@ import {
 import decompress from 'decompress'
 import csvtojson from 'csvtojson'
 import fetch from 'node-fetch'
+import pMap from 'p-map'
 
 import { CROWDIN_TOKEN } from '../constants/config'
 import { logger } from '../utils/logger'
@@ -17,7 +18,6 @@ import {
   type CrowdinCode,
   type LanguageObject,
 } from '../constants/i18n'
-import pMap from 'p-map'
 
 export type {
   LanguagesModel,
@@ -60,7 +60,6 @@ export class CrowdinManager {
       project => project.data.identifier === this.#projectIdentifier
     )
     if (!project) throw new Error('Cannot find Crowdin project.')
-    console.log(project.data.targetLanguages)
 
     return project.data
   }
@@ -278,11 +277,13 @@ export class CrowdinManager {
       index: number,
       array: LanguageObject[]
     ) => Promise<void>,
-    concurrency = 3
+    { concurrency = 10, withEnglish = true } = {}
   ) {
-    const languageObjects = LANGUAGE_OBJECTS.filter(
-      object => object.isOnCrowdin || object.crowdinCode === 'en'
-    )
+    const languageObjects = LANGUAGE_OBJECTS.filter(object => {
+      if (object.isOnCrowdin) return true
+      if (object.crowdinCode === 'en' && withEnglish) return true
+      return false
+    })
     return pMap(
       languageObjects.entries(),
       ([index, languageObject]) =>

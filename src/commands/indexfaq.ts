@@ -6,11 +6,14 @@ import {
 } from 'discord.js'
 import pMap from 'p-map'
 import Bottleneck from 'bottleneck'
+import * as deepl from 'deepl-node'
 
 import type { ResolvedThread } from '../managers/FAQManager'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { logger } from '../utils/logger'
 import { sendAlert } from '../utils/sendAlert'
+import { cleanUpTranslation } from '../utils/cleanUpTranslation'
+import { DEEPL_GLOSSARY_ID } from '../constants/config'
 
 export const scope = 'OFFICIAL'
 
@@ -58,6 +61,10 @@ export const data = new SlashCommandBuilder()
       )
   )
 
+  .addSubcommand(subcommand =>
+    subcommand.setName('deepl').setDescription('Update glossary on DeepL')
+  )
+
   .setDescription('Index the FAQ in Pinecone')
 
 const discordEditLimiter = new Bottleneck({
@@ -65,27 +72,6 @@ const discordEditLimiter = new Bottleneck({
   reservoirRefreshAmount: 5, // Refill to 5
   reservoirRefreshInterval: 5000, // Every 5 seconds
 })
-
-async function fetchTranslationsIfNeeded(
-  interaction: ChatInputCommandInteraction
-) {
-  const crowdinCode = (interaction.options.getString('language') ??
-    'en') as CrowdinCode
-
-  if (crowdinCode === 'en') return []
-
-  logger.logCommand(interaction, 'Fetching translations from Crowdin', {
-    language: crowdinCode,
-  })
-
-  await interaction.editReply('Fetching translations from Crowdin…')
-
-  // The reason we don’t fetch only the translations for the specific language
-  // is that it’s not the way Crowdin works: to get all translations, you need
-  // to build and download the project which comes as bunch of CSV files with
-  // all the translations for all the languages in them.
-  return interaction.client.crowdinManager.fetchAllProjectTranslations()
-}
 
 async function fetchFAQContent(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Fetching FAQ content')
@@ -120,6 +106,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (interaction.options.getSubcommand() === 'thread') {
     return commandThread(interaction)
   }
+
+  if (interaction.options.getSubcommand() === 'deepl') {
+    return commandDeepl(interaction)
+  }
 }
 
 async function commandThread(interaction: ChatInputCommandInteraction) {
@@ -131,7 +121,6 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
 
   await interaction.editReply(`Loading thread with ID \`${threadId}\`…`)
   const resolvedThread = await faqManager.resolveThread(thread)
-  const translations = await fetchTranslationsIfNeeded(interaction)
 
   if (crowdinCode) {
     try {
@@ -140,8 +129,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
       )
       await indexationManager.translateAndIndexThread(
         resolvedThread,
-        crowdinCode,
-        translations
+        crowdinCode
       )
     } catch (error) {
       await onIndexationFailure(interaction, resolvedThread, error)
@@ -163,8 +151,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
           })
           await indexationManager.translateAndIndexThread(
             resolvedThread,
-            crowdinCode,
-            translations
+            crowdinCode
           )
         } catch (error) {
           await onIndexationFailure(interaction, resolvedThread, error)
@@ -199,10 +186,10 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
       })
   )
 
-  // When indexing the English FAQ, there is no need for translation via
-  // ChatGPT, which is why the whole concurrency exists in the first place.
-  // It can safely be done in a single action (which will be batched in the
-  // manager to respect Pinecone’s limits.)
+  // When indexing the English FAQ, there is no need for translation which is
+  // why the whole concurrency exists in the first place. It can safely be done
+  // in a single action (which will be batched in the manager to respect
+  // Pinecone’s limits).
   if (crowdinCode === 'en') {
     await interaction.editReply('Indexing all FAQ threads…')
     await indexationManager.indexRecords(
@@ -218,7 +205,6 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
   // the relevant Pinecone namespace
   else {
     logger.logCommand(interaction, 'Processing all threads')
-    const translations = await fetchTranslationsIfNeeded(interaction)
 
     await interaction.editReply('Indexing all FAQ threads…')
     await pMap(
@@ -226,22 +212,68 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
       async ([index, thread]) => {
         try {
           await notify(thread, index)
-          await indexationManager.translateAndIndexThread(
-            thread,
-            crowdinCode,
-            translations
-          )
+          await indexationManager.translateAndIndexThread(thread, crowdinCode)
         } catch (error) {
           await onIndexationFailure(interaction, thread, error)
         }
       },
-      { concurrency: 3 }
+      { concurrency: 10 }
     )
   }
 
   return interaction.editReply({
     content: `Finished indexing **${total} thread${total === 1 ? '' : 's'}** in namespace \`${crowdinCode}\`.`,
   })
+}
+
+async function commandDeepl(interaction: ChatInputCommandInteraction) {
+  const { client } = interaction
+  const { localizationManager, crowdinManager } = client
+  const translations = (
+    await crowdinManager.fetchAllProjectTranslations()
+  ).slice(0, 5)
+  const languageObjects = LANGUAGE_OBJECTS.filter(object => object.isOnCrowdin)
+
+  await Promise.all(
+    languageObjects.map(async ({ locale, crowdinCode }) => {
+      // I’m not super sure why, but DeepL needs the first part of the locale
+      // and not the Crowdin language. For instance, for Korean, it needs `ko`
+      // and not `kr` or `ko-KR`.
+      const targetLangCode = locale.split('-')[0]
+
+      logger.logCommand(
+        interaction,
+        `Updating glossary entries for ‘${targetLangCode}’`
+      )
+      await interaction.editReply({
+        content: `Updating the DeepL glossary for ‘${targetLangCode}’.`,
+      })
+
+      const pairs = translations
+        .map(({ translations: t }) => {
+          if (!t.en || !t[crowdinCode]) return []
+          const cleanSource = cleanUpTranslation(t.en)
+          const cleanTarget = cleanUpTranslation(t[crowdinCode])
+          return [cleanSource, cleanTarget]
+        })
+        .filter(([src, tgt]) => src && tgt)
+
+      if (pairs.length === 0) return
+
+      const entries = Object.fromEntries(pairs)
+
+      await localizationManager.deepl.updateMultilingualGlossaryDictionary(
+        DEEPL_GLOSSARY_ID,
+        {
+          sourceLangCode: 'en',
+          targetLangCode,
+          entries: new deepl.GlossaryEntries({ entries }),
+        }
+      )
+    })
+  )
+
+  return interaction.editReply({ content: 'Updated the DeepL glossary.' })
 }
 
 // If the indexation fails for any reason despite the exponential backoff

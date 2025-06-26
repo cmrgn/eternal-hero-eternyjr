@@ -1,4 +1,3 @@
-import pMap from 'p-map'
 import { Events, type AnyThreadChannel, type Client } from 'discord.js'
 import {
   Pinecone,
@@ -8,7 +7,6 @@ import {
 
 import type { ResolvedThread } from './FAQManager'
 import type { PineconeEntry, PineconeNamespace } from './SearchManager'
-import type { LocalizationItem } from './LocalizationManager'
 import type { CrowdinCode } from '../constants/i18n'
 import { IS_DEV, PINECONE_API_KEY } from '../constants/config'
 import { logger } from '../utils/logger'
@@ -92,10 +90,8 @@ export class IndexationManager {
 
   async translateAndIndexThreadInAllLanguages(
     thread: ResolvedThread,
-    concurrency = 3
+    concurrency = 10
   ) {
-    const { crowdinManager } = this.client
-    const translations = await crowdinManager.fetchAllProjectTranslations()
     this.#log('info', 'Indexing thread in all languages', {
       action: 'UPSERT',
       id: thread.id,
@@ -103,9 +99,8 @@ export class IndexationManager {
     })
 
     return this.client.crowdinManager.onCrowdinLanguages(
-      ({ crowdinCode }) =>
-        this.translateAndIndexThread(thread, crowdinCode, translations),
-      concurrency
+      ({ crowdinCode }) => this.translateAndIndexThread(thread, crowdinCode),
+      { concurrency }
     )
   }
 
@@ -125,7 +120,7 @@ export class IndexationManager {
     }
   }
 
-  unindexThreadInAllLanguages(threadId: string, concurrency = 3) {
+  unindexThreadInAllLanguages(threadId: string, concurrency = 20) {
     this.#log('info', 'Indexing thread in all languages', {
       action: 'DELETE',
       id: threadId,
@@ -134,27 +129,22 @@ export class IndexationManager {
 
     return this.client.crowdinManager.onCrowdinLanguages(
       ({ crowdinCode }) => this.unindexThread(threadId, crowdinCode),
-      concurrency
+      { concurrency }
     )
   }
 
   translateAndIndexThread(
     thread: ResolvedThread,
     language: CrowdinCode,
-    translations: LocalizationItem[],
-    options?: { backoff?: { retries?: number; backoffMs?: number } }
+    options?: { retries?: number; backoffMs?: number }
   ) {
-    const { retries = 5, backoffMs = 3000 } = options?.backoff ?? {}
+    const { retries = 3, backoffMs = 3000 } = options ?? {}
     const lm = this.client.localizationManager
 
     return withRetries(
       async () => {
         if (language === 'en') return this.indexThread(thread, language)
-        const response = await lm.translateThread(
-          thread,
-          language,
-          translations
-        )
+        const response = await lm.translateThread(thread, language)
         await this.indexThread({ ...thread, ...response }, language)
       },
       { retries, backoffMs, label: thread.name }

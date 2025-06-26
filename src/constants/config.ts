@@ -27,3 +27,6 @@ export const DISCORD_TOKEN = process.env.DISCORD_TOKEN
 export const CROWDIN_TOKEN = process.env.CROWDIN_TOKEN
 export const PINECONE_API_KEY = process.env.PINECONE_API_KEY
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+export const DEEPL_API_KEY = process.env.DEEPL_API_KEY
+
+export const DEEPL_GLOSSARY_ID = 'b88f1891-8a05-4d87-965f-67de6b825693'
