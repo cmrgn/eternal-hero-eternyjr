@@ -337,6 +337,9 @@ export class LocalizationManager {
     )
 
     for (const item of localizationItems) {
+      if (!(crowdinCode in item.translations)) continue
+      if (!('en' in item.translations)) continue
+
       const source = cleanUpTranslation(item.translations.en)
       const target = cleanUpTranslation(item.translations[crowdinCode])
 
