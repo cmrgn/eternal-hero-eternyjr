@@ -150,19 +150,12 @@ export class IndexationManager {
     return withRetries(
       async () => {
         if (language === 'en') return this.indexThread(thread, language)
-
         const response = await lm.translateThread(
           thread,
           language,
           translations
         )
-
-        if (response.status === 'SUCCESS') {
-          const { name, content } = response
-          await this.indexThread({ ...thread, name, content }, language)
-        } else {
-          throw new Error(response.reason)
-        }
+        await this.indexThread({ ...thread, ...response }, language)
       },
       { retries, backoffMs, label: thread.name }
     )

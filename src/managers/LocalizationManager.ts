@@ -217,18 +217,14 @@ export class LocalizationManager {
     crowdinCode: CrowdinCode,
     translations: LocalizationItem[],
     attempt = 1
-  ): Promise<
-    | { status: 'FAILURE'; reason: string }
-    | { status: 'SUCCESS'; name: string; content: string }
-  > {
+  ): Promise<{ name: string; content: string }> {
     // ChatGPT is awfully resilient to translating things at times, and we need
     // to force it to retry with a more agressive prompt. If after a few
     // attempts it still didn’t work, abort.
-    if (attempt > 5) {
-      return {
-        status: 'FAILURE',
-        reason: `ChatGPT could not translate the thread afted ${attempt - 1} attempts.`,
-      }
+    if (attempt > 3) {
+      throw new Error(
+        `ChatGPT could not translate the thread afted ${attempt - 1} attempts.`
+      )
     }
 
     // Build a glossary, and reduce its size as the amount of retries grows in
@@ -261,7 +257,10 @@ export class LocalizationManager {
 
     const basePrompt = [
       `Translate this FAQ from English to ${languageName} (${crowdinCode}).`,
-      `You MUST translate everything — no English should remain. ${emptyGlossary ? '' : 'Use the glossary if relevant. '}Return only the translation.`,
+      'You MUST translate everything — no English should remain. Return only the translation.',
+      emptyGlossary
+        ? ''
+        : 'If a term is listed in the “MUST-USE Term Translations”, you MUST use its translation exactly as written. If it’s not listed, translate it naturally.',
       attempt === 1
         ? null
         : `You have been asked ${attempt === 2 ? 'once' : `${attempt - 1} times`} already and have FAILED to do so. This time, you MUST translate.`,
@@ -272,21 +271,23 @@ export class LocalizationManager {
     const userPrompt = [
       basePrompt,
       '',
-      JSON.stringify(input, null, 2),
-      '',
       emptyGlossary
         ? ''
-        : `GLOSSARY (en → ${crowdinCode}):\n${JSON.stringify(glossary, null, 2)}`,
+        : `MUST-USE Term Translations (en → ${crowdinCode}):\n${JSON.stringify(glossary, null, 2)}`,
+      '',
+      'FAQ:',
+      JSON.stringify(input, null, 2),
     ].join('\n')
 
     let response = await this.translateThreadAsJson(userPrompt)
+    console.log(response)
     const isTitleSame =
       response.title.trim().toLowerCase() === thread.name.trim().toLowerCase()
     const isContentSame =
       response.content.trim().toLowerCase() ===
       thread.content.trim().toLowerCase()
 
-    if (isTitleSame || isContentSame) {
+    if (!response.title || !response.content || isTitleSame || isContentSame) {
       response = await this.translateThread(
         thread,
         crowdinCode,
@@ -295,24 +296,7 @@ export class LocalizationManager {
       )
     }
 
-    if (!response.title || !response.content) {
-      this.#log('error', 'Missing translated content in JSON', {
-        threadId: thread.id,
-        name: thread.name,
-        crowdinCode,
-      })
-
-      return {
-        status: 'FAILURE',
-        reason: 'ChatGPT returned only a partial translation for the thread.',
-      }
-    }
-
-    return {
-      status: 'SUCCESS',
-      name: response.title,
-      content: response.content,
-    }
+    return { name: response.title, content: response.content }
   }
 
   buildGlossaryForEntry(
