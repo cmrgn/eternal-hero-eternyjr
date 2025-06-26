@@ -1,4 +1,5 @@
 import {
+  type AnyThreadChannel,
   type ChatInputCommandInteraction,
   MessageFlags,
   SlashCommandBuilder,
@@ -34,6 +35,9 @@ export const data = new SlashCommandBuilder()
       )
       .setRequired(true)
   )
+  .addStringOption(option =>
+    option.setName('thread_id').setDescription('Specific thread to index')
+  )
   .setDescription('Index the FAQ in Pinecone')
 
 const discordEditLimiter = new Bottleneck({
@@ -66,10 +70,18 @@ async function fetchTranslationsIfNeeded(
 async function fetchFAQContent(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Fetching FAQ content')
 
-  const { faqManager } = interaction.client
+  const { client, options } = interaction
+  const { faqManager } = client
+  const threadId = options.getString('thread_id')
+
+  if (threadId) {
+    await interaction.editReply(`Fetching thread with ID ${threadId}…`)
+    const thread = (await client.channels.fetch(threadId)) as AnyThreadChannel
+
+    return [await faqManager.resolveThread(thread)]
+  }
 
   await interaction.editReply('Loading all FAQ threads…')
-
   return Promise.all(
     faqManager.threads.map(thread => faqManager.resolveThread(thread))
   )
@@ -166,6 +178,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   return interaction.editReply({
-    content: `Finished indexing **${total} threads** in namespace \`${crowdinCode}\`.`,
+    content: `Finished indexing **${total} thread${total === 1 ? '' : 's'}** in namespace \`${crowdinCode}\`.`,
   })
 }
