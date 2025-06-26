@@ -10,7 +10,6 @@ import {
 import {
   type CrowdinCode,
   CROWDIN_CODES,
-  type Language,
   type LanguageObject,
 } from '../constants/i18n'
 import type { ResolvedThread } from './FAQManager'
@@ -186,21 +185,25 @@ export class LocalizationManager {
       targetLang: languageObject.deepLCode,
     })
 
-    // Note: the `TargetLanguageCode` doesn’t list some languages code like `vi`
-    // but they seem to be supported nicely, so it looks like a type problem.
+    // DeepL is quite agressive with line breaks and tend to remove them, which
+    // is a problem when hangling lists. A workaround is to give it a bunch of
+    // individual chunks, and concatenate them back with a line break.
+    const chunks = [thread.name, ...thread.content.split('\n').filter(Boolean)]
     const targetLangCode = languageObject.deepLCode
-    const [name, content] = await this.deepl.translateText(
-      [thread.name, thread.content],
+    const [name, ...content] = await this.deepl.translateText(
+      chunks,
       'en',
       targetLangCode,
       {
+        preserveFormatting: true,
+        splitSentences: 'off',
         formality: 'prefer_less',
         modelType: 'quality_optimized',
         glossary: DEEPL_GLOSSARY_ID,
       }
     )
 
-    return { name: name.text, content: content.text }
+    return { name: name.text, content: content.map(c => c.text).join('\n') }
   }
 }
 
