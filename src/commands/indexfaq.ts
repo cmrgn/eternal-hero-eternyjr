@@ -234,11 +234,8 @@ async function commandDeepl(interaction: ChatInputCommandInteraction) {
   const languageObjects = LANGUAGE_OBJECTS.filter(object => object.isOnCrowdin)
 
   await Promise.all(
-    languageObjects.map(async ({ locale, crowdinCode }) => {
-      // I’m not super sure why, but DeepL needs the first part of the locale
-      // and not the Crowdin language. For instance, for Korean, it needs `ko`
-      // and not `kr` or `ko-KR`.
-      const targetLangCode = locale.split('-')[0]
+    languageObjects.map(async ({ crowdinCode, twoLettersCode }) => {
+      const targetLangCode = twoLettersCode
 
       logger.logCommand(
         interaction,
