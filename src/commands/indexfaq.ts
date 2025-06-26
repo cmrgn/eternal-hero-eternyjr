@@ -7,6 +7,7 @@ import {
 import pMap from 'p-map'
 import Bottleneck from 'bottleneck'
 import * as deepl from 'deepl-node'
+import { GlossaryEntries } from 'deepl-node'
 
 import type { ResolvedThread } from '../managers/FAQManager'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
@@ -249,10 +250,17 @@ async function commandDeepl(interaction: ChatInputCommandInteraction) {
 
       const pairs = translations
         .map(({ translations: t }) => {
-          if (!t.en || !t[crowdinCode]) return []
-          const cleanSource = cleanUpTranslation(t.en)
-          const cleanTarget = cleanUpTranslation(t[crowdinCode])
-          return [cleanSource, cleanTarget]
+          try {
+            const cleanSource = cleanUpTranslation(t.en)
+            const cleanTarget = cleanUpTranslation(t[crowdinCode])
+            if (cleanSource.includes('{') || cleanTarget.includes('{'))
+              throw new Error('Variable still present in string.')
+            GlossaryEntries.validateGlossaryTerm(cleanSource)
+            GlossaryEntries.validateGlossaryTerm(cleanTarget)
+            return [cleanSource, cleanTarget] as const
+          } catch {
+            return ['', ''] as const
+          }
         })
         .filter(([src, tgt]) => src && tgt)
 

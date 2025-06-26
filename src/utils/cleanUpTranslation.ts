@@ -8,5 +8,6 @@ export function cleanUpTranslation(string: string) {
       // Remove tags
       .replace(/<[a-z=]+>/g, '')
       .replace(/<\/[a-z=]+>/g, '')
+      .trim()
   )
 }
