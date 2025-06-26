@@ -1,3 +1,4 @@
+import pMap from 'p-map'
 import { Events, type AnyThreadChannel, type Client } from 'discord.js'
 import {
   Pinecone,
@@ -8,11 +9,10 @@ import {
 import type { ResolvedThread } from './FAQManager'
 import type { PineconeEntry, PineconeNamespace } from './SearchManager'
 import type { LocalizationItem } from './LocalizationManager'
-import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
+import type { CrowdinCode } from '../constants/i18n'
 import { IS_DEV, PINECONE_API_KEY } from '../constants/config'
 import { logger } from '../utils/logger'
 import { withRetries } from '../utils/withRetries'
-import pMap from 'p-map'
 
 export class IndexationManager {
   // This is the name of the index on Pinecone
@@ -90,7 +90,10 @@ export class IndexationManager {
     await this.indexRecords([record], namespaceName)
   }
 
-  async indexThreadInAllLanguages(thread: ResolvedThread, concurrency = 3) {
+  async translateAndIndexThreadInAllLanguages(
+    thread: ResolvedThread,
+    concurrency = 3
+  ) {
     const { crowdinManager } = this.client
     const translations = await crowdinManager.fetchAllProjectTranslations()
     this.#log('info', 'Indexing thread in all languages', {
@@ -99,14 +102,10 @@ export class IndexationManager {
       concurrency,
     })
 
-    await pMap(
-      LANGUAGE_OBJECTS,
-      async ({ isOnCrowdin, crowdinCode }) => {
-        if (!isOnCrowdin && crowdinCode !== 'en') return
-        const indexThread = this.threadIndexer(crowdinCode, translations)
-        await indexThread(thread)
-      },
-      { concurrency }
+    return this.client.crowdinManager.onCrowdinLanguages(
+      ({ crowdinCode }) =>
+        this.translateAndIndexThread(thread, crowdinCode, translations),
+      concurrency
     )
   }
 
@@ -126,66 +125,47 @@ export class IndexationManager {
     }
   }
 
-  async unindexThreadInAllLanguages(threadId: string, concurrency = 3) {
+  unindexThreadInAllLanguages(threadId: string, concurrency = 3) {
     this.#log('info', 'Indexing thread in all languages', {
       action: 'DELETE',
       id: threadId,
       concurrency,
     })
 
-    await pMap(
-      LANGUAGE_OBJECTS,
-      async ({ isOnCrowdin, crowdinCode }) => {
-        if (!isOnCrowdin && crowdinCode !== 'en') return
-        await this.unindexThread(threadId, crowdinCode)
-      },
-      { concurrency }
+    return this.client.crowdinManager.onCrowdinLanguages(
+      ({ crowdinCode }) => this.unindexThread(threadId, crowdinCode),
+      concurrency
     )
   }
 
-  threadIndexer(
+  translateAndIndexThread(
+    thread: ResolvedThread,
     language: CrowdinCode,
     translations: LocalizationItem[],
-    options?: {
-      events?: {
-        onThread?: (thread: ResolvedThread) => void
-        onTranslationFailure?: (thread: ResolvedThread, reason: string) => void
-      }
-      backoff?: { retries?: number; backoffMs?: number }
-    }
+    options?: { backoff?: { retries?: number; backoffMs?: number } }
   ) {
     const { retries = 5, backoffMs = 3000 } = options?.backoff ?? {}
-    const { events } = options ?? {}
+    const lm = this.client.localizationManager
 
-    return (thread: ResolvedThread) => {
-      return withRetries(
-        async () => {
-          await events?.onThread?.(thread)
+    return withRetries(
+      async () => {
+        if (language === 'en') return this.indexThread(thread, language)
 
-          if (language === 'en') {
-            await this.indexThread(thread, language)
-          } else {
-            const response =
-              await this.client.localizationManager.translateThread(
-                thread,
-                language,
-                translations
-              )
-            if (response.status === 'SUCCESS') {
-              const localizedThread = {
-                ...thread,
-                name: response.name,
-                content: response.content,
-              }
-              await this.indexThread(localizedThread, language)
-            } else {
-              events?.onTranslationFailure?.(thread, response.reason)
-            }
-          }
-        },
-        { retries, backoffMs, label: thread.name }
-      )
-    }
+        const response = await lm.translateThread(
+          thread,
+          language,
+          translations
+        )
+
+        if (response.status === 'SUCCESS') {
+          const { name, content } = response
+          await this.indexThread({ ...thread, name, content }, language)
+        } else {
+          throw new Error(response.reason)
+        }
+      },
+      { retries, backoffMs, label: thread.name }
+    )
   }
 
   bindEvents() {
@@ -193,7 +173,7 @@ export class IndexationManager {
 
     this.client.faqManager.on(
       Events.ThreadCreate,
-      this.indexThreadInAllLanguages.bind(this)
+      this.translateAndIndexThreadInAllLanguages.bind(this)
     )
     this.client.faqManager.on(
       Events.ThreadDelete,
@@ -201,7 +181,7 @@ export class IndexationManager {
     )
     this.client.faqManager.on(
       Events.ThreadUpdate,
-      this.indexThreadInAllLanguages.bind(this)
+      this.translateAndIndexThreadInAllLanguages.bind(this)
     )
   }
 }

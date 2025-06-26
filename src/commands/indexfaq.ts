@@ -8,36 +8,56 @@ import pMap from 'p-map'
 import Bottleneck from 'bottleneck'
 
 import type { ResolvedThread } from '../managers/FAQManager'
-import type { PineconeNamespace } from '../managers/SearchManager'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { logger } from '../utils/logger'
 import { sendAlert } from '../utils/sendAlert'
-import { IS_DEV } from '../constants/config'
 
 export const scope = 'OFFICIAL'
 
+const LANGUAGE_CHOICES = Object.values(LANGUAGE_OBJECTS)
+  .filter(
+    languageObject =>
+      languageObject.isOnCrowdin || languageObject.crowdinCode === 'en'
+  )
+  .map(languageObject => ({
+    name: languageObject.languageName,
+    value: languageObject.crowdinCode,
+  }))
+
 export const data = new SlashCommandBuilder()
-  .setName('indexfaq')
-  .addStringOption(option =>
-    option
+  .setName('index')
+
+  .addSubcommand(subcommand =>
+    subcommand
       .setName('language')
-      .setDescription('Translation language')
-      .setChoices(
-        Object.values(LANGUAGE_OBJECTS)
-          .filter(
-            languageObject =>
-              languageObject.isOnCrowdin || languageObject.crowdinCode === 'en'
-          )
-          .map(languageObject => ({
-            name: languageObject.languageName,
-            value: languageObject.crowdinCode,
-          }))
+      .setDescription('Language to index the FAQ in')
+      .addStringOption(option =>
+        option
+          .setName('language')
+          .setDescription('Translation language')
+          .setChoices(LANGUAGE_CHOICES)
+          .setRequired(true)
       )
-      .setRequired(true)
   )
-  .addStringOption(option =>
-    option.setName('thread_id').setDescription('Specific thread to index')
+
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('thread')
+      .setDescription('Thread to index')
+      .addStringOption(option =>
+        option
+          .setName('thread_id')
+          .setDescription('Specific thread to index')
+          .setRequired(true)
+      )
+      .addStringOption(option =>
+        option
+          .setName('language')
+          .setDescription('Translation language')
+          .setChoices(LANGUAGE_CHOICES)
+      )
   )
+
   .setDescription('Index the FAQ in Pinecone')
 
 const discordEditLimiter = new Bottleneck({
@@ -75,7 +95,7 @@ async function fetchFAQContent(interaction: ChatInputCommandInteraction) {
   const threadId = options.getString('thread_id')
 
   if (threadId) {
-    await interaction.editReply(`Fetching thread with ID ${threadId}…`)
+    await interaction.editReply(`Fetching thread with ID \`${threadId}\`…`)
     const thread = (await client.channels.fetch(threadId)) as AnyThreadChannel
 
     return [await faqManager.resolveThread(thread)]
@@ -93,10 +113,75 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   // This command can take a long time, so it needs to be handled asynchronously
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
-  const { client, options } = interaction
-  const { indexationManager } = client
-  const crowdinCode = (options.getString('language') ?? 'en') as CrowdinCode
+  if (interaction.options.getSubcommand() === 'language') {
+    return commandLanguage(interaction)
+  }
+
+  if (interaction.options.getSubcommand() === 'thread') {
+    return commandThread(interaction)
+  }
+}
+
+async function commandThread(interaction: ChatInputCommandInteraction) {
+  const { options, client } = interaction
+  const { faqManager, crowdinManager, indexationManager } = client
+  const threadId = options.getString('thread_id', true)
+  const crowdinCode = options.getString('language') as CrowdinCode | undefined
+  const thread = (await client.channels.fetch(threadId)) as AnyThreadChannel
+
+  await interaction.editReply(`Loading thread with ID \`${threadId}\`…`)
+  const resolvedThread = await faqManager.resolveThread(thread)
   const translations = await fetchTranslationsIfNeeded(interaction)
+
+  if (crowdinCode) {
+    try {
+      await interaction.editReply(
+        `Indexing thread with ID \`${threadId}\` in namespace \`${crowdinCode}\`…`
+      )
+      await indexationManager.translateAndIndexThread(
+        resolvedThread,
+        crowdinCode,
+        translations
+      )
+    } catch (error) {
+      await onIndexationFailure(interaction, resolvedThread, error)
+    }
+  } else {
+    await interaction.editReply('Indexing thread in all languages…')
+
+    await crowdinManager.onCrowdinLanguages(
+      async ({ crowdinCode }, index, languages) => {
+        const progress = Math.round(((index + 1) / languages.length) * 100)
+        try {
+          await interaction.editReply({
+            content: [
+              `Indexing thread with ID \`${threadId}\` in progress…`,
+              `- Namespace: \`${crowdinCode}\``,
+              `- Progress: ${progress}%`,
+              `- Thread: _“${resolvedThread.name}”_`,
+            ].join('\n'),
+          })
+          await indexationManager.translateAndIndexThread(
+            resolvedThread,
+            crowdinCode,
+            translations
+          )
+        } catch (error) {
+          await onIndexationFailure(interaction, resolvedThread, error)
+        }
+      }
+    )
+  }
+
+  return interaction.editReply(
+    `Finished indexing thread with ID \`${threadId}\`.`
+  )
+}
+
+async function commandLanguage(interaction: ChatInputCommandInteraction) {
+  const { options, client } = interaction
+  const { indexationManager } = client
+  const crowdinCode = options.getString('language', true) as CrowdinCode
   const threadsWithContent = await fetchFAQContent(interaction)
   const total = threadsWithContent.length
 
@@ -114,32 +199,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       })
   )
 
-  // If ChatGPT fails to translate something, report it in the #alert channels
-  // of the test server to debug it
-  const onTranslationFailure = (thread: ResolvedThread, reason: string) => {
-    const error = [
-      `ChatGPT failed to translate thread “${thread.name}” (${thread.id}) into ${crowdinCode}.`,
-      `> ${reason.replace(/\n/g, '\n> ')}`,
-    ].join('\n')
-
-    if (IS_DEV) console.warn(interaction, error)
-    else sendAlert(interaction, error)
-  }
-
-  // If the indexation fails for any reason despite the exponential backoff
-  // retries, report it in the #alert channels of the test server to debug it
-  const onIndexationFailure = (thread: ResolvedThread, error: unknown) =>
-    sendAlert(
-      interaction,
-      `Could not index “${thread.name}” (${thread.id}) in namespace ${crowdinCode}, even after several attempts.
-      \`\`\`${error}\`\`\``
-    )
-
   // When indexing the English FAQ, there is no need for translation via
   // ChatGPT, which is why the whole concurrency exists in the first place.
   // It can safely be done in a single action (which will be batched in the
   // manager to respect Pinecone’s limits.)
   if (crowdinCode === 'en') {
+    await interaction.editReply('Indexing all FAQ threads…')
     await indexationManager.indexRecords(
       threadsWithContent.map(thread =>
         indexationManager.prepareForIndexing(thread)
@@ -153,24 +218,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   // the relevant Pinecone namespace
   else {
     logger.logCommand(interaction, 'Processing all threads')
+    const translations = await fetchTranslationsIfNeeded(interaction)
+
+    await interaction.editReply('Indexing all FAQ threads…')
     await pMap(
       threadsWithContent.entries(),
       async ([index, thread]) => {
-        const events = {
-          onThread: (thread: ResolvedThread) => notify(thread, index),
-          onTranslationFailure,
-        }
-
-        const translateAndIndex = indexationManager.threadIndexer(
-          crowdinCode,
-          translations,
-          { events }
-        )
-
         try {
-          await translateAndIndex(thread)
+          await notify(thread, index)
+          await indexationManager.translateAndIndexThread(
+            thread,
+            crowdinCode,
+            translations
+          )
         } catch (error) {
-          await onIndexationFailure(thread, error)
+          await onIndexationFailure(interaction, thread, error)
         }
       },
       { concurrency: 3 }
@@ -180,4 +242,20 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   return interaction.editReply({
     content: `Finished indexing **${total} thread${total === 1 ? '' : 's'}** in namespace \`${crowdinCode}\`.`,
   })
+}
+
+// If the indexation fails for any reason despite the exponential backoff
+// retries, report it in the #alert channels of the test server to debug it
+function onIndexationFailure(
+  interaction: ChatInputCommandInteraction,
+  thread: ResolvedThread,
+  error: unknown
+) {
+  const crowdinCode = interaction.options.getString('language')
+
+  return sendAlert(
+    interaction,
+    `Could not index “${thread.name}” (\`${thread.id}\`) in namespace ${crowdinCode}, even after several attempts.
+      \`\`\`${error}\`\`\``
+  )
 }

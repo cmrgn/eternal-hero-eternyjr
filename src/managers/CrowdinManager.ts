@@ -12,7 +12,12 @@ import { CROWDIN_TOKEN } from '../constants/config'
 import { logger } from '../utils/logger'
 import { pool } from '../utils/pg'
 import type { LocalizationItem } from './LocalizationManager'
-import type { CrowdinCode } from '../constants/i18n'
+import {
+  LANGUAGE_OBJECTS,
+  type CrowdinCode,
+  type LanguageObject,
+} from '../constants/i18n'
+import pMap from 'p-map'
 
 export type {
   LanguagesModel,
@@ -265,6 +270,25 @@ export class CrowdinManager {
     this.#lastFetchedAt = now
 
     return data
+  }
+
+  onCrowdinLanguages(
+    handler: (
+      item: LanguageObject,
+      index: number,
+      array: LanguageObject[]
+    ) => Promise<void>,
+    concurrency = 3
+  ) {
+    const languageObjects = LANGUAGE_OBJECTS.filter(
+      object => object.isOnCrowdin || object.crowdinCode === 'en'
+    )
+    return pMap(
+      languageObjects.entries(),
+      ([index, languageObject]) =>
+        handler(languageObject, index, languageObjects),
+      { concurrency }
+    )
   }
 }
 
