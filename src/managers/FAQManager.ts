@@ -11,6 +11,7 @@ import {
 import { DISCORD_SERVER_ID, TEST_SERVER_ID } from '../constants/discord'
 import { IS_DEV } from '../constants/config'
 import { logger } from '../utils/logger'
+import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
 
 export type ResolvedThread = {
   isResolved: true
@@ -142,6 +143,7 @@ export class FAQManager {
   }
 
   async onThreadCreate(thread: AnyThreadChannel) {
+    if (shouldIgnoreInteraction(thread)) return
     if (this.belongsToFAQ(thread)) {
       this.#log('info', 'Responding to thread creation', { id: thread.id })
       this.cacheThreads()
@@ -153,6 +155,7 @@ export class FAQManager {
   }
 
   async onThreadDelete(thread: AnyThreadChannel) {
+    if (shouldIgnoreInteraction(thread)) return
     if (this.belongsToFAQ(thread)) {
       this.#log('info', 'Responding to thread deletion', { id: thread.id })
       this.cacheThreads()
@@ -163,6 +166,7 @@ export class FAQManager {
   }
 
   async onThreadUpdate(prev: AnyThreadChannel, next: AnyThreadChannel) {
+    if (shouldIgnoreInteraction(next)) return
     if (this.belongsToFAQ(prev) && prev.name !== next.name) {
       this.#log('info', 'Responding to thread update', {
         id: next.id,
@@ -180,6 +184,7 @@ export class FAQManager {
     _: Message | PartialMessage,
     newMessage: Message | PartialMessage
   ) {
+    if (shouldIgnoreInteraction(newMessage)) return
     if (newMessage.partial) newMessage = await newMessage.fetch()
 
     const { guild } = newMessage

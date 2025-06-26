@@ -107,6 +107,8 @@ export class LeaderboardManager {
   }
 
   async faqLinksOnCreate(interaction: DiscordMessage) {
+    if (shouldIgnoreInteraction(interaction)) return
+
     const isTestChannel = interaction.channelId === BOT_TEST_CHANNEL_ID
     if (isTestChannel) return
 
@@ -114,10 +116,14 @@ export class LeaderboardManager {
   }
 
   faqLinksOnDelete(interaction: DiscordMessage) {
+    if (shouldIgnoreInteraction(interaction)) return
+
     return this.faqLinksOnCreateOrDelete(Events.MessageDelete)(interaction)
   }
 
   faqLinksOnUpdate(oldMessage: DiscordMessage, newMessage: DiscordMessage) {
+    if (shouldIgnoreInteraction(newMessage)) return
+
     const { client, guildId, channelId, member } = newMessage
 
     if (!member || !guildId) return
