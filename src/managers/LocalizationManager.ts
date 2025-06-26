@@ -254,11 +254,13 @@ export class LocalizationManager {
     | { status: 'FAILURE'; reason: string }
     | { status: 'SUCCESS'; name: string; content: string }
   > {
-    const glossary = this.buildGlossaryForEntry(
+    const terms = this.buildGlossaryForEntry(
       `${thread.name}\n${thread.content}`,
       translations,
       crowdinCode
     )
+
+    const glossary = terms
       .map(({ source, target }) => `- ${source} → ${target}`)
       .join('\n')
 
@@ -266,7 +268,7 @@ export class LocalizationManager {
       id: thread.id,
       name: thread.name,
       crowdinCode,
-      glossarySize: glossary.length,
+      glossarySize: terms.length,
     })
 
     const userPrompt = `
@@ -354,7 +356,7 @@ export class LocalizationManager {
       }
     }
 
-    return scored.slice(0, maxTerms)
+    return scored.sort((a, b) => a.score - b.score).slice(0, maxTerms)
   }
 }
 
