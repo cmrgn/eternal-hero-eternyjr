@@ -4,11 +4,16 @@ import type { ChatCompletionTool } from 'openai/resources/chat/completions'
 import nlp from 'compromise'
 
 import { OPENAI_API_KEY } from '../constants/config'
-import { type CrowdinCode, CROWDIN_CODES } from '../constants/i18n'
+import {
+  type CrowdinCode,
+  CROWDIN_CODES,
+  LANGUAGE_OBJECTS,
+} from '../constants/i18n'
 import type { ResolvedThread } from './FAQManager'
 import { cleanUpTranslation } from '../utils/cleanUpTranslation'
 import { logger } from '../utils/logger'
 import { regexTest } from '../utils/regexTest'
+import { sendAlert } from '../utils/sendAlert'
 
 const SYSTEM_PROMPT = `
 Sole purpose:
@@ -207,95 +212,86 @@ export class LocalizationManager {
     }
   }
 
-  async translateThreadBackup(
-    thread: ResolvedThread,
-    crowdinCode: CrowdinCode,
-    translations: LocalizationItem[]
-  ) {
-    this.#log('info', 'Translating thread as a backup', {
-      id: thread.id,
-      name: thread.name,
-      crowdinCode,
-      translationCount: translations.length,
-    })
-
-    const glossary = this.buildGlossaryForEntry(
-      `${thread.name}\n${thread.content}`,
-      translations,
-      crowdinCode,
-      { maxTerms: 50 }
-    )
-      .map(({ source, target }) => `- ${source} → ${target}`)
-      .join('\n')
-
-    const userPrompt = `
-    IMPORTANT: You did not translate the text properly last time. This time, you
-    MUST translate both the FAQ entry title and its content into ‘${crowdinCode}’.
-    Use the following glossary as a guide to support your translation.
-
-    GLOSSARY (en → ${crowdinCode}):
-    ${glossary}
-
-    FAQ TITLE:
-    ${thread.name}
-
-    FAQ CONTENT:
-    ${thread.content}
-    `.trim()
-
-    return this.translateThreadAsJson(userPrompt)
-  }
-
   async translateThread(
     thread: ResolvedThread,
     crowdinCode: CrowdinCode,
-    translations: LocalizationItem[]
+    translations: LocalizationItem[],
+    attempt = 1
   ): Promise<
     | { status: 'FAILURE'; reason: string }
     | { status: 'SUCCESS'; name: string; content: string }
   > {
+    // ChatGPT is awfully resilient to translating things at times, and we need
+    // to force it to retry with a more agressive prompt. If after a few
+    // attempts it still didn’t work, abort.
+    if (attempt > 5) {
+      return {
+        status: 'FAILURE',
+        reason: `ChatGPT could not translate the thread afted ${attempt - 1} attempts.`,
+      }
+    }
+
+    // Build a glossary, and reduce its size as the amount of retries grows in
+    // order to lower the prompt complexity and overwhelm the model less.
     const terms = this.buildGlossaryForEntry(
       `${thread.name}\n${thread.content}`,
       translations,
-      crowdinCode
+      crowdinCode,
+      { maxTerms: Math.round(200 / attempt) }
     )
 
-    const glossary = terms
-      .map(({ source, target }) => `- ${source} → ${target}`)
-      .join('\n')
+    const emptyGlossary = terms.length === 0
+    const glossary = terms.reduce<Record<string, string>>(
+      (acc, key) => ({ ...acc, [key.source]: key.target }),
+      {}
+    )
 
     this.#log('info', 'Translating thread', {
       id: thread.id,
       name: thread.name,
       crowdinCode,
       glossarySize: terms.length,
+      attempt,
     })
 
-    const userPrompt = `
-    You are a translation bot specifically for the game Eternal Hero.
-    Translate the following FAQ thread from English (en) into ‘${crowdinCode}’.
-    Use the glossary below when relevant.
+    const input = { name: thread.name, content: thread.content }
+    const languageName =
+      LANGUAGE_OBJECTS.find(object => object.crowdinCode === crowdinCode)
+        ?.languageName ?? crowdinCode
 
-    IMPORTANT: Translate both the FAQ entry title and the content fully into
-    ‘${crowdinCode}’, using the following glossary to support your translation.
+    const basePrompt = [
+      `Translate this FAQ from English to ${languageName} (${crowdinCode}).`,
+      `You MUST translate everything — no English should remain. ${emptyGlossary ? '' : 'Use the glossary if relevant. '}Return only the translation.`,
+      attempt === 1
+        ? null
+        : `You have been asked ${attempt === 2 ? 'once' : `${attempt - 1} times`} already and have FAILED to do so. This time, you MUST translate.`,
+    ]
+      .filter(Boolean)
+      .join('\n')
 
-    GLOSSARY (en → ${crowdinCode}):
-    ${glossary}
-
-    FAQ TITLE:
-    ${thread.name}
-
-    FAQ CONTENT:
-    ${thread.content}
-    `.trim()
+    const userPrompt = [
+      basePrompt,
+      '',
+      JSON.stringify(input, null, 2),
+      '',
+      emptyGlossary
+        ? ''
+        : `GLOSSARY (en → ${crowdinCode}):\n${JSON.stringify(glossary, null, 2)}`,
+    ].join('\n')
 
     let response = await this.translateThreadAsJson(userPrompt)
+    const isTitleSame =
+      response.title.trim().toLowerCase() === thread.name.trim().toLowerCase()
+    const isContentSame =
+      response.content.trim().toLowerCase() ===
+      thread.content.trim().toLowerCase()
 
-    if (response.title === thread.name || response.content === thread.content) {
-      response = await this.translateThreadBackup(
+    if (isTitleSame || isContentSame) {
+      response = await this.translateThread(
         thread,
         crowdinCode,
-        translations
+        translations,
+        attempt + 1
       )
     }
 
@@ -306,7 +302,10 @@ export class LocalizationManager {
         crowdinCode,
       })
 
-      return { status: 'FAILURE', reason: 'Missing translations' }
+      return {
+        status: 'FAILURE',
+        reason: 'ChatGPT returned only a partial translation for the thread.',
+      }
     }
 
     return {

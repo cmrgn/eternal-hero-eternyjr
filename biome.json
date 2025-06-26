@@ -12,7 +12,11 @@
   "organizeImports": { "enabled": true },
   "linter": {
     "enabled": true,
-    "rules": { "recommended": true, "style": { "noParameterAssign": "off" } }
+    "rules": {
+      "recommended": true,
+      "style": { "noParameterAssign": "off" },
+      "performance": { "noAccumulatingSpread": "off" }
+    }
   },
   "javascript": {
     "formatter": {
