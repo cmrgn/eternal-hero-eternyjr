@@ -218,7 +218,7 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
           await onIndexationFailure(interaction, thread, error)
         }
       },
-      { concurrency: 10 }
+      { concurrency: 20 }
     )
   }
 
