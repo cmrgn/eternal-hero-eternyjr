@@ -108,8 +108,8 @@ export const LANGUAGE_OBJECTS = [
   },
   {
     isOnCrowdin: true,
-    twoLettersCode: 'kr' as const,
-    crowdinCode: 'kr' as const,
+    twoLettersCode: 'ko' as const,
+    crowdinCode: 'ko' as const,
     locale: 'ko-KR' as const,
     languageName: '한국어',
     role: 'kr | 한국어',
