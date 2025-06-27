@@ -13,7 +13,8 @@
     "deploy-commands": "tsx src/scripts/deploy-commands.ts",
     "delete-commands": "tsx src/scripts/delete-commands.ts",
     "migrate": "node-pg-migrate -d -m ./migrations --no-reject-unauthorized",
-    "migrate-create": "node-pg-migrate create -m ./migrations"
+    "migrate-create": "node-pg-migrate create -m ./migrations",
+    "test": "npx vitest"
   },
   "dependencies": {
     "@crowdin/crowdin-api-client": "^1.45.0",
@@ -42,9 +43,11 @@
     "@types/ms": "^2.1.0",
     "@types/node-fetch": "^2.6.12",
     "@types/pg": "^8.15.2",
+    "@vitest/ui": "^3.2.4",
     "node-pg-migrate": "^8.0.1",
     "tsup": "^8.5.0",
     "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   }
 }

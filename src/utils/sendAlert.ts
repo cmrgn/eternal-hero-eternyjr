@@ -25,7 +25,7 @@ export async function sendAlert(interaction: InteractionLike, message: string) {
   if (interaction.guildId === TEST_SERVER_ID) return
 
   try {
-    return channel.send(
+    return await channel.send(
       stripIndent(`
       ${message}
 
