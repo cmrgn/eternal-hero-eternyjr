@@ -10,7 +10,6 @@ import type { PineconeEntry, PineconeNamespace } from './SearchManager'
 import type { LanguageObject } from '../constants/i18n'
 import { IS_DEV, PINECONE_API_KEY } from '../constants/config'
 import { logger } from '../utils/logger'
-import { withRetries } from '../utils/withRetries'
 
 export class IndexManager {
   // This is the name of the index on Pinecone
@@ -133,23 +132,15 @@ export class IndexManager {
     )
   }
 
-  translateAndIndexThread(
+  async translateAndIndexThread(
     thread: ResolvedThread,
-    languageObject: LanguageObject,
-    options?: { retries?: number; backoffMs?: number }
+    languageObject: LanguageObject
   ) {
-    const { retries = 3, backoffMs = 3000 } = options ?? {}
     const lm = this.client.localizationManager
     const { crowdinCode } = languageObject
-
-    return withRetries(
-      async () => {
-        if (crowdinCode === 'en') return this.indexThread(thread, crowdinCode)
-        const response = await lm.translateThread(thread, languageObject)
-        await this.indexThread({ ...thread, ...response }, crowdinCode)
-      },
-      { retries, backoffMs, label: thread.name }
-    )
+    if (crowdinCode === 'en') return this.indexThread(thread, crowdinCode)
+    const response = await lm.translateThread(thread, languageObject)
+    await this.indexThread({ ...thread, ...response }, crowdinCode)
   }
 
   bindEvents() {
