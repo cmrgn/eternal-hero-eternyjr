@@ -139,7 +139,7 @@ export class IndexManager {
     options?: { retries?: number; backoffMs?: number }
   ) {
     const { retries = 3, backoffMs = 3000 } = options ?? {}
-    const lm = this.client.localizManager
+    const lm = this.client.localizationManager
     const { crowdinCode } = languageObject
 
     return withRetries(
