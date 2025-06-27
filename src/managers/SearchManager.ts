@@ -122,7 +122,7 @@ export class SearchManager {
     namespaceName: PineconeNamespace,
     limit = 1
   ) {
-    const response = await this.client.indexationManager
+    const response = await this.client.indexManager
       .resolveNamespace(namespaceName)
       .searchRecords({
         query: { topK: limit, inputs: { text: query } },

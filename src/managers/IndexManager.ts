@@ -12,7 +12,7 @@ import { IS_DEV, PINECONE_API_KEY } from '../constants/config'
 import { logger } from '../utils/logger'
 import { withRetries } from '../utils/withRetries'
 
-export class IndexationManager {
+export class IndexManager {
   // This is the name of the index on Pinecone
   #indexName = 'faq-index'
 
@@ -25,7 +25,7 @@ export class IndexationManager {
   client: Client
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('IndexationManager', this.#severityThreshold)
+  #log = logger.log('IndexManager', this.#severityThreshold)
 
   constructor(client: Client) {
     this.#log('info', 'Instantiating manager')
@@ -139,7 +139,7 @@ export class IndexationManager {
     options?: { retries?: number; backoffMs?: number }
   ) {
     const { retries = 3, backoffMs = 3000 } = options ?? {}
-    const lm = this.client.localizationManager
+    const lm = this.client.localizManager
     const { crowdinCode } = languageObject
 
     return withRetries(
@@ -170,8 +170,8 @@ export class IndexationManager {
   }
 }
 
-export const initIndexationManager = (client: Client) => {
-  const indexationManager = new IndexationManager(client)
-  indexationManager.bindEvents()
-  return indexationManager
+export const initIndexManager = (client: Client) => {
+  const indexManager = new IndexManager(client)
+  indexManager.bindEvents()
+  return indexManager
 }

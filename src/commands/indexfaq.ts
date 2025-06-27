@@ -123,7 +123,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
 async function commandThread(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
-  const { faqManager, crowdinManager, indexationManager } = client
+  const { faqManager, crowdinManager, indexManager } = client
   const threadId = options.getString('thread_id', true)
   const crowdinCode = options.getString('language') as CrowdinCode | undefined
   const thread = (await client.channels.fetch(threadId)) as AnyThreadChannel
@@ -131,7 +131,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
   await interaction.editReply(`Loading thread with ID \`${threadId}\`…`)
   const resolvedThread = await faqManager.resolveThread(thread)
 
-  function onIndexationFailure(error: unknown) {
+  function onIndexFailure(error: unknown) {
     return sendAlert(
       interaction,
       `Could not index “${resolvedThread.name}” (\`${resolvedThread.id}\`) in namespace ${crowdinCode}, even after several attempts.
@@ -152,12 +152,9 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
       await interaction.editReply(
         `Indexing thread with ID \`${threadId}\` in namespace \`${crowdinCode}\`…`
       )
-      await indexationManager.translateAndIndexThread(
-        resolvedThread,
-        languageObject
-      )
+      await indexManager.translateAndIndexThread(resolvedThread, languageObject)
     } catch (error) {
-      await onIndexationFailure(error)
+      await onIndexFailure(error)
     }
   } else {
     await interaction.editReply('Indexing thread in all languages…')
@@ -174,12 +171,12 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
               `- Thread: _“${resolvedThread.name}”_`,
             ].join('\n'),
           })
-          await indexationManager.translateAndIndexThread(
+          await indexManager.translateAndIndexThread(
             resolvedThread,
             languageObject
           )
         } catch (error) {
-          await onIndexationFailure(error)
+          await onIndexFailure(error)
         }
       }
     )
@@ -192,7 +189,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
 
 async function commandLanguage(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
-  const { indexationManager } = client
+  const { indexManager } = client
   const crowdinCode = options.getString('language', true)
   const threadsWithContent = await fetchFAQContent(interaction)
   const total = threadsWithContent.length
@@ -224,10 +221,8 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
   // Pinecone’s limits).
   if (crowdinCode === 'en') {
     await interaction.editReply('Indexing all FAQ threads…')
-    await indexationManager.indexRecords(
-      threadsWithContent.map(thread =>
-        indexationManager.prepareForIndexing(thread)
-      ),
+    await indexManager.indexRecords(
+      threadsWithContent.map(thread => indexManager.prepareForIndexing(thread)),
       crowdinCode
     )
   }
@@ -243,7 +238,7 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
       threadsWithContent.entries(),
       async ([index, thread]) => {
         await notify(thread, index)
-        await indexationManager.translateAndIndexThread(thread, languageObject)
+        await indexManager.translateAndIndexThread(thread, languageObject)
       },
       { concurrency: 20 }
     )
@@ -322,7 +317,7 @@ async function commandDeepl(interaction: ChatInputCommandInteraction) {
 
 async function commandStats(interaction: ChatInputCommandInteraction) {
   const { client } = interaction
-  const { faqManager, crowdinManager, localizationManager, indexationManager } =
+  const { faqManager, crowdinManager, localizationManager, indexManager } =
     client
   const languageObjects = crowdinManager.getLanguages({ withEnglish: false })
   const threads = await fetchFAQContent(interaction)
@@ -335,7 +330,7 @@ async function commandStats(interaction: ChatInputCommandInteraction) {
     0
   )
   const deeplUsage = await localizationManager.deepl.getUsage()
-  const pcUsage = await indexationManager.index.describeIndexStats()
+  const pcUsage = await indexManager.index.describeIndexStats()
 
   const totalRecordCounts = Object.entries(pcUsage.namespaces ?? {}).reduce(
     (acc, [name, data]) =>

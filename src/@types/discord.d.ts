@@ -4,7 +4,7 @@ import type { Collection, SlashCommandOptionsOnlyBuilder } from 'discord.js'
 
 import type { CrowdinManager } from '../managers/CrowdinManager'
 import type { FAQManager } from '../managers/FAQManager'
-import type { IndexationManager } from '../managers/IndexationManager'
+import type { IndexManager } from '../managers/IndexManager'
 import type { LeaderboardManager } from '../managers/LeaderboardManager'
 import type { LocalizationManager } from '../managers/LocalizationManager'
 import type { SearchManager } from '../managers/SearchManager'
@@ -23,7 +23,7 @@ declare module 'discord.js' {
     crowdinManager: CrowdinManager
     faqManager: FAQManager
     giveawaysManager: GiveawaysManager
-    indexationManager: IndexationManager
+    indexManager: IndexManager
     leaderboardManager: LeaderboardManager
     localizationManager: LocalizationManager
     searchManager: SearchManager
