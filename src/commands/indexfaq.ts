@@ -66,6 +66,10 @@ export const data = new SlashCommandBuilder()
     subcommand.setName('deepl').setDescription('Update glossary on DeepL')
   )
 
+  .addSubcommand(subcommand =>
+    subcommand.setName('stats').setDescription('Provide general about the FAQ')
+  )
+
   .setDescription('Index the FAQ in Pinecone')
 
 const discordEditLimiter = new Bottleneck({
@@ -111,6 +115,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (interaction.options.getSubcommand() === 'deepl') {
     return commandDeepl(interaction)
   }
+
+  if (interaction.options.getSubcommand() === 'stats') {
+    return commandStats(interaction)
+  }
 }
 
 async function commandThread(interaction: ChatInputCommandInteraction) {
@@ -122,6 +130,14 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
 
   await interaction.editReply(`Loading thread with ID \`${threadId}\`…`)
   const resolvedThread = await faqManager.resolveThread(thread)
+
+  function onIndexationFailure(error: unknown) {
+    return sendAlert(
+      interaction,
+      `Could not index “${resolvedThread.name}” (\`${resolvedThread.id}\`) in namespace ${crowdinCode}, even after several attempts.
+      \`\`\`${error}\`\`\``
+    )
+  }
 
   if (crowdinCode) {
     try {
@@ -141,7 +157,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
         languageObject
       )
     } catch (error) {
-      await onIndexationFailure(interaction, resolvedThread, error)
+      await onIndexationFailure(error)
     }
   } else {
     await interaction.editReply('Indexing thread in all languages…')
@@ -163,7 +179,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
             languageObject
           )
         } catch (error) {
-          await onIndexationFailure(interaction, resolvedThread, error)
+          await onIndexationFailure(error)
         }
       }
     )
@@ -242,7 +258,7 @@ async function commandDeepl(interaction: ChatInputCommandInteraction) {
   const { client } = interaction
   const { localizationManager, crowdinManager } = client
   const translations = await crowdinManager.fetchAllProjectTranslations()
-  const languageObjects = LANGUAGE_OBJECTS.filter(object => object.isOnCrowdin)
+  const languageObjects = crowdinManager.getLanguages({ withEnglish: false })
 
   await Promise.all(
     languageObjects.map(async ({ crowdinCode, twoLettersCode }) => {
@@ -256,8 +272,22 @@ async function commandDeepl(interaction: ChatInputCommandInteraction) {
         content: `Updating the DeepL glossary for ‘${targetLangCode}’.`,
       })
 
+      // These 5 Item_*_Name keys are the fine torso items, which are called
+      // “<Something> Chest” in English. This causes translations to use that
+      // word when translating the word “chest” (as in treasure chest). By
+      // excluding them from the glossary, we can improve translations for all
+      // entries mentioning world chests.
+      const IGNORED_KEYS = [
+        'Item_29_Name',
+        'Item_37_Name',
+        'Item_44_Name',
+        'Item_52_Name',
+        'Item_60_Name',
+      ]
+
       const pairs = translations
-        .map(({ translations: t }) => {
+        .map(({ key, translations: t }) => {
+          if (IGNORED_KEYS.includes(key)) return ['', ''] as const
           try {
             const cleanSource = cleanUpTranslation(t.en)
             const cleanTarget = cleanUpTranslation(t[crowdinCode])
@@ -290,18 +320,63 @@ async function commandDeepl(interaction: ChatInputCommandInteraction) {
   return interaction.editReply({ content: 'Updated the DeepL glossary.' })
 }
 
-// If the indexation fails for any reason despite the exponential backoff
-// retries, report it in the #alert channels of the test server to debug it
-function onIndexationFailure(
-  interaction: ChatInputCommandInteraction,
-  thread: ResolvedThread,
-  error: unknown
-) {
-  const crowdinCode = interaction.options.getString('language')
-
-  return sendAlert(
-    interaction,
-    `Could not index “${thread.name}” (\`${thread.id}\`) in namespace ${crowdinCode}, even after several attempts.
-      \`\`\`${error}\`\`\``
+async function commandStats(interaction: ChatInputCommandInteraction) {
+  const { client } = interaction
+  const { faqManager, crowdinManager, localizationManager, indexationManager } =
+    client
+  const languageObjects = crowdinManager.getLanguages({ withEnglish: false })
+  const threads = await fetchFAQContent(interaction)
+  const wordCount = threads.reduce(
+    (acc, thread) => acc + thread.content.trim().split(/\s+/).length,
+    0
   )
+  const charCount = threads.reduce(
+    (acc, thread) => acc + thread.content.trim().length,
+    0
+  )
+  const deeplUsage = await localizationManager.deepl.getUsage()
+  const pcUsage = await indexationManager.index.describeIndexStats()
+
+  const totalRecordCounts = Object.entries(pcUsage.namespaces ?? {}).reduce(
+    (acc, [name, data]) =>
+      acc + (name.startsWith('test-') ? 0 : data.recordCount),
+    0
+  )
+  const numberFormatter = new Intl.NumberFormat('en-US')
+  const nf = numberFormatter.format
+  const currencyFormatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'EUR',
+  })
+  const cf = currencyFormatter.format
+
+  const costPerChar = 20 / 1_000_000
+  const entryCount = faqManager.threads.length
+  const languageCount = languageObjects.length
+  const avgCharPerEntry = charCount / entryCount
+  const totalChar = charCount * languageCount
+  const charUsed = deeplUsage.character?.count ?? 0
+
+  const content = `
+### Original version:
+- Entry count: ${entryCount}
+- Word count: ${nf(wordCount)}
+- Character count: ${nf(charCount)}
+- Average character count per entry: ${nf(Math.round(avgCharPerEntry))}
+### Localized versions:
+- Language count: ${languageCount} (w/o English)
+- Total word count: ${nf(wordCount * languageCount)}
+- Total character count: ${nf(totalChar)}
+### DeepL:
+- DeepL rate: ${cf(20)} per ${nf(1_000_000)} characters
+- Cost to index 1 entry: ${cf(costPerChar * avgCharPerEntry * languageCount)}
+- Cost to index 1 localized version: ${cf(costPerChar * charCount)}
+- Cost to index all localized versions: ${cf(costPerChar * totalChar)}
+- Current usage: ${nf(charUsed)} characters (${cf(costPerChar * charUsed)})
+### Pinecone:
+- Dimension: ${nf(pcUsage.dimension ?? 0)}
+- Record count: ${nf(totalRecordCounts)}
+  `
+
+  return interaction.editReply({ content })
 }

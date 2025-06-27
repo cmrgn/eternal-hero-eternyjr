@@ -53,6 +53,14 @@ export class CrowdinManager {
     this.client = client
   }
 
+  getLanguages(options: { withEnglish: boolean }) {
+    return LANGUAGE_OBJECTS.filter(object => {
+      if (object.isOnCrowdin) return true
+      if (object.crowdinCode === 'en' && options.withEnglish) return true
+      return false
+    })
+  }
+
   async getProject() {
     this.#log('info', 'Resolving project')
     const projects = await this.crowdin.projectsGroupsApi.listProjects()
@@ -279,11 +287,8 @@ export class CrowdinManager {
     ) => Promise<void>,
     { concurrency = 10, withEnglish = true } = {}
   ) {
-    const languageObjects = LANGUAGE_OBJECTS.filter(object => {
-      if (object.isOnCrowdin) return true
-      if (object.crowdinCode === 'en' && withEnglish) return true
-      return false
-    })
+    const languageObjects = this.getLanguages({ withEnglish })
+
     return pMap(
       languageObjects.entries(),
       ([index, languageObject]) =>
