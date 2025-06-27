@@ -55,7 +55,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (!crowdinCode) {
     logger.logCommand(interaction, 'Aborting due to lack of guessed language')
     embed.setDescription(
-      'Unfortunately, the language could not be guessed from your query.'
+      'Unfortunately, the language could not be guessed from your query, or it is not currently supported..'
     )
     return interaction.editReply({ embeds: [embed] })
   }
