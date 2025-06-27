@@ -107,5 +107,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   embed.setDescription(localizedAnswer ?? answer)
 
-  return interaction.editReply({ embeds: [embed] })
+  const message = await interaction.editReply({
+    embeds: [embed],
+  })
+
+  await Promise.all([message.react('👍'), message.react('👎')])
 }
