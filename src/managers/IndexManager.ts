@@ -87,19 +87,14 @@ export class IndexManager {
     await this.indexRecords([record], namespaceName)
   }
 
-  async translateAndIndexThreadInAllLanguages(
-    thread: ResolvedThread,
-    concurrency = 10
-  ) {
+  async translateAndIndexThreadInAllLanguages(thread: ResolvedThread) {
     this.#log('info', 'Indexing thread in all languages', {
       action: 'UPSERT',
       id: thread.id,
-      concurrency,
     })
 
-    return this.client.crowdinManager.onCrowdinLanguages(
-      language => this.translateAndIndexThread(thread, language),
-      { concurrency }
+    return this.client.crowdinManager.onCrowdinLanguages(language =>
+      this.translateAndIndexThread(thread, language)
     )
   }
 
@@ -119,16 +114,14 @@ export class IndexManager {
     }
   }
 
-  unindexThreadInAllLanguages(threadId: string, concurrency = 20) {
+  unindexThreadInAllLanguages(threadId: string) {
     this.#log('info', 'Indexing thread in all languages', {
       action: 'DELETE',
       id: threadId,
-      concurrency,
     })
 
-    return this.client.crowdinManager.onCrowdinLanguages(
-      ({ crowdinCode }) => this.unindexThread(threadId, crowdinCode),
-      { concurrency }
+    return this.client.crowdinManager.onCrowdinLanguages(({ crowdinCode }) =>
+      this.unindexThread(threadId, crowdinCode)
     )
   }
 
