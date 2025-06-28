@@ -1,10 +1,16 @@
 import dotenv from 'dotenv'
 
-import { deployCommands } from '../utils/commands'
+import { deployCommand, deployCommands } from '../utils/commands'
 
 dotenv.config()
 
 const GUILD_ID = process.env.GUILD_ID
+const COMMAND_NAME = process.env.COMMAND_NAME
+
 if (!GUILD_ID) throw new Error('Missing ‘GUILD_ID’ environment variable.')
 
-deployCommands(GUILD_ID)
+if (COMMAND_NAME) {
+  deployCommand(GUILD_ID, COMMAND_NAME)
+} else {
+  deployCommands(GUILD_ID)
+}
