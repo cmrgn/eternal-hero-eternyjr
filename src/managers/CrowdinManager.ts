@@ -7,7 +7,6 @@ import {
 import decompress from 'decompress'
 import csvtojson from 'csvtojson'
 import fetch from 'node-fetch'
-import pMap from 'p-map'
 
 import { CROWDIN_TOKEN } from '../constants/config'
 import { logger } from '../utils/logger'
@@ -285,16 +284,9 @@ export class CrowdinManager {
       index: number,
       array: LanguageObject[]
     ) => Promise<void>,
-    { concurrency = 10, withEnglish = true } = {}
+    { withEnglish = true } = {}
   ) {
-    const languageObjects = this.getLanguages({ withEnglish })
-
-    return pMap(
-      languageObjects.entries(),
-      ([index, languageObject]) =>
-        handler(languageObject, index, languageObjects),
-      { concurrency }
-    )
+    return Promise.all(this.getLanguages({ withEnglish }).map(handler))
   }
 }
 

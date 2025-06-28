@@ -240,7 +240,7 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
         await notify(thread, index)
         await indexManager.translateAndIndexThread(thread, languageObject)
       },
-      { concurrency: 20 }
+      { concurrency: 25 } // DeepL has a 30 RPS limit
     )
   }
 

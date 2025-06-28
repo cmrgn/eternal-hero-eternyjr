@@ -236,6 +236,10 @@ export class FAQManager {
       .split(/> Related entr(?:y|ies):/)[0]
       // Remove emojis
       .replace(/<a?:\w+:\d+>/g, '')
+      // Remove bold markers
+      .replace(/\*\*/g, '')
+      // Collapse successive double spaces into a single one
+      .replace(/ +/g, ' ')
       .trim()
 
     return {
