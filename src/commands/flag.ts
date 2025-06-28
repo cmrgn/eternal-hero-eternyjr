@@ -1,0 +1,107 @@
+import {
+  type ChatInputCommandInteraction,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+} from 'discord.js'
+
+import { logger } from '../utils/logger'
+
+export const scope = 'OFFICIAL'
+
+export const data = new SlashCommandBuilder()
+  .setName('flag')
+  .setDescription('Manage feature flags')
+  .addSubcommand(sub =>
+    sub
+      .setName('enable')
+      .setDescription('Enable a feature flag')
+      .addStringOption(opt =>
+        opt
+          .setName('name')
+          .setDescription('The feature flag to enable')
+          .setRequired(true)
+      )
+  )
+  .addSubcommand(sub =>
+    sub
+      .setName('disable')
+      .setDescription('Disable a feature flag')
+      .addStringOption(opt =>
+        opt
+          .setName('name')
+          .setDescription('The feature flag to disable')
+          .setRequired(true)
+      )
+  )
+  .addSubcommand(sub =>
+    sub
+      .setName('delete')
+      .setDescription('Delete a feature flag')
+      .addStringOption(opt =>
+        opt
+          .setName('name')
+          .setDescription('The feature flag to delete')
+          .setRequired(true)
+      )
+  )
+  .addSubcommand(sub =>
+    sub
+      .setName('get')
+      .setDescription('Check 1 or all feature flags')
+      .addStringOption(opt =>
+        opt.setName('name').setDescription('The feature flag to check')
+      )
+  )
+
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+
+export async function execute(interaction: ChatInputCommandInteraction) {
+  logger.logCommand(interaction, 'Starting command execution')
+
+  const { options, client } = interaction
+  const { flagsManager } = client
+
+  const subCommand = options.getSubcommand()
+
+  if (subCommand === 'get') {
+    const flag = options.getString('name')
+    if (flag) {
+      const value = await flagsManager.getFeatureFlag(flag)
+      return interaction.reply({
+        content: `Flag \`${flag}\` is currently **${value ? 'ENABLED' : 'DISABLED'}**.`,
+        ephemeral: true,
+      })
+    }
+
+    const flags = await flagsManager.getFeatureFlags()
+    const content = `Feature flags:\n${flags
+      .map(
+        ({ key, value }) => `- \`${key}\`: ${value ? 'ENABLED' : 'DISABLED'}`
+      )
+      .join('\n')}`
+
+    return interaction.reply({
+      content,
+      ephemeral: true,
+    })
+  }
+
+  if (subCommand === 'delete') {
+    const flag = options.getString('name', true)
+    await flagsManager.deleteFeatureFlag(flag)
+
+    return interaction.reply({
+      content: `Flag \`${flag}\` has been deleted.`,
+      ephemeral: true,
+    })
+  }
+
+  const flag = options.getString('name', true)
+  const newValue = subCommand === 'enable'
+  await flagsManager.setFeatureFlag(flag, newValue)
+
+  return interaction.reply({
+    content: `Flag \`${flag}\` has been set to **${newValue ? 'ENABLED' : 'DISABLED'}**.`,
+    ephemeral: true,
+  })
+}

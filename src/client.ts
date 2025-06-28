@@ -8,6 +8,7 @@ import { initSearchManager } from './managers/SearchManager'
 import { initLocalizationManager } from './managers/LocalizationManager'
 import { initIndexManager } from './managers/IndexManager'
 import { initCrowdinManager } from './managers/CrowdinManager'
+import { initFlagsManager } from './managers/FlagsManager'
 
 export const client = new Client({
   intents: [
@@ -29,6 +30,7 @@ client.giveawaysManager = initGiveawayManager(client)
 client.faqManager = initFAQManager(client)
 client.leaderboardManager = initLeaderboardManager(client)
 client.searchManager = initSearchManager(client)
+client.flagsManager = initFlagsManager(client)
 client.indexManager = initIndexManager(client)
 client.localizationManager = initLocalizationManager(client)
 client.crowdinManager = initCrowdinManager(client)

@@ -8,6 +8,7 @@ import type { IndexManager } from '../managers/IndexManager'
 import type { LeaderboardManager } from '../managers/LeaderboardManager'
 import type { LocalizationManager } from '../managers/LocalizationManager'
 import type { SearchManager } from '../managers/SearchManager'
+import type { FlagsManager } from '../managers/FlagsManager'
 
 type Command = {
   data: SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder
@@ -27,6 +28,7 @@ declare module 'discord.js' {
     leaderboardManager: LeaderboardManager
     localizationManager: LocalizationManager
     searchManager: SearchManager
+    flagsManager: FlagsManager
 
     languageIdentifier: LanguageIdentifier
   }

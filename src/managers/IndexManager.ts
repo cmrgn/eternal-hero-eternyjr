@@ -138,18 +138,40 @@ export class IndexManager {
 
   bindEvents() {
     this.#log('info', 'Binding events onto the manager instance')
+    const flagsManager = this.client.flagsManager
 
     this.client.faqManager.on(
       Events.ThreadCreate,
-      this.translateAndIndexThreadInAllLanguages.bind(this)
+      async (thread: ResolvedThread) => {
+        if ((await flagsManager.getFeatureFlag('auto_indexing')) === true) {
+          await this.translateAndIndexThreadInAllLanguages(thread)
+        } else {
+          this.#log('info', 'Auto-indexing is disabled; aborting.', {
+            threadId: thread.id,
+          })
+        }
+      }
     )
-    this.client.faqManager.on(
-      Events.ThreadDelete,
-      this.unindexThreadInAllLanguages.bind(this)
-    )
+
+    this.client.faqManager.on(Events.ThreadDelete, async (threadId: string) => {
+      if ((await flagsManager.getFeatureFlag('auto_indexing')) === true) {
+        await this.unindexThreadInAllLanguages(threadId)
+      } else {
+        this.#log('info', 'Auto-indexing is disabled; aborting.', { threadId })
+      }
+    })
+
     this.client.faqManager.on(
       Events.ThreadUpdate,
-      this.translateAndIndexThreadInAllLanguages.bind(this)
+      async (thread: ResolvedThread) => {
+        if ((await flagsManager.getFeatureFlag('auto_indexing')) === true) {
+          await this.translateAndIndexThreadInAllLanguages(thread)
+        } else {
+          this.#log('info', 'Auto-indexing is disabled; aborting.', {
+            threadId: thread.id,
+          })
+        }
+      }
     )
   }
 }

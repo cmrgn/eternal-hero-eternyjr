@@ -76,58 +76,68 @@ export class LeaderboardManager {
     return rows as { user_id: string; contribution_count: number }[]
   }
 
-  faqLinksOnCreateOrDelete(event: Events.MessageCreate | Events.MessageDelete) {
-    return async (message: DiscordMessage) => {
-      const { client, guildId, channelId, member, content } = message
+  async faqLinksOnCreateOrDelete(
+    event: Events.MessageCreate | Events.MessageDelete,
+    message: DiscordMessage
+  ) {
+    const { client, guildId, channelId, member, content } = message
 
-      if (!member || !guildId || !content) return
-      if (shouldIgnoreInteraction(message)) return
+    if (!member || !guildId || !content) return
+    if (shouldIgnoreInteraction(message)) return
+    if (
+      (await client.flagsManager.getFeatureFlag('faq_leaderboard')) === false
+    ) {
+      this.#log('info', 'FAQ leaderboard is disabled; aborting.')
+      return
+    }
 
-      this.#log('info', 'Handling contribution', {
-        type: event === Events.MessageCreate ? 'insertion' : 'deletion',
-        guildId,
-        channelId,
-        messageId: message.id,
-        userId: message.member?.user.id,
-      })
+    this.#log('info', 'Handling contribution', {
+      type: event === Events.MessageCreate ? 'insertion' : 'deletion',
+      guildId,
+      channelId,
+      messageId: message.id,
+      userId: message.member?.user.id,
+    })
 
-      // Perform a quick and cheap check to figure out whether the message
-      // contains any link whatsoever, otherwise return early.
-      if (!client.faqManager.containsLinkLike(content)) return
+    // Perform a quick and cheap check to figure out whether the message
+    // contains any link whatsoever, otherwise return early.
+    if (!client.faqManager.containsLinkLike(content)) return
 
-      if (client.faqManager.links.some(link => content.includes(link))) {
-        const hasAddedMessage = event === Events.MessageCreate
-        const hasDeletedMessage = event === Events.MessageDelete
-        const increment = hasAddedMessage ? +1 : hasDeletedMessage ? -1 : 0
+    if (client.faqManager.links.some(link => content.includes(link))) {
+      const hasAddedMessage = event === Events.MessageCreate
+      const hasDeletedMessage = event === Events.MessageDelete
+      const increment = hasAddedMessage ? +1 : hasDeletedMessage ? -1 : 0
 
-        if (increment)
-          this.register({ userId: member.id, guildId, channelId, increment })
-      }
+      if (increment)
+        this.register({ userId: member.id, guildId, channelId, increment })
     }
   }
 
   async faqLinksOnCreate(interaction: DiscordMessage) {
-    if (shouldIgnoreInteraction(interaction)) return
-
     const isTestChannel = interaction.channelId === BOT_TEST_CHANNEL_ID
     if (isTestChannel) return
 
-    return this.faqLinksOnCreateOrDelete(Events.MessageCreate)(interaction)
+    return this.faqLinksOnCreateOrDelete(Events.MessageCreate, interaction)
   }
 
   faqLinksOnDelete(interaction: DiscordMessage) {
-    if (shouldIgnoreInteraction(interaction)) return
-
-    return this.faqLinksOnCreateOrDelete(Events.MessageDelete)(interaction)
+    return this.faqLinksOnCreateOrDelete(Events.MessageDelete, interaction)
   }
 
-  faqLinksOnUpdate(oldMessage: DiscordMessage, newMessage: DiscordMessage) {
-    if (shouldIgnoreInteraction(newMessage)) return
-
+  async faqLinksOnUpdate(
+    oldMessage: DiscordMessage,
+    newMessage: DiscordMessage
+  ) {
     const { client, guildId, channelId, member } = newMessage
 
     if (!member || !guildId) return
     if (shouldIgnoreInteraction(newMessage)) return
+    if (
+      (await client.flagsManager.getFeatureFlag('faq_leaderboard')) === false
+    ) {
+      this.#log('info', 'FAQ leaderboard is disabled; aborting.')
+      return
+    }
 
     // Perform a quick and cheap check to figure out whether the message contains
     // any link whatsoever, otherwise return early.

@@ -136,6 +136,10 @@ export class LocalizationManager {
   ) {
     this.#log('info', 'Prompting ChatGPT', { model })
 
+    if ((await this.client.flagsManager.getFeatureFlag('chatgpt')) === false) {
+      throw new Error('ChatGPT usage is disabled; aborting.')
+    }
+
     const response = await this.openai.chat.completions.create({
       model,
       messages: [
@@ -188,6 +192,10 @@ export class LocalizationManager {
       threadId: thread.id,
       targetLang: languageObject.deepLCode,
     })
+
+    if ((await this.client.flagsManager.getFeatureFlag('deepl')) === false) {
+      throw new Error('DeepL usage is disabled; aborting.')
+    }
 
     // DeepL is quite agressive with line breaks and tend to remove them, which
     // is a problem when hangling lists. A workaround is to give it a bunch of
