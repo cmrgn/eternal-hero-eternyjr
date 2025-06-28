@@ -149,7 +149,11 @@ export class LocalizationManager {
 
   summarize(
     userQuestion: string,
-    context: { question: string; answer: string; crowdinCode: CrowdinCode }
+    context: {
+      question: string
+      answer: string
+      languageObject: LanguageObject
+    }
   ) {
     this.#log('info', 'Summarizing', {
       userQuestion,
@@ -166,7 +170,7 @@ export class LocalizationManager {
     Your task is to help the player by summarizing the FAQ answer into a more
     digestible response, while following these strict rules:
 
-    1. Respond in ${context.crowdinCode} (NOT in English).
+    1. Respond in ${context.languageObject.languageName} (${context.languageObject.locale}).
     2. Do not change the meaning of the answer in any way.
     3. Do not add any information that is not explicitly present in the FAQ.
     4. Do not remove important details that are part of the FAQ answer.

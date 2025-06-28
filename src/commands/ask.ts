@@ -50,15 +50,20 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ flags })
 
   logger.logCommand(interaction, 'Guessing the input’s language')
-  const crowdinCode = await localizationManager.guessCrowdinLanguage(query)
+  const guessedLanguage = await localizationManager.guessCrowdinLanguage(query)
+  const languageObject = LANGUAGE_OBJECTS.find(
+    languageObject => languageObject.crowdinCode === guessedLanguage
+  )
 
-  if (!crowdinCode) {
+  if (!languageObject) {
     logger.logCommand(interaction, 'Aborting due to lack of guessed language')
     embed.setDescription(
       'Unfortunately, the language could not be guessed from your query, or it is not currently supported..'
     )
     return interaction.editReply({ embeds: [embed] })
   }
+
+  const { crowdinCode } = languageObject
 
   logger.logCommand(interaction, 'Performing the search', { crowdinCode })
   const { results } = await searchManager.search(
@@ -73,9 +78,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     logger.logCommand(interaction, 'Returning a lack of results', {
       crowdinCode,
     })
-    const languageObject = LANGUAGE_OBJECTS.find(
-      languageObject => languageObject.crowdinCode === crowdinCode
-    )
     const localizedError = languageObject?.messages.no_results
     const error = localizedError ?? ENGLISH_LANGUAGE_OBJECT.messages.no_results
     embed.setDescription(error)
@@ -100,9 +102,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return interaction.editReply({ embeds: [embed] })
   }
 
-  const context = { question, answer, crowdinCode }
+  const context = { question, answer, languageObject }
 
-  logger.logCommand(interaction, 'Summarizing the answer', { crowdinCode })
+  logger.logCommand(interaction, 'Summarizing the answer', {
+    question,
+    crowdinCode,
+  })
   const localizedAnswer = await localizationManager.summarize(query, context)
 
   embed.setDescription(localizedAnswer ?? answer)
