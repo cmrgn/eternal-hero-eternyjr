@@ -41,7 +41,7 @@ export class SearchManager {
   #log = logger.log('LeaderboardManager', this.#severityThreshold)
 
   constructor(client: Client) {
-    this.#log('info', 'Instantiating client')
+    this.#log('info', 'Instantiating manager')
 
     this.client = client
     this.altFuse = new Fuse(
