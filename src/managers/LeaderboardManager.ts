@@ -132,12 +132,6 @@ export class LeaderboardManager {
 
     if (!member || !guildId) return
     if (shouldIgnoreInteraction(newMessage)) return
-    if (
-      (await client.flagsManager.getFeatureFlag('faq_leaderboard')) === false
-    ) {
-      this.#log('info', 'FAQ leaderboard is disabled; aborting.')
-      return
-    }
 
     // Perform a quick and cheap check to figure out whether the message contains
     // any link whatsoever, otherwise return early.
@@ -151,6 +145,13 @@ export class LeaderboardManager {
       client.faqManager.links.some(link => newMessage.content?.includes(link))
 
     if (hadOldMessageLinks !== hasNewMessageLinks) {
+      if (
+        (await client.flagsManager.getFeatureFlag('faq_leaderboard')) === false
+      ) {
+        this.#log('info', 'FAQ leaderboard is disabled; aborting.')
+        return
+      }
+
       this.#log('info', 'Handling contribution', {
         type: 'edition',
         guildId,
