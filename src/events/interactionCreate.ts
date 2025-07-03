@@ -2,6 +2,7 @@ import { MessageFlags, type Interaction } from 'discord.js'
 
 import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
 import { logger } from '../utils/logger'
+import { handleButtons } from './interactionCreate.buttons'
 
 export async function onInteractionCreate(interaction: Interaction) {
   // Abort if this interaction is coming from a bot, as this shouldn’t happen.
@@ -10,6 +11,7 @@ export async function onInteractionCreate(interaction: Interaction) {
   // Check whether the interaction should be processed before proceeding.
   if (shouldIgnoreInteraction(interaction)) return
 
+  if (interaction.isButton()) return handleButtons(interaction)
   if (!interaction.isChatInputCommand()) return
 
   try {

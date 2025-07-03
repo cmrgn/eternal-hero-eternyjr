@@ -1,4 +1,9 @@
-import { Events, type AnyThreadChannel, type Client } from 'discord.js'
+import type {
+  Message,
+  AnyThreadChannel,
+  Client,
+  PartialMessage,
+} from 'discord.js'
 import {
   Pinecone,
   type Index,
@@ -10,6 +15,7 @@ import type { PineconeEntry, PineconeNamespace } from './SearchManager'
 import type { LanguageObject } from '../constants/i18n'
 import { IS_DEV, PINECONE_API_KEY } from '../constants/config'
 import { logger } from '../utils/logger'
+import { diffWords } from 'diff'
 
 export class IndexManager {
   // This is the name of the index on Pinecone
@@ -136,12 +142,69 @@ export class IndexManager {
     await this.indexThread({ ...thread, ...response }, crowdinCode)
   }
 
+  async confirmRetranslation(
+    thread: ResolvedThread,
+    message: Message<boolean>,
+    oldMessage: Message<boolean> | PartialMessage
+  ) {
+    this.#log('info', 'Asking for translation confirmation', {
+      id: thread.id,
+    })
+    const { crowdinManager } = this.client
+    const confirmBtn = {
+      type: 2,
+      style: 1,
+      label: 'Yes, retranslate',
+      custom_id: `retranslate:${thread.id}`,
+    }
+    const cancelBtn = {
+      type: 2,
+      style: 2,
+      label: 'No, skip',
+      custom_id: `skip:${thread.id}`,
+    }
+    const languageObjects = crowdinManager.getLanguages({ withEnglish: false })
+    const languageCount = languageObjects.length
+    const char = message.content.length
+    const numberFormatter = new Intl.NumberFormat('en-US')
+    const currencyFormatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'EUR',
+    })
+    // The previous content may not be defined if the message is a partial. We
+    // cannot refetch it, because it will fetch the latest version of the mes-
+    // sage which will yield a null diff. So either we have the old content in
+    // the Discord cache and we can diff, or we can’t.
+    const contentDiff = oldMessage.content
+      ? diffWords(oldMessage.content, message.content)
+          .map(part => {
+            if (part.added) return `**+${part.value}**`
+            if (part.removed) return `~~-${part.value}~~`
+            return part.value
+          })
+          .join('')
+      : ''
+    const content = [
+      'You have edited a FAQ entry. Do you want to automatically translate it in all supported languages and reindex it?',
+      `- Entry: _“${thread.name}”_`,
+      `- Language count: ${numberFormatter.format(languageCount)} (w/o English)`,
+      `- Character count: ${numberFormatter.format(char)}`,
+      `- **Total cost:** ${currencyFormatter.format((20 / 1_000_000) * char * languageCount)}`,
+      contentDiff.replace(/\n/g, '\n>'),
+    ].join('\n')
+
+    await message?.author?.send({
+      content,
+      components: [{ type: 1, components: [confirmBtn, cancelBtn] }],
+    })
+  }
+
   bindEvents() {
     this.#log('info', 'Binding events onto the manager instance')
     const flagsManager = this.client.flagsManager
 
     this.client.faqManager.on(
-      Events.ThreadCreate,
+      'ThreadCreated',
       async (thread: ResolvedThread) => {
         if ((await flagsManager.getFeatureFlag('auto_indexing')) === true) {
           await this.translateAndIndexThreadInAllLanguages(thread)
@@ -153,7 +216,7 @@ export class IndexManager {
       }
     )
 
-    this.client.faqManager.on(Events.ThreadDelete, async (threadId: string) => {
+    this.client.faqManager.on('ThreadDeleted', async (threadId: string) => {
       if ((await flagsManager.getFeatureFlag('auto_indexing')) === true) {
         await this.unindexThreadInAllLanguages(threadId)
       } else {
@@ -162,13 +225,33 @@ export class IndexManager {
     })
 
     this.client.faqManager.on(
-      Events.ThreadUpdate,
+      'ThreadNameUpdated',
       async (thread: ResolvedThread) => {
         if ((await flagsManager.getFeatureFlag('auto_indexing')) === true) {
           await this.translateAndIndexThreadInAllLanguages(thread)
         } else {
           this.#log('info', 'Auto-indexing is disabled; aborting.', {
             threadId: thread.id,
+          })
+        }
+      }
+    )
+
+    this.client.faqManager.on(
+      'ThreadContentUpdated',
+      async (thread, message, oldMessage) => {
+        if ((await flagsManager.getFeatureFlag('auto_indexing')) === true) {
+          if (
+            (await flagsManager.getFeatureFlag('auto_translation_confirm')) ===
+            true
+          ) {
+            await this.confirmRetranslation(thread, message, oldMessage)
+          } else {
+            await this.translateAndIndexThreadInAllLanguages(thread)
+          }
+        } else {
+          this.#log('info', 'Auto-indexing is disabled; aborting.', {
+            thread: thread.id,
           })
         }
       }

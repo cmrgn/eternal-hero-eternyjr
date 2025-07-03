@@ -22,10 +22,15 @@ export type ResolvedThread = {
   url: string
 }
 
-export type OnThreadEvents = {
-  [Events.ThreadCreate]: (thread: ResolvedThread) => void
-  [Events.ThreadUpdate]: (thread: ResolvedThread) => void
-  [Events.ThreadDelete]: (threadId: string) => void
+export type ThreadEvents = {
+  ThreadCreated: (thread: ResolvedThread) => void
+  ThreadNameUpdated: (thread: ResolvedThread) => void
+  ThreadContentUpdated: (
+    thread: ResolvedThread,
+    newMessage: Message,
+    oldMessage: Message | PartialMessage
+  ) => void
+  ThreadDeleted: (threadId: string) => void
 }
 
 export class FAQManager {
@@ -37,9 +42,10 @@ export class FAQManager {
   #links: string[]
 
   #listeners = {
-    [Events.ThreadCreate]: [] as OnThreadEvents[Events.ThreadCreate][],
-    [Events.ThreadUpdate]: [] as OnThreadEvents[Events.ThreadUpdate][],
-    [Events.ThreadDelete]: [] as OnThreadEvents[Events.ThreadDelete][],
+    ThreadCreated: [] as ThreadEvents['ThreadCreated'][],
+    ThreadNameUpdated: [] as ThreadEvents['ThreadNameUpdated'][],
+    ThreadContentUpdated: [] as ThreadEvents['ThreadContentUpdated'][],
+    ThreadDeleted: [] as ThreadEvents['ThreadDeleted'][],
   }
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
@@ -65,25 +71,42 @@ export class FAQManager {
     return this.#links
   }
 
+  on(eventName: 'ThreadCreated', listener: ThreadEvents['ThreadCreated']): void
+  on(eventName: 'ThreadDeleted', listener: ThreadEvents['ThreadDeleted']): void
   on(
-    eventName: Events.ThreadCreate | Events.ThreadDelete | Events.ThreadUpdate,
+    eventName: 'ThreadNameUpdated',
+    listener: ThreadEvents['ThreadNameUpdated']
+  ): void
+  on(
+    eventName: 'ThreadContentUpdated',
+    listener: ThreadEvents['ThreadContentUpdated']
+  ): void
+  on(
+    eventName: keyof ThreadEvents,
     listener:
-      | OnThreadEvents[Events.ThreadCreate]
-      | OnThreadEvents[Events.ThreadDelete]
-      | OnThreadEvents[Events.ThreadUpdate]
+      | ThreadEvents['ThreadCreated']
+      | ThreadEvents['ThreadDeleted']
+      | ThreadEvents['ThreadNameUpdated']
+      | ThreadEvents['ThreadContentUpdated']
   ) {
-    if (eventName === Events.ThreadDelete)
-      this.#listeners[eventName].push(
-        listener as OnThreadEvents[Events.ThreadDelete]
-      )
-    if (eventName === Events.ThreadUpdate)
-      this.#listeners[eventName].push(
-        listener as OnThreadEvents[Events.ThreadUpdate]
-      )
-    if (eventName === Events.ThreadCreate)
-      this.#listeners[eventName].push(
-        listener as OnThreadEvents[Events.ThreadCreate]
-      )
+    switch (eventName) {
+      case 'ThreadCreated':
+        return this.#listeners[eventName].push(
+          listener as ThreadEvents['ThreadCreated']
+        )
+      case 'ThreadDeleted':
+        return this.#listeners[eventName].push(
+          listener as ThreadEvents['ThreadDeleted']
+        )
+      case 'ThreadNameUpdated':
+        return this.#listeners[eventName].push(
+          listener as ThreadEvents['ThreadNameUpdated']
+        )
+      case 'ThreadContentUpdated':
+        return this.#listeners[eventName].push(
+          listener as ThreadEvents['ThreadContentUpdated']
+        )
+    }
   }
 
   async cacheThreads() {
@@ -148,7 +171,7 @@ export class FAQManager {
       this.#log('info', 'Responding to thread creation', { id: thread.id })
       this.cacheThreads()
       const resolvedThread = await this.resolveThread(thread)
-      for (const listener of this.#listeners[Events.ThreadCreate]) {
+      for (const listener of this.#listeners.ThreadCreated) {
         listener(resolvedThread)
       }
     }
@@ -159,7 +182,7 @@ export class FAQManager {
     if (this.belongsToFAQ(thread)) {
       this.#log('info', 'Responding to thread deletion', { id: thread.id })
       this.cacheThreads()
-      for (const listener of this.#listeners[Events.ThreadDelete]) {
+      for (const listener of this.#listeners.ThreadDeleted) {
         listener(thread.id)
       }
     }
@@ -174,14 +197,14 @@ export class FAQManager {
       })
       this.cacheThreads()
       const resolvedThread = await this.resolveThread(next)
-      for (const listener of this.#listeners[Events.ThreadUpdate]) {
+      for (const listener of this.#listeners.ThreadNameUpdated) {
         listener(resolvedThread)
       }
     }
   }
 
   async onMessageUpdate(
-    _: Message | PartialMessage,
+    oldMessage: Message | PartialMessage,
     newMessage: Message | PartialMessage
   ) {
     if (shouldIgnoreInteraction(newMessage)) return
@@ -201,8 +224,8 @@ export class FAQManager {
         property: 'content',
       })
       const resolvedThread = await this.resolveThread(thread)
-      for (const listener of this.#listeners[Events.ThreadUpdate]) {
-        listener(resolvedThread)
+      for (const listener of this.#listeners.ThreadContentUpdated) {
+        listener(resolvedThread, newMessage, oldMessage)
       }
     }
   }
