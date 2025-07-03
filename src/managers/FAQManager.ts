@@ -191,9 +191,8 @@ export class FAQManager {
   async onThreadUpdate(prev: AnyThreadChannel, next: AnyThreadChannel) {
     if (shouldIgnoreInteraction(next)) return
     if (this.belongsToFAQ(prev) && prev.name !== next.name) {
-      this.#log('info', 'Responding to thread update', {
+      this.#log('info', 'Responding to thread name update', {
         id: next.id,
-        property: 'name',
       })
       this.cacheThreads()
       const resolvedThread = await this.resolveThread(next)
@@ -219,10 +218,22 @@ export class FAQManager {
 
     // Make sure the parent of the thread is the FAQ forum, abort if not
     if (this.belongsToFAQ({ parentId: thread.parent?.id ?? null, guild })) {
-      this.#log('info', 'Responding to thread update', {
+      this.#log('info', 'Responding to thread content update', {
         id: thread.id,
-        property: 'content',
       })
+
+      // If the old content is accessible in the Discord cache and strictly
+      // equal to the new content after normalization, do nothing since the edit
+      // is essentially moot
+      const oldContent = this.cleanUpThreadContent(oldMessage.content)
+      const newContent = this.cleanUpThreadContent(newMessage.content)
+      if (oldContent === newContent) {
+        this.#log('info', 'Content unchanged; ignoring thread update', {
+          id: thread.id,
+        })
+        return
+      }
+
       const resolvedThread = await this.resolveThread(thread)
       for (const listener of this.#listeners.ThreadContentUpdated) {
         listener(resolvedThread, newMessage, oldMessage)
@@ -244,6 +255,21 @@ export class FAQManager {
       .filter(Boolean)
   }
 
+  cleanUpThreadContent(content?: string | null) {
+    return (
+      (content ?? '')
+        // Removed the related entries footer from the message
+        .split(/> Related entr(?:y|ies):/)[0]
+        // Remove emojis
+        .replace(/<a?:\w+:\d+>/g, '')
+        // Remove bold markers
+        .replace(/\*\*/g, '')
+        // Collapse successive double spaces into a single one
+        .replace(/ +/g, ' ')
+        .trim()
+    )
+  }
+
   async resolveThread(
     thread: AnyThreadChannel | ResolvedThread
   ): Promise<ResolvedThread> {
@@ -254,22 +280,11 @@ export class FAQManager {
       thread as AnyThreadChannel
     ).fetchStarterMessage()
 
-    const content = (firstMessage?.content ?? '')
-      // Removed the related entries footer from the message
-      .split(/> Related entr(?:y|ies):/)[0]
-      // Remove emojis
-      .replace(/<a?:\w+:\d+>/g, '')
-      // Remove bold markers
-      .replace(/\*\*/g, '')
-      // Collapse successive double spaces into a single one
-      .replace(/ +/g, ' ')
-      .trim()
-
     return {
       isResolved: true,
       id: thread.id,
       name: thread.name,
-      content,
+      content: this.cleanUpThreadContent(firstMessage?.content),
       tags: this.getThreadTags(thread as AnyThreadChannel),
       url: thread.url,
     }
