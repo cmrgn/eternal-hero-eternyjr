@@ -1,5 +1,6 @@
 import {
   type ChatInputCommandInteraction,
+  MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js'
@@ -69,7 +70,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       const value = await flagsManager.getFeatureFlag(flag)
       return interaction.reply({
         content: `Flag \`${flag}\` is currently **${value ? 'ENABLED' : 'DISABLED'}**.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       })
     }
 
@@ -82,7 +83,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     return interaction.reply({
       content,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     })
   }
 
