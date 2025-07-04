@@ -109,6 +109,7 @@ export class PromptManager {
       3. Do not add any information that is not explicitly present in the FAQ.
       4. Do not remove important details that are part of the FAQ answer.
       5. Be especially careful with game terms — their meaning is precise and important. When in doubt, copy the phrasing exactly rather than risk altering the meaning.
+      6. Do not put empty lines between list items.
   
       Keep the tone helpful, clear, and concise. Your goal is to make the FAQ answer more approachable, but never less accurate.
       `)
