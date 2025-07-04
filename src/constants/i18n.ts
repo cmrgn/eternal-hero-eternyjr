@@ -281,7 +281,6 @@ export const LOCALES = LANGUAGE_OBJECTS.map(object => object.locale)
 export const LANGUAGES = LANGUAGE_OBJECTS.map(object => object.twoLettersCode)
 export const CROWDIN_CODES = LANGUAGE_OBJECTS.map(object => object.crowdinCode)
 
-export const MIN_LENGTH_LANGUAGE_DETECTION_THRESHOLD = 40
 // biome-ignore lint/style/noNonNullAssertion: <explanation>
 export const ENGLISH_LANGUAGE_OBJECT = LANGUAGE_OBJECTS.find(
   locale => locale.twoLettersCode === 'en'

@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import type { Client } from 'discord.js'
 import * as deepl from 'deepl-node'
+import { type LanguageIdentifier, loadModule } from 'cld3-asm'
 
 import {
   DEEPL_API_KEY,
@@ -47,6 +48,7 @@ export class LocalizationManager {
   client: Client
   openai: OpenAI
   deepl: deepl.DeepLClient
+  languageIdentifier: LanguageIdentifier | undefined
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('LeaderboardManager', this.#severityThreshold)
@@ -65,6 +67,12 @@ export class LocalizationManager {
     this.client = client
     this.openai = new OpenAI({ apiKey: OPENAI_API_KEY })
     this.deepl = new deepl.DeepLClient(DEEPL_API_KEY)
+    this.loadLanguageIdentifier()
+  }
+
+  async loadLanguageIdentifier() {
+    this.#log('info', 'Loading language identifier')
+    this.languageIdentifier = (await loadModule()).create(40)
   }
 
   isLanguageSupported(language: string): language is CrowdinCode {
@@ -76,7 +84,8 @@ export class LocalizationManager {
     // message posted on Discord. This is too verbose and pollutes the logs.
     // this.#log('info', 'Guessing language with cld3', { userInput })
 
-    const guess = this.client.languageIdentifier.findLanguage(userInput)
+    if (!this.languageIdentifier) return null
+    const guess = this.languageIdentifier.findLanguage(userInput)
 
     if (
       guess.probability >= 0.9 &&
