@@ -7,6 +7,7 @@ import type { FAQManager } from '../managers/FAQManager'
 import type { IndexManager } from '../managers/IndexManager'
 import type { LeaderboardManager } from '../managers/LeaderboardManager'
 import type { LocalizationManager } from '../managers/LocalizationManager'
+import type { PromptManager } from '../managers/PromptManager'
 import type { SearchManager } from '../managers/SearchManager'
 import type { FlagsManager } from '../managers/FlagsManager'
 
@@ -27,6 +28,7 @@ declare module 'discord.js' {
     indexManager: IndexManager
     leaderboardManager: LeaderboardManager
     localizationManager: LocalizationManager
+    promptManager: PromptManager
     searchManager: SearchManager
     flagsManager: FlagsManager
 

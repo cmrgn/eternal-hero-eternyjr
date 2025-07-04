@@ -37,7 +37,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')
 
   const { options, client } = interaction
-  const { searchManager, localizationManager } = client
+  const { searchManager, localizationManager, promptManager } = client
 
   const query = options.getString('question', true)
   // @TODO: bring back the visibility option after the beta phase
@@ -108,7 +108,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     question,
     crowdinCode,
   })
-  const localizedAnswer = await localizationManager.summarize(query, context)
+  const localizedAnswer = await promptManager.summarize(query, context)
 
   embed.setDescription(localizedAnswer ?? answer)
 
