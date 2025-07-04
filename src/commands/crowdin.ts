@@ -3,16 +3,19 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js'
+
 import type {
-  LanguagesModel,
   ResponseObject,
-  StringTranslationsModel,
   TranslationStatusModel,
 } from '../managers/CrowdinManager'
-
 import { logger } from '../utils/logger'
-import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
+import {
+  type CrowdinCode,
+  LANGUAGE_OBJECTS,
+  type LanguageObject,
+} from '../constants/i18n'
 import { splitMarkdownList } from '../utils/splitMarkdownList'
+import type { LocalizationItem } from '../managers/LocalizationManager'
 
 export const scope = 'OFFICIAL'
 
@@ -147,8 +150,8 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply({ flags })
 
-  logger.logCommand(interaction, 'Getting string object')
-  const string = await crowdinManager.getStringItem(key)
+  const translations = await crowdinManager.fetchAllProjectTranslations()
+  const string = translations.find(translation => translation.key === key)
 
   if (!string) {
     logger.logCommand(interaction, 'Missing string object', { key })
@@ -157,8 +160,12 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
     })
   }
 
+  const languageObjects = crowdinManager.getLanguages({ withEnglish: false })
+
   if (crowdinCode) {
-    const languageObject = await crowdinManager.getLanguageObject(crowdinCode)
+    const languageObject = languageObjects.find(
+      object => object.crowdinCode === crowdinCode
+    )
 
     if (!languageObject) {
       logger.logCommand(interaction, 'Missing language object', {
@@ -168,41 +175,29 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
       return interaction.editReply({ content: error })
     }
 
-    const [translation] = await crowdinManager.getStringTranslations(
-      string.id,
-      [languageObject]
-    )
-
     const content = `
 Translations for term \`${key}\`:
-- English (original): _${string.text}_
-- ${formatTranslation(translation)}`
+- English (original): _${string.translations.en}_
+- ${formatLanguage(languageObject)}: ${string.translations[crowdinCode]}`
 
     return interaction.editReply({ content })
   }
 
-  logger.logCommand(interaction, 'Getting all translations for string', {
-    id: string.id,
-  })
-  const translations =
-    await crowdinManager.getStringTranslationsForAllLanguages(string.id)
-
-  const filled = translations.filter(
-    ({ translation }) =>
-      Boolean(translation) && translation.data.text.length > 0
+  const filled = languageObjects.filter(
+    ({ crowdinCode }) => crowdinCode in string.translations
   )
-  const missing = translations.filter(
-    ({ translation }) => !translation || translation.data.text.length === 0
+  const missing = languageObjects.filter(
+    ({ crowdinCode }) => !(crowdinCode in string.translations)
   )
-  const missCount = missing.length
+  const missCount = Object.keys(missing).length
   const content = `
 Translations for term \`${key}\`:
-- English (original): _${string.text}_
-- ${filled.map(formatTranslation).join('\n- ')}
+- English (original): _${string.translations.en}_
+- ${filled.map(formatTranslation(string)).join('\n- ')}
 
 ${
   missCount > 0
-    ? `-# ${missCount} translation${missCount === 1 ? '' : 's'} missing: ${missing.map(({ language }) => language.locale).join(', ')}.`
+    ? `-# ${missCount} translation${missCount === 1 ? '' : 's'} missing: ${missing.map(({ locale }) => locale).join(', ')}.`
     : ''
 }
   `
@@ -214,35 +209,13 @@ ${
   }
 }
 
-function formatTranslation({
-  language: crowdinLanguageObject,
-  translation,
-}: {
-  language: LanguagesModel.Language
-  translation: ResponseObject<StringTranslationsModel.StringTranslation>
-}) {
-  if (!translation) {
-    return `${formatLanguage(crowdinLanguageObject)}:`
+function formatTranslation(string: LocalizationItem) {
+  return (languageObject: LanguageObject) => {
+    if (!string) return `${formatLanguage(languageObject)}:`
+    return `${formatLanguage(languageObject)}: _${string.translations[languageObject.crowdinCode]}_`
   }
-
-  const { data } = translation
-  const nameMapping = {
-    'Alex Dvl': 'iFunz',
-    'Michał Malarek': 'Exor',
-    Артур: 'roartie',
-    Kaiichi0: 'Kaichii',
-    酷玩熊: 'Kukuch',
-    김지운: '망고',
-    'Gan Ying Zhi': 'Rain',
-  }
-  const userName = data.user.fullName
-  const displayName =
-    nameMapping[userName as keyof typeof nameMapping] ?? userName
-  const date = new Date(data.createdAt).valueOf() / 1000
-
-  return `${formatLanguage(crowdinLanguageObject)}: _${data.text}_ (added on <t:${date}:d> by ${displayName})`
 }
 
-function formatLanguage(crowdinLanguageObject: LanguagesModel.Language) {
-  return `${crowdinLanguageObject.name} (\`${crowdinLanguageObject.locale}\`)`
+function formatLanguage(languageObject: LanguageObject) {
+  return `${languageObject.languageName} (\`${languageObject.crowdinCode}\`)`
 }
