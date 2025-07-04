@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { type InteractionLike, sendAlert } from './sendAlert'
+import {
+  type InteractionLike,
+  sendInteractionAlert,
+} from './sendInteractionAlert'
 
 vi.mock('discord.js', async () => {
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -20,7 +23,7 @@ vi.mock('./stripIndent', () => ({
   stripIndent: vi.fn(str => str.trim()),
 }))
 
-describe('sendAlert', () => {
+describe('sendInteractionAlert', () => {
   const mockSend = vi.fn()
   const mockFetch = vi.fn()
 
@@ -45,7 +48,7 @@ describe('sendAlert', () => {
   it('sends a formatted alert message', async () => {
     mockFetch.mockResolvedValue({ isSendable: () => true, send: mockSend })
 
-    await sendAlert(baseInteraction, 'Test alert')
+    await sendInteractionAlert(baseInteraction, 'Test alert')
 
     expect(mockFetch).toHaveBeenCalledWith('alert-channel-id')
     expect(mockSend).toHaveBeenCalledWith(expect.stringContaining('Test alert'))
@@ -61,7 +64,7 @@ describe('sendAlert', () => {
   it('does not send if channel is not sendable', async () => {
     mockFetch.mockResolvedValue({ isSendable: () => false })
 
-    await sendAlert(baseInteraction, 'Test alert')
+    await sendInteractionAlert(baseInteraction, 'Test alert')
 
     expect(mockSend).not.toHaveBeenCalled()
   })
@@ -70,7 +73,7 @@ describe('sendAlert', () => {
     const testInteraction = { ...baseInteraction, guildId: 'test-server-id' }
     mockFetch.mockResolvedValue({ isSendable: () => true, send: mockSend })
 
-    await sendAlert(testInteraction, 'Test alert')
+    await sendInteractionAlert(testInteraction, 'Test alert')
 
     expect(mockSend).not.toHaveBeenCalled()
   })
@@ -83,7 +86,7 @@ describe('sendAlert', () => {
       userId: 'fallback-id',
     }
 
-    await sendAlert(interactionWithoutUser, 'Test alert')
+    await sendInteractionAlert(interactionWithoutUser, 'Test alert')
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.stringContaining('<@fallback-id>')
@@ -97,7 +100,7 @@ describe('sendAlert', () => {
       send: vi.fn().mockRejectedValue(new Error('send error')),
     })
 
-    await sendAlert(baseInteraction, 'Test alert')
+    await sendInteractionAlert(baseInteraction, 'Test alert')
 
     expect(consoleError).toHaveBeenCalledWith(expect.any(Error))
 

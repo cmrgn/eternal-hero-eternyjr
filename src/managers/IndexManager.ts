@@ -9,25 +9,17 @@ import {
   type Index,
   type RecordMetadata,
 } from '@pinecone-database/pinecone'
+import { diffWords } from 'diff'
 
 import type { ResolvedThread } from './FAQManager'
 import type { PineconeEntry, PineconeNamespace } from './SearchManager'
 import type { LanguageObject } from '../constants/i18n'
 import { IS_DEV, PINECONE_API_KEY } from '../constants/config'
 import { logger } from '../utils/logger'
-import { diffWords } from 'diff'
 
 export class IndexManager {
-  // This is the name of the index on Pinecone
-  #indexName = 'faq-index'
-
-  // This is intended to avoid polluting the production indexes during
-  // development; this will create the same indexes as production, but prefixed
-  // with this prefix
-  #namespacePrefix = IS_DEV ? 'test-' : ''
-
-  index: Index<RecordMetadata>
   client: Client
+  index: Index<RecordMetadata>
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('IndexManager', this.#severityThreshold)
@@ -36,7 +28,7 @@ export class IndexManager {
     this.#log('info', 'Instantiating manager')
     this.client = client
     this.index = new Pinecone({ apiKey: PINECONE_API_KEY ?? '_' }).index(
-      this.#indexName
+      'faq-index'
     )
   }
 
@@ -52,12 +44,16 @@ export class IndexManager {
     }
   }
 
-  resolveNamespaceName(namespaceName: PineconeNamespace) {
-    return this.#namespacePrefix + namespaceName
+  getNamespaceName(namespaceName: PineconeNamespace) {
+    // This is intended to avoid polluting the production indexes during
+    // development; this will create the same indexes as production, but
+    // prefixed with this prefix
+    const prefix = IS_DEV ? 'test-' : ''
+    return prefix + namespaceName
   }
 
-  resolveNamespace(namespaceName: PineconeNamespace) {
-    return this.index.namespace(this.resolveNamespaceName(namespaceName))
+  namespace(namespaceName: PineconeNamespace) {
+    return this.index.namespace(this.getNamespaceName(namespaceName))
   }
 
   async indexRecords(
@@ -65,10 +61,11 @@ export class IndexManager {
     namespaceName: PineconeNamespace
   ) {
     const count = entries.length
-    const namespace = this.resolveNamespace(namespaceName)
+    const namespace = this.namespace(namespaceName)
+
     this.#log('info', 'Indexing entries', {
       count,
-      namespace: this.resolveNamespaceName(namespaceName),
+      namespace: this.getNamespaceName(namespaceName),
     })
 
     while (entries.length) {
@@ -79,17 +76,10 @@ export class IndexManager {
     return count
   }
 
-  async indexThread(
-    thread: AnyThreadChannel | ResolvedThread,
-    namespaceName: PineconeNamespace
-  ) {
+  async indexThread(thread: ResolvedThread, namespaceName: PineconeNamespace) {
     this.#log('info', 'Indexing thread', { action: 'UPSERT', id: thread.id })
 
-    const isResolved = 'isResolved' in thread && thread.isResolved
-    const resolvedThread = isResolved
-      ? thread
-      : await this.client.faqManager.resolveThread(thread)
-    const record = this.prepareForIndexing(resolvedThread)
+    const record = this.prepareForIndexing(thread)
     await this.indexRecords([record], namespaceName)
   }
 
@@ -109,9 +99,9 @@ export class IndexManager {
       this.#log('info', 'Indexing thread', {
         action: 'DELETE',
         id: threadId,
-        namespace: this.resolveNamespaceName(namespaceName),
+        namespace: this.getNamespaceName(namespaceName),
       })
-      await this.resolveNamespace(namespaceName).deleteOne(threadId)
+      await this.namespace(namespaceName).deleteOne(threadId)
     } catch (error) {
       // Unindexing may fail with a 404 if the resource didn’t exist in the
       // index to begin with
@@ -135,11 +125,16 @@ export class IndexManager {
     thread: ResolvedThread,
     languageObject: LanguageObject
   ) {
-    const lm = this.client.localizationManager
+    const { localizationManager } = this.client
     const { crowdinCode } = languageObject
+
     if (crowdinCode === 'en') return this.indexThread(thread, crowdinCode)
-    const response = await lm.translateThread(thread, languageObject)
-    await this.indexThread({ ...thread, ...response }, crowdinCode)
+
+    const { name, content } = await localizationManager.translateThread(
+      thread,
+      languageObject
+    )
+    await this.indexThread({ ...thread, name, content }, crowdinCode)
   }
 
   async confirmRetranslation(
@@ -150,6 +145,7 @@ export class IndexManager {
     this.#log('info', 'Asking for translation confirmation', {
       id: thread.id,
     })
+
     const { crowdinManager } = this.client
     const confirmBtn = {
       type: 2,
@@ -193,7 +189,7 @@ export class IndexManager {
       contentDiff.replace(/\n/g, '\n>'),
     ].join('\n')
 
-    await message?.author?.send({
+    await message.author.send({
       content,
       components: [{ type: 1, components: [confirmBtn, cancelBtn] }],
     })
@@ -201,46 +197,40 @@ export class IndexManager {
 
   bindEvents() {
     this.#log('info', 'Binding events onto the manager instance')
-    const flagsManager = this.client.flagsManager
+    const { flagsManager, faqManager } = this.client
 
-    this.client.faqManager.on(
-      'ThreadCreated',
-      async (thread: ResolvedThread) => {
-        if ((await flagsManager.getFeatureFlag('auto_indexing')) === true) {
-          await this.translateAndIndexThreadInAllLanguages(thread)
-        } else {
-          this.#log('info', 'Auto-indexing is disabled; aborting.', {
-            threadId: thread.id,
-          })
-        }
+    faqManager.on('ThreadCreated', async (thread: ResolvedThread) => {
+      if (await flagsManager.getFeatureFlag('auto_indexing')) {
+        await this.translateAndIndexThreadInAllLanguages(thread)
+      } else {
+        this.#log('info', 'Auto-indexing is disabled; aborting.', {
+          threadId: thread.id,
+        })
       }
-    )
+    })
 
-    this.client.faqManager.on('ThreadDeleted', async (threadId: string) => {
-      if ((await flagsManager.getFeatureFlag('auto_indexing')) === true) {
+    faqManager.on('ThreadDeleted', async (threadId: string) => {
+      if (await flagsManager.getFeatureFlag('auto_indexing')) {
         await this.unindexThreadInAllLanguages(threadId)
       } else {
         this.#log('info', 'Auto-indexing is disabled; aborting.', { threadId })
       }
     })
 
-    this.client.faqManager.on(
-      'ThreadNameUpdated',
-      async (thread: ResolvedThread) => {
-        if ((await flagsManager.getFeatureFlag('auto_indexing')) === true) {
-          await this.translateAndIndexThreadInAllLanguages(thread)
-        } else {
-          this.#log('info', 'Auto-indexing is disabled; aborting.', {
-            threadId: thread.id,
-          })
-        }
+    faqManager.on('ThreadNameUpdated', async (thread: ResolvedThread) => {
+      if (await flagsManager.getFeatureFlag('auto_indexing')) {
+        await this.translateAndIndexThreadInAllLanguages(thread)
+      } else {
+        this.#log('info', 'Auto-indexing is disabled; aborting.', {
+          threadId: thread.id,
+        })
       }
-    )
+    })
 
-    this.client.faqManager.on(
+    faqManager.on(
       'ThreadContentUpdated',
       async (thread, message, oldMessage) => {
-        if ((await flagsManager.getFeatureFlag('auto_indexing')) === true) {
+        if (await flagsManager.getFeatureFlag('auto_indexing')) {
           if (
             (await flagsManager.getFeatureFlag('auto_translation_confirm')) ===
             true

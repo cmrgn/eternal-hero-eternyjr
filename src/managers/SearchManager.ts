@@ -37,6 +37,7 @@ const FUZZY_SEARCH_OPTIONS = {
 export class SearchManager {
   client: Client
   altFuse: Fuse<{ from: string; to: string }>
+
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('LeaderboardManager', this.#severityThreshold)
 
@@ -123,7 +124,7 @@ export class SearchManager {
     limit = 1
   ) {
     const response = await this.client.indexManager
-      .resolveNamespace(namespaceName)
+      .namespace(namespaceName)
       .searchRecords({
         query: { topK: limit, inputs: { text: query } },
         rerank: {

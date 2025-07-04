@@ -1,15 +1,11 @@
 import type { Client } from 'discord.js'
-import type { SearchRecordsResponse } from '@pinecone-database/pinecone'
-import type { AnyThreadChannel } from 'discord.js'
-import Fuse, { type FuseResult } from 'fuse.js'
 
-import { PINECONE_API_KEY } from '../constants/config'
-import type { CrowdinCode } from '../constants/i18n'
 import { logger } from '../utils/logger'
 import { pool } from '../utils/pg'
 
 export class FlagsManager {
   client: Client
+
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('FlagsManager', this.#severityThreshold)
 

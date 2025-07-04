@@ -18,7 +18,10 @@ export type InteractionLike = {
   userId?: string | null
 }
 
-export async function sendAlert(interaction: InteractionLike, message: string) {
+export async function sendInteractionAlert(
+  interaction: InteractionLike,
+  message: string
+) {
   const userId = interaction.user?.id ?? interaction.userId
   const channel = await interaction.client.channels.fetch(ALERT_CHANNEL_ID)
   if (!channel?.isSendable()) return

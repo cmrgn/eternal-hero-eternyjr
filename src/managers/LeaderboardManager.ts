@@ -10,7 +10,7 @@ import { BOT_TEST_CHANNEL_ID } from '../constants/discord'
 import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
 import { pool } from '../utils/pg'
 import { logger } from '../utils/logger'
-import { sendAlert } from '../utils/sendAlert'
+import { sendInteractionAlert } from '../utils/sendInteractionAlert'
 
 type DiscordMessage = OmitPartialGroupDMChannel<
   Message<boolean> | PartialMessage
@@ -27,10 +27,15 @@ export class LeaderboardManager {
     this.client = client
   }
 
+  isLeaderboardEnabled() {
+    return this.client.flagsManager.getFeatureFlag('faq_leaderboard')
+  }
+
   async register(options: {
     userId: string
-    channelId: string
     guildId: string
+    channelId: string
+    messageId?: string
     increment?: number
   }) {
     this.#log('info', 'Registering contribution', options)
@@ -47,7 +52,7 @@ export class LeaderboardManager {
         [guildId, userId, increment]
       )
     } catch (error) {
-      await sendAlert(
+      await sendInteractionAlert(
         { client: this.client, guildId, channelId, userId },
         `A link to the FAQ failed to be properly recorded in the database.\`\`\`${error}\`\`\``
       )
@@ -84,43 +89,40 @@ export class LeaderboardManager {
 
     if (!member || !guildId || !content) return
     if (shouldIgnoreInteraction(message)) return
-    if (
-      (await client.flagsManager.getFeatureFlag('faq_leaderboard')) === false
-    ) {
-      this.#log('info', 'FAQ leaderboard is disabled; aborting.')
-      return
+    if (!(await this.isLeaderboardEnabled())) {
+      return this.#log('info', 'FAQ leaderboard is disabled; aborting.')
     }
-
-    this.#log('info', 'Handling contribution', {
-      type: event === Events.MessageCreate ? 'insertion' : 'deletion',
-      guildId,
-      channelId,
-      messageId: message.id,
-      userId: message.member?.user.id,
-    })
 
     // Perform a quick and cheap check to figure out whether the message
     // contains any link whatsoever, otherwise return early.
     if (!client.faqManager.containsLinkLike(content)) return
+    if (!client.faqManager.links.some(link => content.includes(link))) return
 
-    if (client.faqManager.links.some(link => content.includes(link))) {
-      const hasAddedMessage = event === Events.MessageCreate
-      const hasDeletedMessage = event === Events.MessageDelete
-      const increment = hasAddedMessage ? +1 : hasDeletedMessage ? -1 : 0
+    const hasAddedMessage = event === Events.MessageCreate
+    const hasDeletedMessage = event === Events.MessageDelete
+    const increment = hasAddedMessage ? +1 : hasDeletedMessage ? -1 : 0
 
-      if (increment)
-        this.register({ userId: member.id, guildId, channelId, increment })
-    }
+    if (increment)
+      this.register({
+        userId: member.id,
+        guildId,
+        channelId,
+        messageId: message.id,
+        increment,
+      })
   }
 
   async faqLinksOnCreate(interaction: DiscordMessage) {
-    const isTestChannel = interaction.channelId === BOT_TEST_CHANNEL_ID
-    if (isTestChannel) return
+    if (interaction.channelId === BOT_TEST_CHANNEL_ID) return
+    if (shouldIgnoreInteraction(interaction)) return
 
     return this.faqLinksOnCreateOrDelete(Events.MessageCreate, interaction)
   }
 
   faqLinksOnDelete(interaction: DiscordMessage) {
+    if (interaction.channelId === BOT_TEST_CHANNEL_ID) return
+    if (shouldIgnoreInteraction(interaction)) return
+
     return this.faqLinksOnCreateOrDelete(Events.MessageDelete, interaction)
   }
 
@@ -144,29 +146,23 @@ export class LeaderboardManager {
       client.faqManager.containsLinkLike(newMessage.content) &&
       client.faqManager.links.some(link => newMessage.content?.includes(link))
 
-    if (hadOldMessageLinks !== hasNewMessageLinks) {
-      if (
-        (await client.flagsManager.getFeatureFlag('faq_leaderboard')) === false
-      ) {
-        this.#log('info', 'FAQ leaderboard is disabled; aborting.')
-        return
-      }
+    if (hadOldMessageLinks === hasNewMessageLinks) return
+    if (!(await this.isLeaderboardEnabled())) {
+      return this.#log('info', 'FAQ leaderboard is disabled; aborting.')
+    }
 
-      this.#log('info', 'Handling contribution', {
-        type: 'edition',
+    const hasRemovedLinks = hadOldMessageLinks && !hasNewMessageLinks
+    const hasAddedLinks = !hadOldMessageLinks && hasNewMessageLinks
+    const increment = hasRemovedLinks ? -1 : hasAddedLinks ? +1 : 0
+
+    if (increment)
+      this.register({
+        userId: member.id,
         guildId,
         channelId,
         messageId: newMessage.id,
-        userId: newMessage.member?.user.id,
+        increment,
       })
-
-      const hasRemovedLinks = hadOldMessageLinks && !hasNewMessageLinks
-      const hasAddedLinks = !hadOldMessageLinks && hasNewMessageLinks
-      const increment = hasRemovedLinks ? -1 : hasAddedLinks ? +1 : 0
-
-      if (increment)
-        this.register({ userId: member.id, guildId, channelId, increment })
-    }
   }
 
   bindEvents() {

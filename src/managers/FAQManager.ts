@@ -34,10 +34,9 @@ export type ThreadEvents = {
 }
 
 export class FAQManager {
-  #FORUM_NAME = '❓│faq-guide'
-
   client: Client
   guildId: string
+
   #threads: AnyThreadChannel[]
   #links: string[]
 
@@ -154,9 +153,7 @@ export class FAQManager {
 
   getFAQForum(guild: Guild) {
     this.#log('info', 'Getting FAQ forum')
-    const faq = guild.channels.cache.find(
-      ({ name }) => name === this.#FORUM_NAME
-    )
+    const faq = guild.channels.cache.find(({ name }) => name === '❓│faq-guide')
     if (!faq) throw new Error('Could not find the FAQ forum.')
     return faq as ForumChannel
   }
@@ -167,39 +164,37 @@ export class FAQManager {
 
   async onThreadCreate(thread: AnyThreadChannel) {
     if (shouldIgnoreInteraction(thread)) return
-    if (this.belongsToFAQ(thread)) {
-      this.#log('info', 'Responding to thread creation', { id: thread.id })
-      this.cacheThreads()
-      const resolvedThread = await this.resolveThread(thread)
-      for (const listener of this.#listeners.ThreadCreated) {
-        listener(resolvedThread)
-      }
-    }
+    if (!this.belongsToFAQ(thread)) return
+
+    this.#log('info', 'Responding to thread creation', { id: thread.id })
+    this.cacheThreads()
+
+    const resolvedThread = await this.resolveThread(thread)
+    for (const listener of this.#listeners.ThreadCreated)
+      listener(resolvedThread)
   }
 
   async onThreadDelete(thread: AnyThreadChannel) {
     if (shouldIgnoreInteraction(thread)) return
-    if (this.belongsToFAQ(thread)) {
-      this.#log('info', 'Responding to thread deletion', { id: thread.id })
-      this.cacheThreads()
-      for (const listener of this.#listeners.ThreadDeleted) {
-        listener(thread.id)
-      }
-    }
+    if (!this.belongsToFAQ(thread)) return
+
+    this.#log('info', 'Responding to thread deletion', { id: thread.id })
+    this.cacheThreads()
+
+    for (const listener of this.#listeners.ThreadDeleted) listener(thread.id)
   }
 
   async onThreadUpdate(prev: AnyThreadChannel, next: AnyThreadChannel) {
     if (shouldIgnoreInteraction(next)) return
-    if (this.belongsToFAQ(prev) && prev.name !== next.name) {
-      this.#log('info', 'Responding to thread name update', {
-        id: next.id,
-      })
-      this.cacheThreads()
-      const resolvedThread = await this.resolveThread(next)
-      for (const listener of this.#listeners.ThreadNameUpdated) {
-        listener(resolvedThread)
-      }
-    }
+    if (!this.belongsToFAQ(prev)) return
+    if (prev.name === next.name) return
+
+    this.#log('info', 'Responding to thread name update', { id: next.id })
+    this.cacheThreads()
+
+    const resolvedThread = await this.resolveThread(next)
+    for (const listener of this.#listeners.ThreadNameUpdated)
+      listener(resolvedThread)
   }
 
   async onMessageUpdate(
@@ -217,40 +212,40 @@ export class FAQManager {
     if (!thread?.isThread()) return
 
     // Make sure the parent of the thread is the FAQ forum, abort if not
-    if (this.belongsToFAQ({ parentId: thread.parent?.id ?? null, guild })) {
-      this.#log('info', 'Responding to thread content update', {
+    if (!this.belongsToFAQ({ parentId: thread.parent?.id ?? null, guild }))
+      return
+
+    this.#log('info', 'Responding to thread content update', {
+      id: thread.id,
+    })
+
+    // If the old content is accessible in the Discord cache and strictly
+    // equal to the new content after normalization, do nothing since the edit
+    // is essentially moot
+    if (
+      this.cleanUpThreadContent(oldMessage.content) ===
+      this.cleanUpThreadContent(newMessage.content)
+    ) {
+      return this.#log('info', 'Content unchanged; ignoring thread update', {
         id: thread.id,
       })
-
-      // If the old content is accessible in the Discord cache and strictly
-      // equal to the new content after normalization, do nothing since the edit
-      // is essentially moot
-      const oldContent = this.cleanUpThreadContent(oldMessage.content)
-      const newContent = this.cleanUpThreadContent(newMessage.content)
-      if (oldContent === newContent) {
-        this.#log('info', 'Content unchanged; ignoring thread update', {
-          id: thread.id,
-        })
-        return
-      }
-
-      const resolvedThread = await this.resolveThread(thread)
-      for (const listener of this.#listeners.ThreadContentUpdated) {
-        listener(resolvedThread, newMessage, oldMessage)
-      }
     }
+
+    const resolvedThread = await this.resolveThread(thread)
+    for (const listener of this.#listeners.ThreadContentUpdated)
+      listener(resolvedThread, newMessage, oldMessage)
   }
 
   getThreadTags(thread: AnyThreadChannel) {
-    if (!(thread.parent instanceof ForumChannel)) {
-      return []
-    }
+    const { parent, appliedTags } = thread
 
-    return thread.appliedTags
+    if (!(parent instanceof ForumChannel)) return []
+
+    return appliedTags
       .map(
         id =>
-          (thread.parent as ForumChannel).availableTags.find(pt => pt.id === id)
-            ?.name ?? ''
+          (parent as ForumChannel).availableTags.find(t => t.id === id)?.name ??
+          ''
       )
       .filter(Boolean)
   }
@@ -270,22 +265,17 @@ export class FAQManager {
     )
   }
 
-  async resolveThread(
-    thread: AnyThreadChannel | ResolvedThread
-  ): Promise<ResolvedThread> {
-    if ('isResolved' in thread && thread.isResolved) return thread
+  async resolveThread(thread: AnyThreadChannel): Promise<ResolvedThread> {
     this.#log('info', 'Resolving thread', { id: thread.id })
 
-    const firstMessage = await (
-      thread as AnyThreadChannel
-    ).fetchStarterMessage()
+    const firstMessage = await thread.fetchStarterMessage()
 
     return {
       isResolved: true,
       id: thread.id,
       name: thread.name,
       content: this.cleanUpThreadContent(firstMessage?.content),
-      tags: this.getThreadTags(thread as AnyThreadChannel),
+      tags: this.getThreadTags(thread),
       url: thread.url,
     }
   }

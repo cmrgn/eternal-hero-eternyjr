@@ -17,7 +17,7 @@ import { logger } from '../utils/logger'
 
 const SYSTEM_PROMPT = `
 Sole purpose:
-- You are a friendly bot for the mobile game called Eternal Hero: Action RPG.
+- You are a friendly bot for the mobile game called *Eternal Hero: Action RPG*.
 - You help players navigate the FAQ and provide helpful answers to their questions.
 
 Here are some very important rules to follow:
@@ -47,7 +47,7 @@ export class LocalizationManager {
   client: Client
   openai: OpenAI
   deepl: deepl.DeepLClient
-  #gptModel = 'gpt-4o'
+
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('LeaderboardManager', this.#severityThreshold)
 
@@ -132,7 +132,7 @@ export class LocalizationManager {
   async promptGPT(
     userPrompt: string,
     systemPrompt = SYSTEM_PROMPT,
-    model = this.#gptModel
+    model = 'gpt-4o'
   ) {
     this.#log('info', 'Prompting ChatGPT', { model })
 
@@ -171,8 +171,7 @@ export class LocalizationManager {
     Q: ${context.question}
     A: ${context.answer}
 
-    Your task is to help the player by summarizing the FAQ answer into a more
-    digestible response, while following these strict rules:
+    Your task is to help the player by summarizing the FAQ answer into a more digestible response, while following these strict rules:
 
     1. Respond in ${context.languageObject.languageName} (${context.languageObject.locale}).
     2. Do not change the meaning of the answer in any way.
@@ -198,7 +197,7 @@ export class LocalizationManager {
     }
 
     // DeepL is quite agressive with line breaks and tend to remove them, which
-    // is a problem when hangling lists. A workaround is to give it a bunch of
+    // is a problem when handling lists. A workaround is to give it a bunch of
     // individual chunks, and concatenate them back with a line break.
     const chunks = [thread.name, ...thread.content.split('\n').filter(Boolean)]
     const targetLangCode = languageObject.deepLCode

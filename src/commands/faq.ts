@@ -8,7 +8,7 @@ import {
 import { logger } from '../utils/logger'
 import { createEmbed } from '../utils/createEmbed'
 import { KITTY_USER_ID } from '../constants/discord'
-import { sendAlert } from '../utils/sendAlert'
+import { sendInteractionAlert } from '../utils/sendInteractionAlert'
 import type { SearchType } from '../managers/SearchManager'
 
 export const scope = 'PUBLIC'
@@ -82,7 +82,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   } else {
     const message = `A ${method.toLowerCase()} search for _“${keyword}”_ yielded no results.`
     logger.logCommand(interaction, 'Sending empty search alert')
-    await sendAlert(
+    await sendInteractionAlert(
       interaction,
       method === 'VECTOR'
         ? message

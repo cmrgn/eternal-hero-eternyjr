@@ -12,7 +12,7 @@ import { GlossaryEntries } from 'deepl-node'
 import type { ResolvedThread } from '../managers/FAQManager'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { logger } from '../utils/logger'
-import { sendAlert } from '../utils/sendAlert'
+import { sendInteractionAlert } from '../utils/sendInteractionAlert'
 import { cleanUpTranslation } from '../utils/cleanUpTranslation'
 import { DEEPL_GLOSSARY_ID } from '../constants/config'
 
@@ -132,7 +132,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
   const resolvedThread = await faqManager.resolveThread(thread)
 
   function onIndexFailure(error: unknown) {
-    return sendAlert(
+    return sendInteractionAlert(
       interaction,
       `Could not index “${resolvedThread.name}” (\`${resolvedThread.id}\`) in namespace ${crowdinCode}, even after several attempts.
       \`\`\`${error}\`\`\``
