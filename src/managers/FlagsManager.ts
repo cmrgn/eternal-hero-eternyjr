@@ -15,8 +15,8 @@ export class FlagsManager {
     this.client = client
   }
 
-  async getFeatureFlag(key: string): Promise<boolean> {
-    this.#log('info', 'Reading feature flag', { key })
+  async getFeatureFlag(key: string, options?: { silent: boolean }): Promise<boolean> {
+    if (!options?.silent) this.#log('info', 'Reading feature flag', { key })
 
     const res = await pool.query(
       'SELECT value FROM feature_flags WHERE key = $1',

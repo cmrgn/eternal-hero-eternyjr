@@ -28,7 +28,7 @@ export class LeaderboardManager {
   }
 
   isLeaderboardEnabled() {
-    return this.client.flagsManager.getFeatureFlag('faq_leaderboard')
+    return this.client.flagsManager.getFeatureFlag('faq_leaderboard', { silent: true })
   }
 
   async register(options: {
