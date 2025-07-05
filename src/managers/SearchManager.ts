@@ -39,7 +39,7 @@ export class SearchManager {
   altFuse: Fuse<{ from: string; to: string }>
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('LeaderboardManager', this.#severityThreshold)
+  #log = logger.log('SearchManager', this.#severityThreshold)
 
   constructor(client: Client) {
     this.#log('info', 'Instantiating manager')
