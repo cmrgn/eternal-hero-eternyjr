@@ -174,8 +174,8 @@ export class IndexManager {
     const contentDiff = oldMessage.content
       ? diffWords(oldMessage.content, message.content)
           .map(part => {
-            if (part.added) return `**+${part.value}**`
-            if (part.removed) return `~~-${part.value}~~`
+            if (part.added) return `**${part.value}**`
+            if (part.removed) return `~~${part.value}~~`
             return part.value
           })
           .join('')
@@ -186,7 +186,7 @@ export class IndexManager {
       `- Language count: ${numberFormatter.format(languageCount)} (w/o English)`,
       `- Character count: ${numberFormatter.format(char)}`,
       `- **Total cost:** ${currencyFormatter.format((20 / 1_000_000) * char * languageCount)}`,
-      contentDiff.replace(/\n/g, '\n>'),
+      contentDiff.replace(/\n/g, '\n> '),
     ].join('\n')
 
     await message.author.send({
