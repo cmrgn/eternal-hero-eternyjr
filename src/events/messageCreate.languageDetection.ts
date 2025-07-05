@@ -10,6 +10,7 @@ const INCLUDED_CATEGORY_IDS = [
   /* Bug report */ '1239437158247567360',
   /* Feedback */ '1271841974994993224',
   /* Weapons */ '1262801739829219511',
+  /* Community */ '1239263655426523188',
   /* General (test) */ IS_DEV && '714858253531742209',
   /* FAQ (test) */ IS_DEV && '1373344771552317532',
 ].filter(Boolean)
