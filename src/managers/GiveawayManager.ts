@@ -1,11 +1,11 @@
-import { type GiveawayData, GiveawaysManager } from 'discord-giveaways'
+import {
+  type Giveaway,
+  type GiveawayData,
+  GiveawaysManager,
+} from 'discord-giveaways'
 import type { Client } from 'discord.js'
 
-import { IS_DEV } from '../constants/config'
 import { logger } from '../utils/logger'
-import { pool } from '../utils/pg'
-
-const ENVIRONMENT = IS_DEV ? 'DEV' : 'PROD'
 
 const severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
 const log = logger.log('GiveawayManager', severityThreshold)
@@ -14,12 +14,21 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
   async getAllGiveaways() {
     log('info', 'Fetching all giveaways from the database')
 
-    const { rows } = await pool.query(
-      'SELECT data FROM giveaways WHERE environment = $1',
-      [ENVIRONMENT]
-    )
+    const { Database } = this.client.managers
 
-    return rows.map(row => row.data)
+    const rows = await Database.db
+      .selectFrom('giveaways')
+      .select('data')
+      .where('environment', '=', Database.environment)
+      .execute()
+
+    // It seems that the `discord-giveaways` module uses the `Giveaway` and
+    // `GiveawayData` types interchangeably. Upserting is done with the latter
+    // while reading is done with the former — which doesn’t make sense but here
+    // we are. The consensus seems to be that the database should store only the
+    // data for each giveaway, but this method somehow expects full Giveaways
+    // back.
+    return rows.map(row => row.data as unknown as Giveaway)
   }
 
   async saveGiveaway(messageId: string, giveawayData: GiveawayData) {
@@ -29,11 +38,18 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
       guildId: giveawayData.guildId,
     })
 
-    await pool.query(
-      'INSERT INTO giveaways (id, data, environment) VALUES ($1, $2, $3)',
-      [messageId, giveawayData, ENVIRONMENT]
-    )
-    return true
+    const { Database } = this.client.managers
+
+    const result = await Database.db
+      .insertInto('giveaways')
+      .values({
+        id: messageId,
+        data: giveawayData,
+        environment: Database.environment,
+      })
+      .executeTakeFirst()
+
+    return Boolean(result.insertId)
   }
 
   async editGiveaway(messageId: string, giveawayData: GiveawayData) {
@@ -42,22 +58,28 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
       giveawayData,
     })
 
-    const result = await pool.query(
-      'UPDATE giveaways SET data = $1 WHERE id = $2',
-      [giveawayData, messageId]
-    )
+    const { Database } = this.client.managers
 
-    return result.rowCount ? result.rowCount > 0 : false
+    const result = await Database.db
+      .updateTable('giveaways')
+      .set({ data: giveawayData })
+      .where('id', '=', messageId)
+      .executeTakeFirst()
+
+    return result.numUpdatedRows > 0
   }
 
   async deleteGiveaway(messageId: string) {
     log('info', 'Deleting a giveaway from the database', { messageId })
 
-    const result = await pool.query('DELETE FROM giveaways WHERE id = $1', [
-      messageId,
-    ])
+    const { Database } = this.client.managers
 
-    return result.rowCount ? result.rowCount > 0 : false
+    const result = await Database.db
+      .deleteFrom('giveaways')
+      .where('id', '=', messageId)
+      .executeTakeFirst()
+
+    return result.numDeletedRows > 0
   }
 }
 

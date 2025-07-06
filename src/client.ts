@@ -2,11 +2,12 @@ import { Client, Collection, GatewayIntentBits, Partials } from 'discord.js'
 
 import { commands } from './commands'
 import { CrowdinManager } from './managers/CrowdinManager'
+import { DatabaseManager } from './managers/DatabaseManager'
 import { DiscordManager } from './managers/DiscordManager'
 import { FAQManager } from './managers/FAQManager'
 import { FlagsManager } from './managers/FlagsManager'
-import { initGiveawayManager } from './managers/GiveawayManager'
 import { IndexManager } from './managers/IndexManager'
+import { initGiveawayManager } from './managers/GiveawayManager'
 import { LeaderboardManager } from './managers/LeaderboardManager'
 import { LocalizationManager } from './managers/LocalizationManager'
 import { PromptManager } from './managers/PromptManager'
@@ -31,6 +32,7 @@ for (const command of Object.values(commands)) {
 // @ts-expect-error
 client.managers = {}
 client.managers.Discord = new DiscordManager()
+client.managers.Database = new DatabaseManager()
 client.managers.Giveaways = initGiveawayManager(client)
 client.managers.Faq = new FAQManager(client).bindEvents()
 client.managers.Leaderboard = new LeaderboardManager(client).bindEvents()

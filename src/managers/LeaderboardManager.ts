@@ -6,8 +6,8 @@ import {
   type PartialMessage,
 } from 'discord.js'
 
-import { pool } from '../utils/pg'
 import { logger } from '../utils/logger'
+import { sql } from 'kysely'
 
 type DiscordMessage = OmitPartialGroupDMChannel<
   Message<boolean> | PartialMessage
@@ -36,21 +36,25 @@ export class LeaderboardManager {
     messageId?: string
     increment?: number
   }) {
-    const { Discord } = this.#client.managers
-
     this.#log('info', 'Registering contribution', options)
 
+    const { Discord, Database } = this.#client.managers
     const { userId, guildId, channelId, increment = 1 } = options
+
     try {
-      await pool.query(
-        `
-          INSERT INTO faq_leaderboard (guild_id, user_id, contribution_count)
-          VALUES ($1, $2, GREATEST($3, 0))
-          ON CONFLICT (guild_id, user_id)
-          DO UPDATE SET contribution_count = GREATEST(faq_leaderboard.contribution_count + $3, 0)
-        `,
-        [guildId, userId, increment]
-      )
+      await Database.db
+        .insertInto('faq_leaderboard')
+        .values({
+          guild_id: guildId,
+          user_id: userId,
+          contribution_count: sql`GREATEST(${increment}, 0)`,
+        })
+        .onConflict(oc =>
+          oc.columns(['guild_id', 'user_id']).doUpdateSet({
+            contribution_count: sql`GREATEST(faq_leaderboard.contribution_count + ${increment}, 0)`,
+          })
+        )
+        .execute()
     } catch (error) {
       await Discord.sendInteractionAlert(
         { client: this.#client, guildId, channelId, userId },
@@ -67,18 +71,17 @@ export class LeaderboardManager {
   async getLeaderboard(guildId: string, limit: number) {
     this.#log('info', 'Retrieving leaderboard', { guildId, limit })
 
-    const { rows } = await pool.query(
-      `
-        SELECT user_id, contribution_count
-        FROM faq_leaderboard
-        WHERE guild_id = $1
-        ORDER BY contribution_count DESC
-        LIMIT $2
-      `,
-      [guildId, limit]
-    )
+    const { Database } = this.#client.managers
 
-    return rows as { user_id: string; contribution_count: number }[]
+    const results = await Database.db
+      .selectFrom('faq_leaderboard')
+      .select(['user_id', 'contribution_count'])
+      .where('guild_id', '=', guildId)
+      .orderBy('contribution_count', 'desc')
+      .limit(limit)
+      .execute()
+
+    return results
   }
 
   async faqLinksOnCreateOrDelete(
