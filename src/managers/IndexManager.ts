@@ -1,4 +1,11 @@
-import type { Message, Client, PartialMessage } from 'discord.js'
+import {
+  type Message,
+  type Client,
+  type PartialMessage,
+  ButtonBuilder,
+  ButtonStyle,
+  ActionRowBuilder,
+} from 'discord.js'
 import {
   Pinecone,
   type Index,
@@ -153,18 +160,6 @@ export class IndexManager {
     })
 
     const { Crowdin } = this.#client.managers
-    const confirmBtn = {
-      type: 2,
-      style: 1,
-      label: 'Yes, retranslate',
-      custom_id: `retranslate:${thread.id}`,
-    }
-    const cancelBtn = {
-      type: 2,
-      style: 2,
-      label: 'No, skip',
-      custom_id: `skip:${thread.id}`,
-    }
     const languageObjects = Crowdin.getLanguages({ withEnglish: false })
     const languageCount = languageObjects.length
     const char = message.content.length
@@ -195,10 +190,20 @@ export class IndexManager {
       contentDiff.replace(/\n/g, '\n> '),
     ].join('\n')
 
-    await message.author.send({
-      content,
-      components: [{ type: 1, components: [confirmBtn, cancelBtn] }],
-    })
+    const confirmBtn = new ButtonBuilder()
+      .setCustomId(`retranslate:${thread.id}`)
+      .setLabel('Yes, retranslate')
+      .setStyle(ButtonStyle.Primary)
+    const cancelBtn = new ButtonBuilder()
+      .setCustomId(`skip:${thread.id}`)
+      .setLabel('No, skip')
+      .setStyle(ButtonStyle.Secondary)
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      confirmBtn,
+      cancelBtn
+    )
+
+    await message.author.send({ content, components: [row] })
   }
 
   bindEvents() {
