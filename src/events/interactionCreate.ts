@@ -1,21 +1,23 @@
 import { MessageFlags, type Interaction } from 'discord.js'
 
-import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
 import { logger } from '../utils/logger'
 import { handleButtons } from './interactionCreate.buttons'
 
 export async function onInteractionCreate(interaction: Interaction) {
+  const { user, client } = interaction
+  const { Discord } = client.managers
+
   // Abort if this interaction is coming from a bot, as this shouldn’t happen.
-  if (interaction.user.bot) return
+  if (user.bot) return
 
   // Check whether the interaction should be processed before proceeding.
-  if (shouldIgnoreInteraction(interaction)) return
+  if (Discord.shouldIgnoreInteraction(interaction)) return
 
   if (interaction.isButton()) return handleButtons(interaction)
   if (!interaction.isChatInputCommand()) return
 
   try {
-    const command = interaction.client.commands.get(interaction.commandName)
+    const command = client.commands.get(interaction.commandName)
     if (command) await command.execute(interaction)
   } catch (error) {
     const message = 'There was an error while executing this command.'

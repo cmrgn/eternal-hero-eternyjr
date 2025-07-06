@@ -1,8 +1,10 @@
 import dotenv from 'dotenv'
 
-import { deployCommand, deployCommands } from '../utils/commands'
+import { DiscordManager } from '../managers/DiscordManager'
 
 dotenv.config()
+
+const Discord = new DiscordManager()
 
 const GUILD_ID = process.env.GUILD_ID
 const COMMAND_NAME = process.env.COMMAND_NAME
@@ -10,7 +12,7 @@ const COMMAND_NAME = process.env.COMMAND_NAME
 if (!GUILD_ID) throw new Error('Missing ‘GUILD_ID’ environment variable.')
 
 if (COMMAND_NAME) {
-  deployCommand(GUILD_ID, COMMAND_NAME)
+  Discord.deployCommand(GUILD_ID, COMMAND_NAME)
 } else {
-  deployCommands(GUILD_ID)
+  Discord.deployCommands(GUILD_ID)
 }

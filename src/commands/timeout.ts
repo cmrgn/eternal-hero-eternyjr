@@ -54,9 +54,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await member.timeout(durationMs, `Violating rule ${rule}`)
 
   // Retrieve the moderation channel
-  // biome-ignore lint/style/noNonNullAssertion: <explanation>
-  const channels = interaction.guild!.channels
-  const moderation = channels.cache.find(
+  const moderation = interaction.guild.channels.cache.find(
     channel => channel.name === '🔨│moderation'
   )
 

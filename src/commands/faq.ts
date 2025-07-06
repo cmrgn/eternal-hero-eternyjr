@@ -6,9 +6,6 @@ import {
 } from 'discord.js'
 
 import { logger } from '../utils/logger'
-import { createEmbed } from '../utils/createEmbed'
-import { KITTY_USER_ID } from '../constants/discord'
-import { sendInteractionAlert } from '../utils/sendInteractionAlert'
 import type { SearchType } from '../managers/SearchManager'
 
 export const scope = 'PUBLIC'
@@ -44,12 +41,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')
 
   const { client, guildId, channelId, member, options } = interaction
-  const { Search, Leaderboard } = client.managers
+  const { Search, Leaderboard, Discord } = client.managers
   const visible = options.getBoolean('visible') ?? false
   const user = options.getUser('user')
   const keyword = options.getString('keyword', true)
   const method = (options.getString('method') ?? 'FUZZY') as SearchType
-  const embed = createEmbed().setTitle(`FAQ search: “${keyword}”`)
+  const embed = Discord.createEmbed().setTitle(`FAQ search: “${keyword}”`)
 
   logger.logCommand(interaction, 'Performing search')
   const { query, results } = await Search.search(keyword, method, 'en', 5)
@@ -83,14 +80,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   } else {
     const message = `A ${method.toLowerCase()} search for _“${keyword}”_ yielded no results.`
     logger.logCommand(interaction, 'Sending empty search alert')
-    await sendInteractionAlert(
+    await Discord.sendInteractionAlert(
       interaction,
       method === 'VECTOR'
         ? message
         : `${message} If it’s unexpected, we may want to improve it with assigning that keyword (or something similar) to a specific search term.`
     )
     embed.setDescription(
-      `Your search for “${keyword}” yielded no results. Try a more generic term, or reach out to ${userMention(KITTY_USER_ID)} if you think this is a mistake.`
+      `Your search for “${keyword}” yielded no results. Try a more generic term, or reach out to ${userMention(Discord.KITTY_USER_ID)} if you think this is a mistake.`
     )
   }
 

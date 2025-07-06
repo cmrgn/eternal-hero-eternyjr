@@ -1,7 +1,6 @@
 import { bold, channelMention, type GuildBasedChannel } from 'discord.js'
 
 import { ENGLISH_LANGUAGE_OBJECT, LANGUAGE_OBJECTS } from '../constants/i18n'
-import { BOT_TEST_CHANNEL_ID } from '../constants/discord'
 import { IS_DEV } from '../constants/config'
 import type { EnsuredInteraction } from './messageCreate'
 
@@ -20,7 +19,7 @@ export async function languageDetection(
   channel: GuildBasedChannel
 ) {
   const { guild, client } = interaction
-  const { Localization } = client.managers
+  const { Localization, Discord } = client.managers
 
   // Remove URLs from the message before performing language detection as to not
   // consider URL content.
@@ -30,7 +29,7 @@ export async function languageDetection(
   // level or by belonging to a category that’s not listed), return early. An
   // exception is made to the bot testing channel.
   if (!channel.parentId) return
-  const isTestChannel = channel.id === BOT_TEST_CHANNEL_ID
+  const isTestChannel = channel.id === Discord.BOT_TEST_CHANNEL_ID
   const isInRelevantCategory = INCLUDED_CATEGORY_IDS.includes(channel.parentId)
   if (!isTestChannel && !isInRelevantCategory) return
 

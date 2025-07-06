@@ -3,6 +3,7 @@ import type { GiveawaysManager } from 'discord-giveaways'
 import type { Collection, SlashCommandOptionsOnlyBuilder } from 'discord.js'
 
 import type { CrowdinManager } from '../managers/CrowdinManager'
+import type { DiscordManager } from '../managers/DiscordManager'
 import type { FAQManager } from '../managers/FAQManager'
 import type { IndexManager } from '../managers/IndexManager'
 import type { LeaderboardManager } from '../managers/LeaderboardManager'
@@ -23,6 +24,7 @@ declare module 'discord.js' {
     commands: Collection<PropertyKey, Command>
     managers: {
       Crowdin: CrowdinManager
+      Discord: DiscordManager
       Faq: FAQManager
       Giveaways: GiveawaysManager
       Index: IndexManager

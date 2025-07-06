@@ -1,8 +1,6 @@
 import { type GiveawayData, GiveawaysManager } from 'discord-giveaways'
 import type { Client } from 'discord.js'
 
-import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
-import { BOT_COLOR } from '../constants/discord'
 import { IS_DEV } from '../constants/config'
 import { logger } from '../utils/logger'
 import { pool } from '../utils/pg'
@@ -64,11 +62,13 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
 }
 
 export const initGiveawayManager = (client: Client) => {
+  const { Discord } = client.managers
+
   const manager = new GiveawayManagerWithOwnDatabase(client, {
     default: {
       botsCanWin: false,
-      embedColor: BOT_COLOR,
-      embedColorEnd: BOT_COLOR,
+      embedColor: Discord.BOT_COLOR,
+      embedColorEnd: Discord.BOT_COLOR,
       reaction: '🎉',
       // Unless it’s run in the mod channels (for testing purposes), prevent
       // moderators from winning a giveaway.
@@ -83,7 +83,7 @@ export const initGiveawayManager = (client: Client) => {
   })
 
   manager.on('giveawayReactionAdded', (giveaway, member) => {
-    if (shouldIgnoreInteraction(giveaway)) return
+    if (Discord.shouldIgnoreInteraction(giveaway)) return
 
     log('info', 'User entered giveaway', {
       messageId: giveaway.messageId,
@@ -92,7 +92,7 @@ export const initGiveawayManager = (client: Client) => {
   })
 
   manager.on('giveawayReactionRemoved', (giveaway, member) => {
-    if (shouldIgnoreInteraction(giveaway)) return
+    if (Discord.shouldIgnoreInteraction(giveaway)) return
 
     log('info', 'User left giveaway', {
       messageId: giveaway.messageId,
@@ -101,7 +101,7 @@ export const initGiveawayManager = (client: Client) => {
   })
 
   manager.on('giveawayRerolled', (giveaway, winners) => {
-    if (shouldIgnoreInteraction(giveaway)) return
+    if (Discord.shouldIgnoreInteraction(giveaway)) return
 
     log('info', 'Giveaway rerolled', {
       messageId: giveaway.messageId,
@@ -110,7 +110,7 @@ export const initGiveawayManager = (client: Client) => {
   })
 
   manager.on('giveawayEnded', (giveaway, winners) => {
-    if (shouldIgnoreInteraction(giveaway)) return
+    if (Discord.shouldIgnoreInteraction(giveaway)) return
 
     log('info', 'Giveaway ended', {
       messageId: giveaway.messageId,
@@ -119,7 +119,7 @@ export const initGiveawayManager = (client: Client) => {
   })
 
   manager.on('giveawayDeleted', giveaway => {
-    if (shouldIgnoreInteraction(giveaway)) return
+    if (Discord.shouldIgnoreInteraction(giveaway)) return
 
     log('info', 'Giveaway deleted', {
       messageId: giveaway.messageId,

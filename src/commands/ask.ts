@@ -7,7 +7,6 @@ import {
 import { logger } from '../utils/logger'
 import type { PineconeMetadata } from '../managers/SearchManager'
 import { ENGLISH_LANGUAGE_OBJECT, LANGUAGE_OBJECTS } from '../constants/i18n'
-import { createEmbed } from '../utils/createEmbed'
 
 export const scope = 'OFFICIAL'
 
@@ -37,15 +36,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')
 
   const { options, client } = interaction
-  const { Search, Localization, Prompt } = client.managers
+  const { Search, Localization, Prompt, Discord } = client.managers
 
   const query = options.getString('question', true)
   // @TODO: bring back the visibility option after the beta phase
   const visible = true // options.getBoolean('visible') ?? false
   const raw = options.getBoolean('raw') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
-  const embed = createEmbed(false)
-  embed.setTitle(`Asked: “${query}”`)
+  const embed = Discord.createEmbed(false).setTitle(`Asked: “${query}”`)
 
   await interaction.deferReply({ flags })
 
@@ -87,8 +85,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   } = result.fields as PineconeMetadata
   const timestamp = `<t:${Math.round(new Date(indexedAt).valueOf() / 1000)}:d>`
 
-  embed.addFields({ name: 'Source', value: url, inline: true })
-  embed.addFields({ name: 'Indexed on', value: timestamp, inline: true })
+  embed.addFields(
+    { name: 'Source', value: url, inline: true },
+    { name: 'Indexed on', value: timestamp, inline: true }
+  )
 
   if (raw) {
     logger.logCommand(interaction, 'Returning a raw answer', { crowdinCode })

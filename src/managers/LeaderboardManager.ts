@@ -6,11 +6,8 @@ import {
   type PartialMessage,
 } from 'discord.js'
 
-import { BOT_TEST_CHANNEL_ID } from '../constants/discord'
-import { shouldIgnoreInteraction } from '../utils/shouldIgnoreInteraction'
 import { pool } from '../utils/pg'
 import { logger } from '../utils/logger'
-import { sendInteractionAlert } from '../utils/sendInteractionAlert'
 
 type DiscordMessage = OmitPartialGroupDMChannel<
   Message<boolean> | PartialMessage
@@ -39,6 +36,8 @@ export class LeaderboardManager {
     messageId?: string
     increment?: number
   }) {
+    const { Discord } = this.#client.managers
+
     this.#log('info', 'Registering contribution', options)
 
     const { userId, guildId, channelId, increment = 1 } = options
@@ -53,7 +52,7 @@ export class LeaderboardManager {
         [guildId, userId, increment]
       )
     } catch (error) {
-      await sendInteractionAlert(
+      await Discord.sendInteractionAlert(
         { client: this.#client, guildId, channelId, userId },
         `A link to the FAQ failed to be properly recorded in the database.\`\`\`${error}\`\`\``
       )
@@ -87,10 +86,10 @@ export class LeaderboardManager {
     message: DiscordMessage
   ) {
     const { client, guildId, channelId, member, content } = message
-    const { Faq } = client.managers
+    const { Faq, Discord } = client.managers
 
     if (!member || !guildId || !content) return
-    if (shouldIgnoreInteraction(message)) return
+    if (Discord.shouldIgnoreInteraction(message)) return
     if (!(await this.isLeaderboardEnabled())) {
       return this.#log('info', 'FAQ leaderboard is disabled; aborting.')
     }
@@ -115,15 +114,19 @@ export class LeaderboardManager {
   }
 
   async faqLinksOnCreate(interaction: DiscordMessage) {
-    if (interaction.channelId === BOT_TEST_CHANNEL_ID) return
-    if (shouldIgnoreInteraction(interaction)) return
+    const { Discord } = this.#client.managers
+
+    if (interaction.channelId === Discord.BOT_TEST_CHANNEL_ID) return
+    if (Discord.shouldIgnoreInteraction(interaction)) return
 
     return this.faqLinksOnCreateOrDelete(Events.MessageCreate, interaction)
   }
 
   faqLinksOnDelete(interaction: DiscordMessage) {
-    if (interaction.channelId === BOT_TEST_CHANNEL_ID) return
-    if (shouldIgnoreInteraction(interaction)) return
+    const { Discord } = this.#client.managers
+
+    if (interaction.channelId === Discord.BOT_TEST_CHANNEL_ID) return
+    if (Discord.shouldIgnoreInteraction(interaction)) return
 
     return this.faqLinksOnCreateOrDelete(Events.MessageDelete, interaction)
   }
@@ -133,10 +136,10 @@ export class LeaderboardManager {
     newMessage: DiscordMessage
   ) {
     const { client, guildId, channelId, member } = newMessage
-    const { Faq } = client.managers
+    const { Faq, Discord } = client.managers
 
     if (!member || !guildId) return
-    if (shouldIgnoreInteraction(newMessage)) return
+    if (Discord.shouldIgnoreInteraction(newMessage)) return
 
     // Perform a quick and cheap check to figure out whether the message contains
     // any link whatsoever, otherwise return early.

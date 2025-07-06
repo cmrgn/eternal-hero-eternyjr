@@ -5,13 +5,10 @@ import {
   SlashCommandBuilder,
 } from 'discord.js'
 import pMap from 'p-map'
-import Bottleneck from 'bottleneck'
 import { GlossaryEntries } from 'deepl-node'
 
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { logger } from '../utils/logger'
-import { sendInteractionAlert } from '../utils/sendInteractionAlert'
-import { cleanUpTranslation } from '../utils/cleanUpTranslation'
 
 export const scope = 'OFFICIAL'
 
@@ -69,12 +66,6 @@ export const data = new SlashCommandBuilder()
 
   .setDescription('Index the FAQ in Pinecone')
 
-const discordEditLimiter = new Bottleneck({
-  reservoir: 5, // Allow 5 calls
-  reservoirRefreshAmount: 5, // Refill to 5
-  reservoirRefreshInterval: 5000, // Every 5 seconds
-})
-
 async function fetchFAQContent(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Fetching FAQ content')
 
@@ -118,7 +109,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
 async function commandThread(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
-  const { Faq, Crowdin, Index } = client.managers
+  const { Faq, Crowdin, Index, Discord } = client.managers
   const threadId = options.getString('thread_id', true)
   const crowdinCode = options.getString('language') as CrowdinCode | undefined
   const thread = (await client.channels.fetch(threadId)) as AnyThreadChannel
@@ -127,7 +118,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
   const resolvedThread = await Faq.resolveThread(thread)
 
   function onIndexFailure(error: unknown) {
-    return sendInteractionAlert(
+    return Discord.sendInteractionAlert(
       interaction,
       `Could not index “${resolvedThread.name}” (\`${resolvedThread.id}\`) in namespace ${crowdinCode}, even after several attempts.
       \`\`\`${error}\`\`\``
@@ -179,13 +170,14 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
 
 async function commandLanguage(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
-  const { Index } = client.managers
+  const { Index, Discord } = client.managers
   const crowdinCode = options.getString('language', true)
   const threadsWithContent = await fetchFAQContent(interaction)
   const total = threadsWithContent.length
   const languageObject = LANGUAGE_OBJECTS.find(
     languageObject => languageObject.crowdinCode === crowdinCode
   )
+  const discordEditLimiter = Discord.getDiscordEditLimiter()
 
   if (!languageObject) {
     throw new Error(`Could not retrieve language object for ${crowdinCode}`)
@@ -243,16 +235,14 @@ async function commandDeepl(interaction: ChatInputCommandInteraction) {
   const { client } = interaction
   const { Localization, Crowdin } = client.managers
   const translations = await Crowdin.fetchAllProjectTranslations()
-  const languageObjects = Crowdin.getLanguages({ withEnglish: false })
 
-  await Promise.all(
-    languageObjects.map(async ({ crowdinCode, twoLettersCode }) => {
-      const targetLangCode = twoLettersCode
-
+  await Crowdin.onCrowdinLanguages(
+    async ({ crowdinCode, twoLettersCode: targetLangCode }) => {
       logger.logCommand(
         interaction,
         `Updating glossary entries for ‘${targetLangCode}’`
       )
+
       await interaction.editReply({
         content: `Updating the DeepL glossary for ‘${targetLangCode}’.`,
       })
@@ -289,7 +279,8 @@ async function commandDeepl(interaction: ChatInputCommandInteraction) {
 
       if (pairs.length)
         await Localization.updateDeepLGlossary(pairs, targetLangCode)
-    })
+    },
+    { withEnglish: false }
   )
 
   return interaction.editReply({ content: 'Updated the DeepL glossary.' })
@@ -353,4 +344,18 @@ async function commandStats(interaction: ChatInputCommandInteraction) {
   `
 
   return interaction.editReply({ content })
+}
+
+function cleanUpTranslation(string: string) {
+  return (
+    string
+      // Remove line breaks
+      .replace(/\n/g, '')
+      // Replace pluralization tokens with the singular form
+      .replace(/\{0:plural:([^|}]+)\|[^}]+\}/g, (_, singular) => singular)
+      // Remove tags
+      .replace(/<[a-z=]+>/g, '')
+      .replace(/<\/[a-z=]+>/g, '')
+      .trim()
+  )
 }

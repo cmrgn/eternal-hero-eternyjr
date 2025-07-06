@@ -22,8 +22,6 @@ export type {
   TranslationStatusModel,
 } from '@crowdin/crowdin-api-client'
 
-type StringId = SourceStringsModel.String['id']
-
 export type CrowdinItem = Record<CrowdinCode, string> & {
   Key: string
   Context?: string

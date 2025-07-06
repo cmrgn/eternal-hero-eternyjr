@@ -150,65 +150,9 @@ export class IndexManager {
     await this.indexThread({ ...thread, name, content }, crowdinCode)
   }
 
-  async confirmRetranslation(
-    thread: ResolvedThread,
-    message: Message<boolean>,
-    oldMessage: Message<boolean> | PartialMessage
-  ) {
-    this.#log('info', 'Asking for translation confirmation', {
-      id: thread.id,
-    })
-
-    const { Crowdin } = this.#client.managers
-    const languageObjects = Crowdin.getLanguages({ withEnglish: false })
-    const languageCount = languageObjects.length
-    const char = message.content.length
-    const numberFormatter = new Intl.NumberFormat('en-US')
-    const currencyFormatter = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'EUR',
-    })
-    // The previous content may not be defined if the message is a partial. We
-    // cannot refetch it, because it will fetch the latest version of the mes-
-    // sage which will yield a null diff. So either we have the old content in
-    // the Discord cache and we can diff, or we can’t.
-    const contentDiff = oldMessage.content
-      ? diffWords(oldMessage.content, message.content)
-          .map(part => {
-            if (part.added) return `**${part.value}**`
-            if (part.removed) return `~~${part.value}~~`
-            return part.value
-          })
-          .join('')
-      : ''
-    const content = [
-      'You have edited a FAQ entry. Do you want to automatically translate it in all supported languages and reindex it?',
-      `- Entry: _“${thread.name}”_`,
-      `- Language count: ${numberFormatter.format(languageCount)} (w/o English)`,
-      `- Character count: ${numberFormatter.format(char)}`,
-      `- **Total cost:** ${currencyFormatter.format((20 / 1_000_000) * char * languageCount)}`,
-      contentDiff.replace(/\n/g, '\n> '),
-    ].join('\n')
-
-    const confirmBtn = new ButtonBuilder()
-      .setCustomId(`confirm-retranslate:${thread.id}`)
-      .setLabel('Yes, retranslate')
-      .setStyle(ButtonStyle.Primary)
-    const cancelBtn = new ButtonBuilder()
-      .setCustomId(`skip-retranslate:${thread.id}`)
-      .setLabel('No, skip')
-      .setStyle(ButtonStyle.Secondary)
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      confirmBtn,
-      cancelBtn
-    )
-
-    await message.author.send({ content, components: [row] })
-  }
-
   bindEvents() {
     this.#log('info', 'Binding events onto the manager instance')
-    const { Flags, Faq } = this.#client.managers
+    const { Flags, Faq, Discord, Crowdin } = this.#client.managers
 
     Faq.on('ThreadCreated', async (thread: ResolvedThread) => {
       if (await Flags.getFeatureFlag('auto_indexing')) {
@@ -241,7 +185,12 @@ export class IndexManager {
     Faq.on('ThreadContentUpdated', async (thread, message, oldMessage) => {
       if (await Flags.getFeatureFlag('auto_indexing')) {
         if ((await Flags.getFeatureFlag('auto_translation_confirm')) === true) {
-          await this.confirmRetranslation(thread, message, oldMessage)
+          await Discord.confirmThreadRetranslation(
+            Crowdin.getLanguages({ withEnglish: false }),
+            thread,
+            message,
+            oldMessage
+          )
         } else {
           await this.translateAndIndexThreadInAllLanguages(thread)
         }

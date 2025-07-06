@@ -5,7 +5,6 @@ import {
 } from 'discord.js'
 
 import { logger } from '../utils/logger'
-import { createEmbed } from '../utils/createEmbed'
 
 export const scope = 'PUBLIC'
 
@@ -24,7 +23,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')
 
   const { guildId, client, options } = interaction
-  const { Leaderboard } = client.managers
+  const { Leaderboard, Discord } = client.managers
   const size = options.getInteger('size') ?? 5
 
   if (!guildId) return
@@ -32,7 +31,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Retrieving leaderboard data')
   const leaderboard = await Leaderboard.getLeaderboard(guildId, size)
 
-  const embed = createEmbed().setTitle('FAQ Leaderboard')
+  const embed = Discord.createEmbed().setTitle('FAQ Leaderboard')
 
   if (leaderboard.length === 0) {
     embed.setDescription('The FAQ leaderboard is currently empty.')
