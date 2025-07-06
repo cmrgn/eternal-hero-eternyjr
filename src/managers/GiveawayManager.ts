@@ -14,12 +14,13 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
   async getAllGiveaways() {
     log('info', 'Fetching all giveaways from the database')
 
-    const { Database } = this.client.managers
+    const { Database, Discord } = this.client.managers
+    const environment = Discord.IS_DEV ? 'DEV' : 'PROD'
 
     const rows = await Database.db
       .selectFrom('giveaways')
       .select('data')
-      .where('environment', '=', Database.environment)
+      .where('environment', '=', environment)
       .execute()
 
     // It seems that the `discord-giveaways` module uses the `Giveaway` and
@@ -38,15 +39,12 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
       guildId: giveawayData.guildId,
     })
 
-    const { Database } = this.client.managers
+    const { Database, Discord } = this.client.managers
+    const environment = Discord.IS_DEV ? 'DEV' : 'PROD'
 
     const result = await Database.db
       .insertInto('giveaways')
-      .values({
-        id: messageId,
-        data: giveawayData,
-        environment: Database.environment,
-      })
+      .values({ id: messageId, data: giveawayData, environment })
       .executeTakeFirst()
 
     return Boolean(result.insertId)

@@ -2,8 +2,6 @@ import type { GiveawayData } from 'discord-giveaways'
 import { Kysely, PostgresDialect } from 'kysely'
 import { Pool } from 'pg'
 
-import { IS_DEV } from '../constants/config'
-
 export class DatabaseManager {
   db: Kysely<DB>
 
@@ -19,10 +17,6 @@ export class DatabaseManager {
     })
     const dialect = new PostgresDialect({ pool })
     this.db = new Kysely<DB>({ dialect })
-  }
-
-  get environment() {
-    return IS_DEV ? 'DEV' : 'PROD'
   }
 }
 

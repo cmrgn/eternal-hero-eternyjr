@@ -1,7 +1,5 @@
 import type { Client } from 'discord.js'
 
-import { IS_DEV } from '../constants/config'
-
 export function onClientReady(client: Client<true>) {
   const { Discord } = client.managers
 
@@ -11,6 +9,6 @@ export function onClientReady(client: Client<true>) {
   // redeploying the commands to the test server (given as an environment
   // variable) every time the server gets started (such as when saving a file
   // that gets bundled).
-  if (IS_DEV && Discord.TEST_SERVER_ID)
+  if (Discord.IS_DEV && Discord.TEST_SERVER_ID)
     Discord.deployCommands(Discord.TEST_SERVER_ID)
 }

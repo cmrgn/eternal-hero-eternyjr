@@ -1,7 +1,6 @@
 import { bold, channelMention, type GuildBasedChannel } from 'discord.js'
 
 import { ENGLISH_LANGUAGE_OBJECT, LANGUAGE_OBJECTS } from '../constants/i18n'
-import { IS_DEV } from '../constants/config'
 import type { EnsuredInteraction } from './messageCreate'
 
 const INCLUDED_CATEGORY_IDS = [
@@ -10,9 +9,12 @@ const INCLUDED_CATEGORY_IDS = [
   /* Feedback */ '1271841974994993224',
   /* Weapons */ '1262801739829219511',
   /* Community */ '1239263655426523188',
-  /* General (test) */ IS_DEV && '714858253531742209',
-  /* FAQ (test) */ IS_DEV && '1373344771552317532',
-].filter(Boolean)
+]
+
+const DEV_INCLUDED_CATEGORY_IDS = [
+  /* General (test) */ '714858253531742209',
+  /* FAQ (test) */ '1373344771552317532',
+]
 
 export async function languageDetection(
   interaction: EnsuredInteraction,
@@ -30,7 +32,9 @@ export async function languageDetection(
   // exception is made to the bot testing channel.
   if (!channel.parentId) return
   const isTestChannel = channel.id === Discord.BOT_TEST_CHANNEL_ID
-  const isInRelevantCategory = INCLUDED_CATEGORY_IDS.includes(channel.parentId)
+  const isInRelevantCategory =
+    INCLUDED_CATEGORY_IDS.includes(channel.parentId) ||
+    (Discord.IS_DEV && DEV_INCLUDED_CATEGORY_IDS.includes(channel.parentId))
   if (!isTestChannel && !isInRelevantCategory) return
 
   const crowdinCode = Localization.guessLanguageWithCld3(content)

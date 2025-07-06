@@ -8,7 +8,6 @@ import {
   type PartialMessage,
 } from 'discord.js'
 
-import { IS_DEV } from '../constants/config'
 import { logger } from '../utils/logger'
 
 export type ResolvedThread = {
@@ -49,15 +48,15 @@ export class FAQManager {
   #log = logger.log('FAQManager', this.#severityThreshold)
 
   constructor(client: Client) {
-    const { TEST_SERVER_ID, DISCORD_SERVER_ID } = client.managers.Discord
+    const { Discord } = client.managers
 
     this.#log('info', 'Instantiating manager')
     this.#client = client
     // Force `guildId` to `DISCORD_SERVER_ID` to test with the real FAQ, even
     // of the test server
-    this.guildId = IS_DEV
-      ? (TEST_SERVER_ID ?? DISCORD_SERVER_ID)
-      : DISCORD_SERVER_ID
+    this.guildId = Discord.IS_DEV
+      ? (Discord.TEST_SERVER_ID ?? Discord.DISCORD_SERVER_ID)
+      : Discord.DISCORD_SERVER_ID
     this.#threads = []
     this.#links = []
   }

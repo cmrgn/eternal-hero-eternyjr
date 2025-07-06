@@ -8,7 +8,6 @@ import {
 import type { ResolvedThread } from './FAQManager'
 import type { PineconeEntry, PineconeNamespace } from './SearchManager'
 import type { LanguageObject } from '../constants/i18n'
-import { IS_DEV } from '../constants/config'
 import { logger } from '../utils/logger'
 
 export class IndexManager {
@@ -46,10 +45,11 @@ export class IndexManager {
   }
 
   getNamespaceName(namespaceName: PineconeNamespace) {
+    const { Discord } = this.#client.managers
     // This is intended to avoid polluting the production indexes during
     // development; this will create the same indexes as production, but
     // prefixed with this prefix
-    const prefix = IS_DEV ? 'test-' : ''
+    const prefix = Discord.IS_DEV ? 'test-' : ''
     return prefix + namespaceName
   }
 
