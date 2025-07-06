@@ -1,11 +1,17 @@
 import type { GiveawayData } from 'discord-giveaways'
 import { Kysely, PostgresDialect } from 'kysely'
 import { Pool } from 'pg'
+import { logger } from '../utils/logger'
 
 export class DatabaseManager {
   db: Kysely<DB>
 
+  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
+  #log = logger.log('DatabaseManager', this.#severityThreshold)
+
   constructor() {
+    this.#log('info', 'Instantiating manager')
+
     if (!process.env.DATABASE_URL) {
       throw new Error('Missing environment variable DATABASE_URL; aborting.')
     }

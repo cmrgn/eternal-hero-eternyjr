@@ -1,8 +1,6 @@
-import dotenv from 'dotenv'
+import 'dotenv/config'
 
 import { DiscordManager } from '../managers/DiscordManager'
-
-dotenv.config()
 
 const Discord = new DiscordManager()
 

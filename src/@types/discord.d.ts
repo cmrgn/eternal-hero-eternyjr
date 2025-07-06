@@ -4,6 +4,7 @@ import type { Collection, SlashCommandOptionsOnlyBuilder } from 'discord.js'
 
 import type { CrowdinManager } from '../managers/CrowdinManager'
 import type { DatabaseManager } from '../managers/DatabaseManager'
+import type { DeepLManager } from '../managers/DeepLManager'
 import type { DiscordManager } from '../managers/DiscordManager'
 import type { FAQManager } from '../managers/FAQManager'
 import type { IndexManager } from '../managers/IndexManager'
@@ -26,6 +27,7 @@ declare module 'discord.js' {
     managers: {
       Crowdin: CrowdinManager
       Database: DatabaseManager
+      DeepL: DeepLManager
       Discord: DiscordManager
       Faq: FAQManager
       Giveaways: GiveawaysManager

@@ -3,6 +3,7 @@ import { Client, Collection, GatewayIntentBits, Partials } from 'discord.js'
 import { commands } from './commands'
 import { CrowdinManager } from './managers/CrowdinManager'
 import { DatabaseManager } from './managers/DatabaseManager'
+import { DeepLManager } from './managers/DeepLManager'
 import { DiscordManager } from './managers/DiscordManager'
 import { FAQManager } from './managers/FAQManager'
 import { FlagsManager } from './managers/FlagsManager'
@@ -32,6 +33,7 @@ for (const command of Object.values(commands)) {
 // @ts-expect-error
 client.managers = {}
 client.managers.Discord = new DiscordManager()
+client.managers.DeepL = new DeepLManager(client)
 client.managers.Database = new DatabaseManager()
 client.managers.Giveaways = initGiveawayManager(client)
 client.managers.Faq = new FAQManager(client).bindEvents()

@@ -1,5 +1,4 @@
 import type { Client } from 'discord.js'
-import * as deepl from 'deepl-node'
 import { type LanguageIdentifier, loadModule } from 'cld3-asm'
 
 import {
@@ -19,29 +18,14 @@ export class LocalizationManager {
   #client: Client
 
   #languageIdentifier: LanguageIdentifier | undefined
-  deepl: deepl.DeepLClient
-  #deepLGlossaryId = 'b88f1891-8a05-4d87-965f-67de6b825693'
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('LocalizationManager', this.#severityThreshold)
 
   constructor(client: Client) {
     this.#log('info', 'Instantiating manager')
-
-    if (!process.env.DEEPL_API_KEY) {
-      throw new Error('Missing environment variable DEEPL_API_KEY; aborting.')
-    }
-
     this.#client = client
-    this.deepl = new deepl.DeepLClient(process.env.DEEPL_API_KEY)
     this.loadLanguageIdentifier()
-  }
-
-  async ensureDeepLisEnabled() {
-    const { Flags } = this.#client.managers
-    const isEnabled = await Flags.getFeatureFlag('deepl')
-
-    if (!isEnabled) throw new Error('DeepL usage is disabled; aborting.')
   }
 
   async loadLanguageIdentifier() {
@@ -117,51 +101,18 @@ export class LocalizationManager {
     thread: ResolvedThread,
     languageObject: LanguageObject
   ) {
+    const { DeepL } = this.#client.managers
+    const targetLangCode = languageObject.deepLCode
+
     this.#log('info', 'Translating thread with DeepL', {
       threadId: thread.id,
-      targetLang: languageObject.deepLCode,
-    })
-
-    await this.ensureDeepLisEnabled()
-
-    // DeepL is quite agressive with line breaks and tend to remove them, which
-    // is a problem when handling lists. A workaround is to give it a bunch of
-    // individual chunks, and concatenate them back with a line break.
-    const chunks = [thread.name, ...thread.content.split('\n').filter(Boolean)]
-    const targetLangCode = languageObject.deepLCode
-    const [name, ...content] = await this.deepl.translateText(
-      chunks,
-      'en',
-      targetLangCode,
-      {
-        preserveFormatting: true,
-        splitSentences: 'off',
-        formality: 'prefer_less',
-        modelType: 'quality_optimized',
-        glossary: this.#deepLGlossaryId,
-      }
-    )
-
-    return { name: name.text, content: content.map(c => c.text).join('\n') }
-  }
-
-  async updateDeepLGlossary(pairs: [string, string][], targetLangCode: string) {
-    this.#log('info', 'Updating the DeepL glossary', {
-      count: pairs.length,
       targetLang: targetLangCode,
     })
 
-    await this.ensureDeepLisEnabled()
+    const input = `${thread.name}\n${thread.content}`
+    const translation = await DeepL.translate(input, targetLangCode)
+    const [name, ...content] = translation.split('\n')
 
-    await this.deepl.updateMultilingualGlossaryDictionary(
-      this.#deepLGlossaryId,
-      {
-        sourceLangCode: 'en',
-        targetLangCode,
-        entries: new deepl.GlossaryEntries({
-          entries: Object.fromEntries(pairs),
-        }),
-      }
-    )
+    return { name, content: content.join('\n') }
   }
 }

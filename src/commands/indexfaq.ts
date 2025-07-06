@@ -233,52 +233,15 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
 
 async function commandDeepl(interaction: ChatInputCommandInteraction) {
   const { client } = interaction
-  const { Localization, Crowdin } = client.managers
+  const { DeepL, Crowdin } = client.managers
   const translations = await Crowdin.fetchAllProjectTranslations()
 
   await Crowdin.onCrowdinLanguages(
-    async ({ crowdinCode, twoLettersCode: targetLangCode }) => {
-      logger.logCommand(
-        interaction,
-        `Updating glossary entries for ‘${targetLangCode}’`
-      )
-
+    async ({ twoLettersCode: targetLangCode }) => {
       await interaction.editReply({
         content: `Updating the DeepL glossary for ‘${targetLangCode}’.`,
       })
-
-      // These 5 Item_*_Name keys are the fine torso items, which are called
-      // “<Something> Chest” in English. This causes translations to use that
-      // word when translating the word “chest” (as in treasure chest). By
-      // excluding them from the glossary, we can improve translations for all
-      // entries mentioning world chests.
-      const IGNORED_KEYS = [
-        'Item_29_Name',
-        'Item_37_Name',
-        'Item_44_Name',
-        'Item_52_Name',
-        'Item_60_Name',
-      ]
-
-      const pairs = translations
-        .map(({ key, translations: t }): [string, string] => {
-          if (IGNORED_KEYS.includes(key)) return ['', '']
-          try {
-            const cleanSource = cleanUpTranslation(t.en)
-            const cleanTarget = cleanUpTranslation(t[crowdinCode])
-            if (cleanSource.includes('{') || cleanTarget.includes('{'))
-              throw new Error('Variable still present in string.')
-            GlossaryEntries.validateGlossaryTerm(cleanSource)
-            GlossaryEntries.validateGlossaryTerm(cleanTarget)
-            return [cleanSource, cleanTarget]
-          } catch {
-            return ['', '']
-          }
-        })
-        .filter(([src, tgt]) => src && tgt)
-
-      if (pairs.length)
-        await Localization.updateDeepLGlossary(pairs, targetLangCode)
+      await DeepL.updateDeepLGlossary(translations, targetLangCode)
     },
     { withEnglish: false }
   )
@@ -288,7 +251,7 @@ async function commandDeepl(interaction: ChatInputCommandInteraction) {
 
 async function commandStats(interaction: ChatInputCommandInteraction) {
   const { client } = interaction
-  const { Faq, Crowdin, Localization, Index } = client.managers
+  const { Faq, Crowdin, DeepL, Index } = client.managers
   const languageObjects = Crowdin.getLanguages({ withEnglish: false })
   const threads = await fetchFAQContent(interaction)
   const wordCount = threads.reduce(
@@ -299,7 +262,7 @@ async function commandStats(interaction: ChatInputCommandInteraction) {
     (acc, thread) => acc + thread.content.trim().length,
     0
   )
-  const deeplUsage = await Localization.deepl.getUsage()
+  const { character: charUsed } = await DeepL.getUsage()
   const pcUsage = await Index.index.describeIndexStats()
 
   const totalRecordCounts = Object.entries(pcUsage.namespaces ?? {}).reduce(
@@ -315,12 +278,11 @@ async function commandStats(interaction: ChatInputCommandInteraction) {
   })
   const cf = currencyFormatter.format
 
-  const costPerChar = 20 / 1_000_000
+  const costPerChar = DeepL.COST_PER_CHAR
   const entryCount = Faq.threads.length
   const languageCount = languageObjects.length
   const avgCharPerEntry = charCount / entryCount
   const totalChar = charCount * languageCount
-  const charUsed = deeplUsage.character?.count ?? 0
 
   const content = `
 ### Original version:

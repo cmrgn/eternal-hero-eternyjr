@@ -3,6 +3,7 @@ import OpenAI from 'openai'
 
 import { logger } from '../utils/logger'
 import type { LanguageObject } from '../constants/i18n'
+import { getExcerpt } from '../utils/getExcerpt'
 
 const SYSTEM_PROMPT = `
 Sole purpose:
@@ -52,13 +53,6 @@ export class PromptManager {
     if (!isEnabled) throw new Error('ChatGPT usage is disabled; aborting.')
   }
 
-  getExcerpt(input: string) {
-    const [firstLine] = input.trim().split('\n')
-    const maxLength = 100
-    if (firstLine.length < maxLength) return firstLine
-    return `${firstLine.slice(0, maxLength)}…`
-  }
-
   async promptGPT(
     userPrompt: string,
     systemPrompt = SYSTEM_PROMPT,
@@ -66,7 +60,7 @@ export class PromptManager {
   ) {
     this.#log('info', 'Prompting ChatGPT', {
       model,
-      prompt: this.getExcerpt(userPrompt),
+      prompt: getExcerpt(userPrompt),
     })
 
     await this.ensureChatGPTisEnabled()
