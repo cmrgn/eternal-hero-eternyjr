@@ -2,6 +2,7 @@ import { MessageFlags, type Interaction } from 'discord.js'
 
 import { logger } from '../utils/logger'
 import { handleButtons } from './interactionCreate.buttons'
+import { handleAutocomplete } from './interactionCreate.autocomplete'
 
 export async function onInteractionCreate(interaction: Interaction) {
   const { user, client } = interaction
@@ -14,6 +15,7 @@ export async function onInteractionCreate(interaction: Interaction) {
   if (Discord.shouldIgnoreInteraction(interaction)) return
 
   if (interaction.isButton()) return handleButtons(interaction)
+  if (interaction.isAutocomplete()) return handleAutocomplete(interaction)
   if (!interaction.isChatInputCommand()) return
 
   try {

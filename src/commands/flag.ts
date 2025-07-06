@@ -24,6 +24,7 @@ export const data = new SlashCommandBuilder()
           .setName('name')
           .setDescription('The feature flag to enable')
           .setRequired(true)
+          .setAutocomplete(true)
       )
   )
   .addSubcommand(sub =>
@@ -35,6 +36,7 @@ export const data = new SlashCommandBuilder()
           .setName('name')
           .setDescription('The feature flag to disable')
           .setRequired(true)
+          .setAutocomplete(true)
       )
   )
   .addSubcommand(sub =>
@@ -46,6 +48,7 @@ export const data = new SlashCommandBuilder()
           .setName('name')
           .setDescription('The feature flag to delete')
           .setRequired(true)
+          .setAutocomplete(true)
       )
   )
   .addSubcommand(sub =>
@@ -53,7 +56,10 @@ export const data = new SlashCommandBuilder()
       .setName('get')
       .setDescription('Check 1 or all feature flags')
       .addStringOption(opt =>
-        opt.setName('name').setDescription('The feature flag to check')
+        opt
+          .setName('name')
+          .setDescription('The feature flag to check')
+          .setAutocomplete(true)
       )
   )
 
@@ -69,10 +75,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   if (subCommand === 'get') {
     const flag = options.getString('name')
+
     if (flag) {
       const value = await Flags.getFeatureFlag(flag)
+
       return interaction.reply({
-        content: `Flag \`${flag}\` is currently **${value ? 'ENABLED' : 'DISABLED'}**.`,
+        content:
+          typeof value === 'undefined'
+            ? `Flag \`${flag}\` does not exist.`
+            : `Flag \`${flag}\` is currently **${value ? 'ENABLED' : 'DISABLED'}**.`,
         flags: MessageFlags.Ephemeral,
       })
     }
@@ -92,7 +103,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   if (subCommand === 'delete') {
     const flag = options.getString('name', true)
-    await Flags.deleteFeatureFlag(flag)
+
+    if (!(await Flags.hasFeatureFlag(flag))) {
+      return interaction.reply({
+        content: `Flag \`${flag}\` does not exist.`,
+        flags: MessageFlags.Ephemeral,
+      })
+    }
 
     const confirmBtn = new ButtonBuilder()
       .setCustomId(`confirm-delete:${flag}`)
@@ -116,10 +133,32 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const flag = options.getString('name', true)
   const newValue = subCommand === 'enable'
+
+  if (!(await Flags.hasFeatureFlag(flag))) {
+    const confirmBtn = new ButtonBuilder()
+      .setCustomId(`confirm-create:${flag}:${newValue}`)
+      .setLabel('Yes, create it')
+      .setStyle(ButtonStyle.Primary)
+    const cancelBtn = new ButtonBuilder()
+      .setCustomId(`cancel-create:${flag}`)
+      .setLabel('Cancel')
+      .setStyle(ButtonStyle.Secondary)
+    const confirmRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      confirmBtn,
+      cancelBtn
+    )
+
+    return interaction.reply({
+      content: `Flag \`${flag}\` does not exist. Do you want to create it?`,
+      components: [confirmRow],
+      flags: MessageFlags.Ephemeral,
+    })
+  }
+
   await Flags.setFeatureFlag(flag, newValue)
 
   return interaction.reply({
     content: `Flag \`${flag}\` has been set to **${newValue ? 'ENABLED' : 'DISABLED'}**.`,
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   })
 }

@@ -1,7 +1,6 @@
 import type { Client } from 'discord.js'
 
 import { logger } from '../utils/logger'
-import { pool } from '../utils/pg'
 import { sql } from 'kysely'
 
 export class FlagsManager {
@@ -16,10 +15,22 @@ export class FlagsManager {
     this.#client = client
   }
 
-  async getFeatureFlag(
-    key: string,
-    options?: { silent: boolean }
-  ): Promise<boolean> {
+  async hasFeatureFlag(key: string, options?: { silent: boolean }) {
+    if (!options?.silent)
+      this.#log('info', 'Checking if feature flag exists', { key })
+
+    const { Database } = this.#client.managers
+    const exists = await Database.db
+      .selectFrom('feature_flags')
+      .select(eb => eb.val<boolean>(true).as('exists'))
+      .where('key', '=', key)
+      .limit(1)
+      .executeTakeFirst()
+
+    return !!exists
+  }
+
+  async getFeatureFlag(key: string, options?: { silent: boolean }) {
     if (!options?.silent) this.#log('info', 'Reading feature flag', { key })
 
     const { Database } = this.#client.managers
@@ -29,7 +40,7 @@ export class FlagsManager {
       .where('key', '=', key)
       .executeTakeFirst()
 
-    return response?.value ?? false
+    return response?.value
   }
 
   async deleteFeatureFlag(key: string): Promise<boolean> {
