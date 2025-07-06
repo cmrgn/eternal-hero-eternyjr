@@ -191,11 +191,11 @@ export class IndexManager {
     ].join('\n')
 
     const confirmBtn = new ButtonBuilder()
-      .setCustomId(`retranslate:${thread.id}`)
+      .setCustomId(`confirm-retranslate:${thread.id}`)
       .setLabel('Yes, retranslate')
       .setStyle(ButtonStyle.Primary)
     const cancelBtn = new ButtonBuilder()
-      .setCustomId(`skip:${thread.id}`)
+      .setCustomId(`skip-retranslate:${thread.id}`)
       .setLabel('No, skip')
       .setStyle(ButtonStyle.Secondary)
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(

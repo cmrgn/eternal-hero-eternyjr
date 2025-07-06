@@ -1,4 +1,7 @@
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   type ChatInputCommandInteraction,
   MessageFlags,
   PermissionFlagsBits,
@@ -91,9 +94,23 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const flag = options.getString('name', true)
     await Flags.deleteFeatureFlag(flag)
 
+    const confirmBtn = new ButtonBuilder()
+      .setCustomId(`confirm-delete:${flag}`)
+      .setLabel('Yes, delete it')
+      .setStyle(ButtonStyle.Danger)
+    const cancelBtn = new ButtonBuilder()
+      .setCustomId(`cancel-delete:${flag}`)
+      .setLabel('Cancel')
+      .setStyle(ButtonStyle.Secondary)
+    const confirmRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      confirmBtn,
+      cancelBtn
+    )
+
     return interaction.reply({
-      content: `Flag \`${flag}\` has been deleted.`,
-      ephemeral: true,
+      content: `Are you sure you want to delete the feature flag \`${flag}\`? Any reference to it in the code will resolve to \`false\`.`,
+      components: [confirmRow],
+      flags: MessageFlags.Ephemeral,
     })
   }
 

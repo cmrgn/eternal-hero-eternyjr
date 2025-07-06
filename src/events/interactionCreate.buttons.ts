@@ -1,12 +1,12 @@
 import type { ButtonInteraction } from 'discord.js'
 
 export async function handleButtons(interaction: ButtonInteraction) {
-  const [action, threadId] = interaction.customId.split(':')
+  const [action, id] = interaction.customId.split(':')
   const { channels, managers } = interaction.client
-  const { Faq, Index } = managers
+  const { Faq, Index, Flags } = managers
 
-  if (action === 'retranslate') {
-    const thread = await channels.fetch(threadId)
+  if (action === 'confirm-retranslate') {
+    const thread = await channels.fetch(id)
     if (!thread?.isThread()) return
 
     const resolvedThread = await Faq.resolveThread(thread)
@@ -21,9 +21,24 @@ export async function handleButtons(interaction: ButtonInteraction) {
     })
   }
 
-  if (action === 'skip') {
+  if (action === 'skip-retranslate') {
     await interaction.update({
       content: 'Retranslation skipped.',
+      components: [],
+    })
+  }
+
+  if (action === 'confirm-delete') {
+    await Flags.deleteFeatureFlag(id)
+    await interaction.update({
+      content: `Feature flag \`${id}\` deletion successful.`,
+      components: [],
+    })
+  }
+
+  if (action === 'cancel-delete') {
+    await interaction.update({
+      content: 'Flag deletion aborted.',
       components: [],
     })
   }
