@@ -55,12 +55,16 @@ export class DiscordManager {
       )
     }
 
+    this.#clientId = process.env.DISCORD_CLIENT_ID
+    this.#rest = new REST({ version: '10' }).setToken(this.token)
+  }
+
+  get token() {
     if (!process.env.DISCORD_TOKEN) {
       throw new Error('Missing environment variable DISCORD_TOKEN; aborting.')
     }
 
-    this.#clientId = process.env.DISCORD_CLIENT_ID
-    this.#rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN)
+    return process.env.DISCORD_TOKEN
   }
 
   get TEST_SERVER_ID() {
