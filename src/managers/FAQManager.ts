@@ -151,7 +151,6 @@ export class FAQManager {
   }
 
   getFAQForum(guild: Guild) {
-    this.#log('info', 'Getting FAQ forum')
     const faq = guild.channels.cache.find(({ name }) => name === '❓│faq-guide')
     if (!faq) throw new Error('Could not find the FAQ forum.')
     return faq as ForumChannel
