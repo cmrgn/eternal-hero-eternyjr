@@ -1,17 +1,9 @@
-import {
-  type Message,
-  type Client,
-  type PartialMessage,
-  ButtonBuilder,
-  ButtonStyle,
-  ActionRowBuilder,
-} from 'discord.js'
+import type { Client } from 'discord.js'
 import {
   Pinecone,
   type Index,
   type RecordMetadata,
 } from '@pinecone-database/pinecone'
-import { diffWords } from 'diff'
 
 import type { ResolvedThread } from './FAQManager'
 import type { PineconeEntry, PineconeNamespace } from './SearchManager'

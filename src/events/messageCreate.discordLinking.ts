@@ -1,10 +1,6 @@
 import { bold, channelMention, type GuildMember } from 'discord.js'
 
-import {
-  type LanguageObject,
-  LANGUAGE_OBJECTS,
-  ENGLISH_LANGUAGE_OBJECT,
-} from '../constants/i18n'
+import { LANGUAGE_OBJECTS, ENGLISH_LANGUAGE_OBJECT } from '../constants/i18n'
 import type { EnsuredInteraction } from './messageCreate'
 
 const LANGUAGE_ROLES = LANGUAGE_OBJECTS.map(
@@ -19,7 +15,7 @@ const looksLikePlayerId = (message: string) => {
   return /^[A-Za-z0-9]+$/.test(message)
 }
 
-function getMemberLanguageObject(member: GuildMember | null): LanguageObject {
+function getMemberLanguageObject(member: GuildMember | null) {
   if (!member) throw new Error('Missing member to get language object from.')
 
   // If the member has no international role, or multiple of them, return the

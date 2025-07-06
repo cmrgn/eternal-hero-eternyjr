@@ -5,9 +5,9 @@ import {
   type OmitPartialGroupDMChannel,
   type PartialMessage,
 } from 'discord.js'
+import { sql } from 'kysely'
 
 import { logger } from '../utils/logger'
-import { sql } from 'kysely'
 
 type DiscordMessage = OmitPartialGroupDMChannel<
   Message<boolean> | PartialMessage

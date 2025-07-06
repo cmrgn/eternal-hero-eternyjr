@@ -219,7 +219,7 @@ function formatLanguage(languageObject: LanguageObject) {
   return `${languageObject.languageName} (\`${languageObject.crowdinCode}\`)`
 }
 
-function splitMarkdownList(message: string, maxLength = 2000): string[] {
+function splitMarkdownList(message: string, maxLength = 2000) {
   const lines = message.split('\n')
   const chunks: string[] = []
   let current = ''

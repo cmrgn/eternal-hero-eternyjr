@@ -17,12 +17,12 @@ import {
   type ColorResolvable,
 } from 'discord.js'
 import { diffWords } from 'diff'
+import Bottleneck from 'bottleneck'
 
 import type { ResolvedThread } from './FAQManager'
 import { logger } from '../utils/logger'
 import { commands } from '../commands'
 import type { LanguageObject } from '../constants/i18n'
-import Bottleneck from 'bottleneck'
 
 export type InteractionLike = {
   client: Client

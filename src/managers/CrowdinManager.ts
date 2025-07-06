@@ -1,8 +1,5 @@
 import type { Client } from 'discord.js'
-import {
-  default as Crowdin,
-  type SourceStringsModel,
-} from '@crowdin/crowdin-api-client'
+import { default as Crowdin } from '@crowdin/crowdin-api-client'
 import decompress from 'decompress'
 import csvtojson from 'csvtojson'
 import fetch from 'node-fetch'

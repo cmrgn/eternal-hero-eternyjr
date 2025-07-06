@@ -1,7 +1,7 @@
 import type { Client } from 'discord.js'
+import { sql } from 'kysely'
 
 import { logger } from '../utils/logger'
-import { sql } from 'kysely'
 
 export class FlagsManager {
   #client: Client
@@ -43,7 +43,7 @@ export class FlagsManager {
     return response?.value
   }
 
-  async deleteFeatureFlag(key: string): Promise<boolean> {
+  async deleteFeatureFlag(key: string) {
     this.#log('info', 'Delete feature flag', { key })
 
     const { Database } = this.#client.managers
@@ -55,7 +55,7 @@ export class FlagsManager {
     return response.length > 0
   }
 
-  async getFeatureFlags(): Promise<{ key: string; value: boolean }[]> {
+  async getFeatureFlags() {
     this.#log('info', 'Reading all feature flags')
 
     const { Database } = this.#client.managers

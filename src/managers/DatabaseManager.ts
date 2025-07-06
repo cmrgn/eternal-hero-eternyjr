@@ -1,6 +1,7 @@
 import type { GiveawayData } from 'discord-giveaways'
 import { Kysely, PostgresDialect } from 'kysely'
 import { Pool } from 'pg'
+
 import { IS_DEV } from '../constants/config'
 
 export class DatabaseManager {

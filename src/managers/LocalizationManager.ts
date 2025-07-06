@@ -116,7 +116,7 @@ export class LocalizationManager {
   async translateThread(
     thread: ResolvedThread,
     languageObject: LanguageObject
-  ): Promise<{ name: string; content: string }> {
+  ) {
     this.#log('info', 'Translating thread with DeepL', {
       threadId: thread.id,
       targetLang: languageObject.deepLCode,

@@ -131,10 +131,7 @@ export class SearchManager {
   // perform a search within the alt fuse to find a manually indexed keyword. If
   // it finds one, it will redo the original search with the new keyword. This
   // helps padding some obvious gaps in search results.
-  searchFuzzy(keyword: string): {
-    keyword: string
-    results: SearchResultFuse[]
-  } {
+  searchFuzzy(keyword: string) {
     const { Faq } = this.#client.managers
     const primaryFuse = new Fuse(Faq.threads, {
       ...FUZZY_SEARCH_OPTIONS,
@@ -163,7 +160,7 @@ export class SearchManager {
   // Figure out whether the given result is a relevant one. Note: this needs to
   // happen **before** result normalization since it uses the raw score from
   // Fuse.js, and not the normalized one.
-  isHitRelevant(hit: SearchResultVector | FuseResult<unknown>): boolean {
+  isHitRelevant(hit: SearchResultVector | FuseResult<unknown>) {
     if ('_score' in hit) return hit._score > 0.3
     if ('score' in hit && hit.score) return hit.score <= 0.65
     return false
