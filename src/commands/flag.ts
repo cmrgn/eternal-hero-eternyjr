@@ -1,7 +1,4 @@
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
   type ChatInputCommandInteraction,
   MessageFlags,
   PermissionFlagsBits,
@@ -69,7 +66,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')
 
   const { options, client } = interaction
-  const { Flags } = client.managers
+  const { Flags, Discord } = client.managers
 
   const subCommand = options.getSubcommand()
 
@@ -111,17 +108,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       })
     }
 
-    const confirmBtn = new ButtonBuilder()
-      .setCustomId(`confirm-delete:${flag}`)
-      .setLabel('Yes, delete it')
-      .setStyle(ButtonStyle.Danger)
-    const cancelBtn = new ButtonBuilder()
-      .setCustomId(`cancel-delete:${flag}`)
-      .setLabel('Cancel')
-      .setStyle(ButtonStyle.Secondary)
-    const confirmRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      confirmBtn,
-      cancelBtn
+    const confirmRow = Discord.confirmationComponent(
+      { id: `confirm-delete:${flag}`, label: 'Yes, delete it' },
+      { id: `cancel-delete:${flag}`, label: 'Cancel' }
     )
 
     return interaction.reply({
@@ -135,17 +124,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const newValue = subCommand === 'enable'
 
   if (!(await Flags.hasFeatureFlag(flag))) {
-    const confirmBtn = new ButtonBuilder()
-      .setCustomId(`confirm-create:${flag}:${newValue}`)
-      .setLabel('Yes, create it')
-      .setStyle(ButtonStyle.Primary)
-    const cancelBtn = new ButtonBuilder()
-      .setCustomId(`cancel-create:${flag}`)
-      .setLabel('Cancel')
-      .setStyle(ButtonStyle.Secondary)
-    const confirmRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      confirmBtn,
-      cancelBtn
+    const confirmRow = Discord.confirmationComponent(
+      { id: `confirm-create:${flag}:${newValue}`, label: 'Yes, create it' },
+      { id: `cancel-create:${flag}:${newValue}`, label: 'Nevermind' }
     )
 
     return interaction.reply({

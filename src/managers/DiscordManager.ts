@@ -132,17 +132,9 @@ export class DiscordManager {
       contentDiff.replace(/\n/g, '\n> '),
     ].join('\n')
 
-    const confirmBtn = new ButtonBuilder()
-      .setCustomId(`confirm-retranslate:${thread.id}`)
-      .setLabel('Yes, retranslate')
-      .setStyle(ButtonStyle.Primary)
-    const cancelBtn = new ButtonBuilder()
-      .setCustomId(`skip-retranslate:${thread.id}`)
-      .setLabel('No, skip')
-      .setStyle(ButtonStyle.Secondary)
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      confirmBtn,
-      cancelBtn
+    const row = this.confirmationComponent(
+      { id: `confirm-retranslate:${thread.id}`, label: 'Yes, retranslate' },
+      { id: `skip-retranslate:${thread.id}`, label: 'No, skip' }
     )
 
     await message.author.send({ content, components: [row] })
@@ -248,6 +240,34 @@ export class DiscordManager {
       commandId
     )
     return this.#rest.delete(endpoint)
+  }
+
+  toTimestamp(input: string | Date) {
+    if (typeof input === 'string') {
+      return `<t:${Math.round(new Date(input).valueOf() / 1000)}:d>`
+    }
+
+    return `<t:${Math.round(input.valueOf() / 1000)}:d>`
+  }
+
+  confirmationComponent(
+    confirmBtn: {
+      id: string
+      label?: string
+      style?: keyof typeof ButtonStyle
+    },
+    cancelBtn: { id: string; label?: string; style?: keyof typeof ButtonStyle }
+  ) {
+    return new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId(confirmBtn.id)
+        .setLabel(confirmBtn.label ?? 'Confirm')
+        .setStyle(ButtonStyle[confirmBtn.style ?? 'Primary']),
+      new ButtonBuilder()
+        .setCustomId(cancelBtn.id)
+        .setLabel(cancelBtn.label ?? 'Cancel')
+        .setStyle(ButtonStyle[cancelBtn.style ?? 'Secondary'])
+    )
   }
 }
 

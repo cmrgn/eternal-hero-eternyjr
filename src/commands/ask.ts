@@ -83,11 +83,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     entry_url: url,
     entry_indexed_at: indexedAt,
   } = result.fields as PineconeMetadata
-  const timestamp = `<t:${Math.round(new Date(indexedAt).valueOf() / 1000)}:d>`
 
   embed.addFields(
     { name: 'Source', value: url, inline: true },
-    { name: 'Indexed on', value: timestamp, inline: true }
+    { name: 'Indexed on', value: Discord.toTimestamp(indexedAt), inline: true }
   )
 
   if (raw) {
