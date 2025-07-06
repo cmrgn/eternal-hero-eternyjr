@@ -17,18 +17,19 @@ type DiscordMessage = OmitPartialGroupDMChannel<
 >
 
 export class LeaderboardManager {
-  client: Client
+  #client: Client
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('LeaderboardManager', this.#severityThreshold)
 
   constructor(client: Client) {
     this.#log('info', 'Instantiating manager')
-    this.client = client
+    this.#client = client
   }
 
   isLeaderboardEnabled() {
-    return this.client.flagsManager.getFeatureFlag('faq_leaderboard', { silent: true })
+    const { Flags } = this.#client.managers
+    return Flags.getFeatureFlag('faq_leaderboard', { silent: true })
   }
 
   async register(options: {
@@ -53,7 +54,7 @@ export class LeaderboardManager {
       )
     } catch (error) {
       await sendInteractionAlert(
-        { client: this.client, guildId, channelId, userId },
+        { client: this.#client, guildId, channelId, userId },
         `A link to the FAQ failed to be properly recorded in the database.\`\`\`${error}\`\`\``
       )
 
@@ -86,6 +87,7 @@ export class LeaderboardManager {
     message: DiscordMessage
   ) {
     const { client, guildId, channelId, member, content } = message
+    const { Faq } = client.managers
 
     if (!member || !guildId || !content) return
     if (shouldIgnoreInteraction(message)) return
@@ -95,8 +97,8 @@ export class LeaderboardManager {
 
     // Perform a quick and cheap check to figure out whether the message
     // contains any link whatsoever, otherwise return early.
-    if (!client.faqManager.containsLinkLike(content)) return
-    if (!client.faqManager.links.some(link => content.includes(link))) return
+    if (!Faq.containsLinkLike(content)) return
+    if (!Faq.links.some(link => content.includes(link))) return
 
     const hasAddedMessage = event === Events.MessageCreate
     const hasDeletedMessage = event === Events.MessageDelete
@@ -131,6 +133,7 @@ export class LeaderboardManager {
     newMessage: DiscordMessage
   ) {
     const { client, guildId, channelId, member } = newMessage
+    const { Faq } = client.managers
 
     if (!member || !guildId) return
     if (shouldIgnoreInteraction(newMessage)) return
@@ -139,12 +142,12 @@ export class LeaderboardManager {
     // any link whatsoever, otherwise return early.
     const hadOldMessageLinks =
       oldMessage.content &&
-      client.faqManager.containsLinkLike(oldMessage.content) &&
-      client.faqManager.links.some(link => oldMessage.content?.includes(link))
+      Faq.containsLinkLike(oldMessage.content) &&
+      Faq.links.some(link => oldMessage.content?.includes(link))
     const hasNewMessageLinks =
       newMessage.content &&
-      client.faqManager.containsLinkLike(newMessage.content) &&
-      client.faqManager.links.some(link => newMessage.content?.includes(link))
+      Faq.containsLinkLike(newMessage.content) &&
+      Faq.links.some(link => newMessage.content?.includes(link))
 
     if (hadOldMessageLinks === hasNewMessageLinks) return
     if (!(await this.isLeaderboardEnabled())) {
@@ -170,14 +173,10 @@ export class LeaderboardManager {
 
     // Look for FAQ links in any message in order to maintain the FAQ
     // leaderboard.
-    this.client.on(Events.MessageCreate, this.faqLinksOnCreate.bind(this))
-    this.client.on(Events.MessageDelete, this.faqLinksOnDelete.bind(this))
-    this.client.on(Events.MessageUpdate, this.faqLinksOnUpdate.bind(this))
-  }
-}
+    this.#client.on(Events.MessageCreate, this.faqLinksOnCreate.bind(this))
+    this.#client.on(Events.MessageDelete, this.faqLinksOnDelete.bind(this))
+    this.#client.on(Events.MessageUpdate, this.faqLinksOnUpdate.bind(this))
 
-export const initLeaderboardManager = (client: Client) => {
-  const leaderboardManager = new LeaderboardManager(client)
-  leaderboardManager.bindEvents()
-  return leaderboardManager
+    return this
+  }
 }

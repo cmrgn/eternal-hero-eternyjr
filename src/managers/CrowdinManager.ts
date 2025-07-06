@@ -7,7 +7,6 @@ import decompress from 'decompress'
 import csvtojson from 'csvtojson'
 import fetch from 'node-fetch'
 
-import { CROWDIN_TOKEN } from '../constants/config'
 import { logger } from '../utils/logger'
 import type { LocalizationItem } from './LocalizationManager'
 import {
@@ -31,9 +30,9 @@ export type CrowdinItem = Record<CrowdinCode, string> & {
 }
 
 export class CrowdinManager {
-  client: Client
-  crowdin: Crowdin
+  #client: Client
 
+  #crowdin: Crowdin
   #projectId = 797774
 
   #cachedTranslations: LocalizationItem[] | null = null
@@ -45,9 +44,14 @@ export class CrowdinManager {
 
   constructor(client: Client) {
     this.#log('info', 'Instantiating manager')
+
+    if (!process.env.CROWDIN_TOKEN) {
+      throw new Error('Missing environment variable CROWDIN_TOKEN; aborting.')
+    }
+
     // @ts-expect-error
-    this.crowdin = new Crowdin.default({ token: CROWDIN_TOKEN ?? '' })
-    this.client = client
+    this.#crowdin = new Crowdin.default({ token: process.env.CROWDIN_TOKEN })
+    this.#client = client
   }
 
   getLanguages(options: { withEnglish: boolean }) {
@@ -60,7 +64,7 @@ export class CrowdinManager {
 
   async getProject() {
     this.#log('info', 'Resolving project')
-    const projects = await this.crowdin.projectsGroupsApi.listProjects()
+    const projects = await this.#crowdin.projectsGroupsApi.listProjects()
     const project = projects.data.find(
       ({ data: { id } }) => id === this.#projectId
     )
@@ -73,7 +77,7 @@ export class CrowdinManager {
     this.#log('info', 'Getting project progress')
 
     const { data: projectProgress } =
-      await this.crowdin.translationStatusApi.getProjectProgress(
+      await this.#crowdin.translationStatusApi.getProjectProgress(
         this.#projectId
       )
 
@@ -85,7 +89,7 @@ export class CrowdinManager {
 
     const {
       data: { id: buildId },
-    } = await this.crowdin.translationsApi.buildProject(this.#projectId)
+    } = await this.#crowdin.translationsApi.buildProject(this.#projectId)
 
     return buildId
   }
@@ -95,7 +99,7 @@ export class CrowdinManager {
 
     let status = 'inProgress'
     while (status === 'inProgress') {
-      const { data } = await this.crowdin.translationsApi.checkBuildStatus(
+      const { data } = await this.#crowdin.translationsApi.checkBuildStatus(
         this.#projectId,
         buildId
       )
@@ -109,7 +113,7 @@ export class CrowdinManager {
     this.#log('info', 'Downloading build artefact', { buildId })
 
     // Retrieve the URL to download the zip file with all CSV translation files
-    const { data } = await this.crowdin.translationsApi.downloadTranslations(
+    const { data } = await this.#crowdin.translationsApi.downloadTranslations(
       this.#projectId,
       buildId
     )
@@ -174,9 +178,4 @@ export class CrowdinManager {
   ) {
     return Promise.all(this.getLanguages({ withEnglish }).map(handler))
   }
-}
-
-export const initCrowdinManager = (client: Client) => {
-  const manager = new CrowdinManager(client)
-  return manager
 }

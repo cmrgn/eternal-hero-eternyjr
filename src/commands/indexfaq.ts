@@ -6,15 +6,12 @@ import {
 } from 'discord.js'
 import pMap from 'p-map'
 import Bottleneck from 'bottleneck'
-import * as deepl from 'deepl-node'
 import { GlossaryEntries } from 'deepl-node'
 
-import type { ResolvedThread } from '../managers/FAQManager'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { logger } from '../utils/logger'
 import { sendInteractionAlert } from '../utils/sendInteractionAlert'
 import { cleanUpTranslation } from '../utils/cleanUpTranslation'
-import { DEEPL_GLOSSARY_ID } from '../constants/config'
 
 export const scope = 'OFFICIAL'
 
@@ -82,20 +79,18 @@ async function fetchFAQContent(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Fetching FAQ content')
 
   const { client, options } = interaction
-  const { faqManager } = client
+  const { Faq } = client.managers
   const threadId = options.getString('thread_id')
 
   if (threadId) {
     await interaction.editReply(`Fetching thread with ID \`${threadId}\`…`)
     const thread = (await client.channels.fetch(threadId)) as AnyThreadChannel
 
-    return [await faqManager.resolveThread(thread)]
+    return [await Faq.resolveThread(thread)]
   }
 
   await interaction.editReply('Loading all FAQ threads…')
-  return Promise.all(
-    faqManager.threads.map(thread => faqManager.resolveThread(thread))
-  )
+  return Promise.all(Faq.threads.map(thread => Faq.resolveThread(thread)))
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -123,13 +118,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
 async function commandThread(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
-  const { faqManager, crowdinManager, indexManager } = client
+  const { Faq, Crowdin, Index } = client.managers
   const threadId = options.getString('thread_id', true)
   const crowdinCode = options.getString('language') as CrowdinCode | undefined
   const thread = (await client.channels.fetch(threadId)) as AnyThreadChannel
 
   await interaction.editReply(`Loading thread with ID \`${threadId}\`…`)
-  const resolvedThread = await faqManager.resolveThread(thread)
+  const resolvedThread = await Faq.resolveThread(thread)
 
   function onIndexFailure(error: unknown) {
     return sendInteractionAlert(
@@ -152,34 +147,29 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
       await interaction.editReply(
         `Indexing thread with ID \`${threadId}\` in namespace \`${crowdinCode}\`…`
       )
-      await indexManager.translateAndIndexThread(resolvedThread, languageObject)
+      await Index.translateAndIndexThread(resolvedThread, languageObject)
     } catch (error) {
       await onIndexFailure(error)
     }
   } else {
     await interaction.editReply('Indexing thread in all languages…')
 
-    await crowdinManager.onCrowdinLanguages(
-      async (languageObject, index, languages) => {
-        const progress = Math.round(((index + 1) / languages.length) * 100)
-        try {
-          await interaction.editReply({
-            content: [
-              `Indexing thread with ID \`${threadId}\` in progress…`,
-              `- Namespace: \`${languageObject.crowdinCode}\``,
-              `- Progress: ${progress}%`,
-              `- Thread: _“${resolvedThread.name}”_`,
-            ].join('\n'),
-          })
-          await indexManager.translateAndIndexThread(
-            resolvedThread,
-            languageObject
-          )
-        } catch (error) {
-          await onIndexFailure(error)
-        }
+    await Crowdin.onCrowdinLanguages(async (languageObject, i, languages) => {
+      const progress = Math.round(((i + 1) / languages.length) * 100)
+      try {
+        await interaction.editReply({
+          content: [
+            `Indexing thread with ID \`${threadId}\` in progress…`,
+            `- Namespace: \`${languageObject.crowdinCode}\``,
+            `- Progress: ${progress}%`,
+            `- Thread: _“${resolvedThread.name}”_`,
+          ].join('\n'),
+        })
+        await Index.translateAndIndexThread(resolvedThread, languageObject)
+      } catch (error) {
+        await onIndexFailure(error)
       }
-    )
+    })
   }
 
   return interaction.editReply(
@@ -189,7 +179,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
 
 async function commandLanguage(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
-  const { indexManager } = client
+  const { Index } = client.managers
   const crowdinCode = options.getString('language', true)
   const threadsWithContent = await fetchFAQContent(interaction)
   const total = threadsWithContent.length
@@ -204,7 +194,7 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
   // This function is responsible for reporting the current progress by editing
   // the original message while respecting Discord’s rate limits
   const notify = discordEditLimiter.wrap(
-    (thread: ResolvedThread, index: number) =>
+    (thread: (typeof threadsWithContent)[number], index: number) =>
       interaction.editReply({
         content: [
           'Indexing in progress…',
@@ -221,8 +211,8 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
   // Pinecone’s limits).
   if (crowdinCode === 'en') {
     await interaction.editReply('Indexing all FAQ threads…')
-    await indexManager.indexRecords(
-      threadsWithContent.map(thread => indexManager.prepareForIndexing(thread)),
+    await Index.indexRecords(
+      threadsWithContent.map(thread => Index.prepareForIndexing(thread)),
       crowdinCode
     )
   }
@@ -236,9 +226,9 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
     await interaction.editReply('Indexing all FAQ threads…')
     await pMap(
       threadsWithContent.entries(),
-      async ([index, thread]) => {
-        await notify(thread, index)
-        await indexManager.translateAndIndexThread(thread, languageObject)
+      async ([i, thread]) => {
+        await notify(thread, i)
+        await Index.translateAndIndexThread(thread, languageObject)
       },
       { concurrency: 25 } // DeepL has a 30 RPS limit
     )
@@ -251,9 +241,9 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
 
 async function commandDeepl(interaction: ChatInputCommandInteraction) {
   const { client } = interaction
-  const { localizationManager, crowdinManager } = client
-  const translations = await crowdinManager.fetchAllProjectTranslations()
-  const languageObjects = crowdinManager.getLanguages({ withEnglish: false })
+  const { Localization, Crowdin } = client.managers
+  const translations = await Crowdin.fetchAllProjectTranslations()
+  const languageObjects = Crowdin.getLanguages({ withEnglish: false })
 
   await Promise.all(
     languageObjects.map(async ({ crowdinCode, twoLettersCode }) => {
@@ -281,8 +271,8 @@ async function commandDeepl(interaction: ChatInputCommandInteraction) {
       ]
 
       const pairs = translations
-        .map(({ key, translations: t }) => {
-          if (IGNORED_KEYS.includes(key)) return ['', ''] as const
+        .map(({ key, translations: t }): [string, string] => {
+          if (IGNORED_KEYS.includes(key)) return ['', '']
           try {
             const cleanSource = cleanUpTranslation(t.en)
             const cleanTarget = cleanUpTranslation(t[crowdinCode])
@@ -290,25 +280,15 @@ async function commandDeepl(interaction: ChatInputCommandInteraction) {
               throw new Error('Variable still present in string.')
             GlossaryEntries.validateGlossaryTerm(cleanSource)
             GlossaryEntries.validateGlossaryTerm(cleanTarget)
-            return [cleanSource, cleanTarget] as const
+            return [cleanSource, cleanTarget]
           } catch {
-            return ['', ''] as const
+            return ['', '']
           }
         })
         .filter(([src, tgt]) => src && tgt)
 
-      if (pairs.length === 0) return
-
-      const entries = Object.fromEntries(pairs)
-
-      await localizationManager.deepl.updateMultilingualGlossaryDictionary(
-        DEEPL_GLOSSARY_ID,
-        {
-          sourceLangCode: 'en',
-          targetLangCode,
-          entries: new deepl.GlossaryEntries({ entries }),
-        }
-      )
+      if (pairs.length)
+        await Localization.updateDeepLGlossary(pairs, targetLangCode)
     })
   )
 
@@ -317,9 +297,8 @@ async function commandDeepl(interaction: ChatInputCommandInteraction) {
 
 async function commandStats(interaction: ChatInputCommandInteraction) {
   const { client } = interaction
-  const { faqManager, crowdinManager, localizationManager, indexManager } =
-    client
-  const languageObjects = crowdinManager.getLanguages({ withEnglish: false })
+  const { Faq, Crowdin, Localization, Index } = client.managers
+  const languageObjects = Crowdin.getLanguages({ withEnglish: false })
   const threads = await fetchFAQContent(interaction)
   const wordCount = threads.reduce(
     (acc, thread) => acc + thread.content.trim().split(/\s+/).length,
@@ -329,8 +308,8 @@ async function commandStats(interaction: ChatInputCommandInteraction) {
     (acc, thread) => acc + thread.content.trim().length,
     0
   )
-  const deeplUsage = await localizationManager.deepl.getUsage()
-  const pcUsage = await indexManager.index.describeIndexStats()
+  const deeplUsage = await Localization.deepl.getUsage()
+  const pcUsage = await Index.index.describeIndexStats()
 
   const totalRecordCounts = Object.entries(pcUsage.namespaces ?? {}).reduce(
     (acc, [name, data]) =>
@@ -346,7 +325,7 @@ async function commandStats(interaction: ChatInputCommandInteraction) {
   const cf = currencyFormatter.format
 
   const costPerChar = 20 / 1_000_000
-  const entryCount = faqManager.threads.length
+  const entryCount = Faq.threads.length
   const languageCount = languageObjects.length
   const avgCharPerEntry = charCount / entryCount
   const totalChar = charCount * languageCount

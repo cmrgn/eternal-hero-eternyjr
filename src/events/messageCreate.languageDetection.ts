@@ -20,6 +20,7 @@ export async function languageDetection(
   channel: GuildBasedChannel
 ) {
   const { guild, client } = interaction
+  const { Localization } = client.managers
 
   // Remove URLs from the message before performing language detection as to not
   // consider URL content.
@@ -33,7 +34,7 @@ export async function languageDetection(
   const isInRelevantCategory = INCLUDED_CATEGORY_IDS.includes(channel.parentId)
   if (!isTestChannel && !isInRelevantCategory) return
 
-  const crowdinCode = client.localizationManager.guessLanguageWithCld3(content)
+  const crowdinCode = Localization.guessLanguageWithCld3(content)
 
   // If the guessed language is not unknown or unreliable, return early as it’s
   // better to have a false negative than a false positive.

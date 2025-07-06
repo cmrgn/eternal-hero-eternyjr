@@ -21,17 +21,16 @@ type Command = {
 declare module 'discord.js' {
   export interface Client {
     commands: Collection<PropertyKey, Command>
-
-    crowdinManager: CrowdinManager
-    faqManager: FAQManager
-    giveawaysManager: GiveawaysManager
-    indexManager: IndexManager
-    leaderboardManager: LeaderboardManager
-    localizationManager: LocalizationManager
-    promptManager: PromptManager
-    searchManager: SearchManager
-    flagsManager: FlagsManager
-
-    languageIdentifier: LanguageIdentifier
+    managers: {
+      Crowdin: CrowdinManager
+      Faq: FAQManager
+      Giveaways: GiveawaysManager
+      Index: IndexManager
+      Leaderboard: LeaderboardManager
+      Localization: LocalizationManager
+      Prompt: PromptManager
+      Search: SearchManager
+      Flags: FlagsManager
+    }
   }
 }

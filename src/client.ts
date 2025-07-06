@@ -1,15 +1,15 @@
 import { Client, Collection, GatewayIntentBits, Partials } from 'discord.js'
 
 import { commands } from './commands'
-import { initCrowdinManager } from './managers/CrowdinManager'
-import { initFAQManager } from './managers/FAQManager'
-import { initFlagsManager } from './managers/FlagsManager'
+import { CrowdinManager } from './managers/CrowdinManager'
+import { FAQManager } from './managers/FAQManager'
+import { FlagsManager } from './managers/FlagsManager'
 import { initGiveawayManager } from './managers/GiveawayManager'
-import { initIndexManager } from './managers/IndexManager'
-import { initLeaderboardManager } from './managers/LeaderboardManager'
-import { initLocalizationManager } from './managers/LocalizationManager'
-import { initPromptManager } from './managers/PromptManager'
-import { initSearchManager } from './managers/SearchManager'
+import { IndexManager } from './managers/IndexManager'
+import { LeaderboardManager } from './managers/LeaderboardManager'
+import { LocalizationManager } from './managers/LocalizationManager'
+import { PromptManager } from './managers/PromptManager'
+import { SearchManager } from './managers/SearchManager'
 
 export const client = new Client({
   intents: [
@@ -27,12 +27,14 @@ for (const command of Object.values(commands)) {
   client.commands.set(command.data.name, command)
 }
 
-client.giveawaysManager = initGiveawayManager(client)
-client.faqManager = initFAQManager(client)
-client.leaderboardManager = initLeaderboardManager(client)
-client.searchManager = initSearchManager(client)
-client.flagsManager = initFlagsManager(client)
-client.indexManager = initIndexManager(client)
-client.promptManager = initPromptManager(client)
-client.localizationManager = initLocalizationManager(client)
-client.crowdinManager = initCrowdinManager(client)
+// @ts-expect-error
+client.managers = {}
+client.managers.Giveaways = initGiveawayManager(client)
+client.managers.Faq = new FAQManager(client).bindEvents()
+client.managers.Leaderboard = new LeaderboardManager(client).bindEvents()
+client.managers.Search = new SearchManager(client)
+client.managers.Flags = new FlagsManager(client)
+client.managers.Index = new IndexManager(client).bindEvents()
+client.managers.Prompt = new PromptManager(client)
+client.managers.Localization = new LocalizationManager(client)
+client.managers.Crowdin = new CrowdinManager(client)

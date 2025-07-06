@@ -3,7 +3,6 @@ import type { SearchRecordsResponse } from '@pinecone-database/pinecone'
 import type { AnyThreadChannel } from 'discord.js'
 import Fuse, { type FuseResult } from 'fuse.js'
 
-import { PINECONE_API_KEY } from '../constants/config'
 import type { CrowdinCode } from '../constants/i18n'
 import { logger } from '../utils/logger'
 
@@ -35,8 +34,8 @@ const FUZZY_SEARCH_OPTIONS = {
 }
 
 export class SearchManager {
-  client: Client
-  altFuse: Fuse<{ from: string; to: string }>
+  #client: Client
+  #altFuse: Fuse<{ from: string; to: string }>
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('SearchManager', this.#severityThreshold)
@@ -44,8 +43,8 @@ export class SearchManager {
   constructor(client: Client) {
     this.#log('info', 'Instantiating manager')
 
-    this.client = client
-    this.altFuse = new Fuse(
+    this.#client = client
+    this.#altFuse = new Fuse(
       [
         { from: 'error token', to: 'invalid token error' },
         { from: 'floating', to: 'extra weapon mastery point' },
@@ -75,14 +74,6 @@ export class SearchManager {
       namespaceName,
       limit,
     })
-
-    if (!PINECONE_API_KEY && type === 'VECTOR') {
-      type = 'FUZZY'
-      this.#log(
-        'warn',
-        'Missing environment variable PINECONE_API_KEY; falling back to Fuzzy search.'
-      )
-    }
 
     if (type === 'VECTOR') {
       try {
@@ -123,16 +114,15 @@ export class SearchManager {
     namespaceName: PineconeNamespace,
     limit = 1
   ) {
-    const response = await this.client.indexManager
-      .namespace(namespaceName)
-      .searchRecords({
-        query: { topK: limit, inputs: { text: query } },
-        rerank: {
-          model: 'bge-reranker-v2-m3',
-          topN: limit,
-          rankFields: ['chunk_text'],
-        },
-      })
+    const { Index } = this.#client.managers
+    const response = await Index.namespace(namespaceName).searchRecords({
+      query: { topK: limit, inputs: { text: query } },
+      rerank: {
+        model: 'bge-reranker-v2-m3',
+        topN: limit,
+        rankFields: ['chunk_text'],
+      },
+    })
 
     return response.result.hits as SearchResultVector[]
   }
@@ -145,7 +135,8 @@ export class SearchManager {
     keyword: string
     results: SearchResultFuse[]
   } {
-    const primaryFuse = new Fuse(this.client.faqManager.threads, {
+    const { Faq } = this.#client.managers
+    const primaryFuse = new Fuse(Faq.threads, {
       ...FUZZY_SEARCH_OPTIONS,
       keys: ['name'],
     })
@@ -155,7 +146,7 @@ export class SearchManager {
     if (results.length) return { keyword, results }
 
     // Base search without results, no alternative search available
-    const altKeywords = this.altFuse.search(keyword).filter(this.isHitRelevant)
+    const altKeywords = this.#altFuse.search(keyword).filter(this.isHitRelevant)
     const altKeyword = altKeywords[0]
     if (!altKeyword) return { keyword, results: [] }
 
@@ -199,9 +190,4 @@ export class SearchManager {
 
     return result
   }
-}
-
-export const initSearchManager = (client: Client) => {
-  const searchManager = new SearchManager(client)
-  return searchManager
 }

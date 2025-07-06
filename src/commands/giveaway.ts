@@ -112,7 +112,10 @@ function getGiveaway(
   interaction: ChatInputCommandInteraction,
   messageId: string
 ) {
-  return interaction.client.giveawaysManager.giveaways.find(
+  const { client } = interaction
+  const { Giveaways } = client.managers
+
+  return Giveaways.giveaways.find(
     giveaway =>
       giveaway.guildId === interaction.guildId &&
       giveaway.messageId === messageId
@@ -133,6 +136,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     logger.logCommand(interaction, 'Starting command execution')
 
     const { client, options, channel } = interaction
+    const { Giveaways } = client.managers
     const subcommand = options.getSubcommand()
     const isStart = subcommand === 'start'
     const messageId = options.getString('message_id', !isStart) ?? ''
@@ -143,15 +147,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       case 'start': {
         logger.logCommand(interaction, 'Starting giveaway')
 
-        const data = await client.giveawaysManager.start(
-          channel as GuildTextBasedChannel,
-          {
-            duration: ms(options.getString('duration', true) as StringValue),
-            winnerCount: options.getInteger('winner_count') ?? 1,
-            prize: options.getString('prize', true),
-            messages: MESSAGES,
-          }
-        )
+        const data = await Giveaways.start(channel as GuildTextBasedChannel, {
+          duration: ms(options.getString('duration', true) as StringValue),
+          winnerCount: options.getInteger('winner_count') ?? 1,
+          prize: options.getString('prize', true),
+          messages: MESSAGES,
+        })
         await interaction.reply(initiatorAnswer(data.messageId, 'started'))
 
         break
@@ -159,7 +160,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       case 'reroll': {
         logger.logCommand(interaction, 'Rerolling giveaway')
 
-        await client.giveawaysManager.reroll(messageId, {
+        await Giveaways.reroll(messageId, {
           winnerCount: options.getInteger('new_winner_count') ?? undefined,
         })
         await interaction.reply(initiatorAnswer(messageId, 'rerolled'))
@@ -170,7 +171,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const extraDuration = options.getString('extra_duration')
         logger.logCommand(interaction, 'Editing giveaway')
 
-        await client.giveawaysManager.edit(messageId, {
+        await Giveaways.edit(messageId, {
           addTime: extraDuration ? ms(extraDuration as StringValue) : undefined,
           newWinnerCount: options.getInteger('new_winner_count') ?? undefined,
           newPrize: options.getString('new_prize') ?? undefined,
@@ -182,7 +183,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       case 'delete': {
         logger.logCommand(interaction, 'Deleting giveaway')
 
-        await client.giveawaysManager.delete(messageId)
+        await Giveaways.delete(messageId)
         await interaction.reply(initiatorAnswer(messageId, 'deleted'))
 
         break
@@ -190,7 +191,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       case 'end': {
         logger.logCommand(interaction, 'Ending giveaway')
 
-        await client.giveawaysManager.end(messageId)
+        await Giveaways.end(messageId)
         await interaction.reply(initiatorAnswer(messageId, 'ended'))
 
         break

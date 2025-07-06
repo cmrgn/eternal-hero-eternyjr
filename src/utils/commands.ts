@@ -1,9 +1,14 @@
 import { REST, Routes } from 'discord.js'
 
-import { DISCORD_TOKEN, DISCORD_CLIENT_ID } from '../constants/config'
+import { DISCORD_TOKEN } from '../constants/config'
 import { DISCORD_SERVER_ID, TEST_SERVER_ID } from '../constants/discord'
 import { commands } from '../commands'
 
+if (!process.env.DISCORD_CLIENT_ID) {
+  throw new Error('Missing environment variable DISCORD_CLIENT_ID; aborting.')
+}
+
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN)
 
 export async function deployCommands(guildId: string) {

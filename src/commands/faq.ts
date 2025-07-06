@@ -44,6 +44,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')
 
   const { client, guildId, channelId, member, options } = interaction
+  const { Search, Leaderboard } = client.managers
   const visible = options.getBoolean('visible') ?? false
   const user = options.getUser('user')
   const keyword = options.getString('keyword', true)
@@ -51,24 +52,24 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const embed = createEmbed().setTitle(`FAQ search: “${keyword}”`)
 
   logger.logCommand(interaction, 'Performing search')
-  const search = await client.searchManager.search(keyword, method, 'en', 5)
+  const { query, results } = await Search.search(keyword, method, 'en', 5)
 
-  if (search.results.length > 0) {
-    if (method === 'FUZZY' && search.query !== keyword) {
+  if (results.length > 0) {
+    if (method === 'FUZZY' && query !== keyword) {
       embed.setDescription(
-        `Your search for “${keyword}” yielded no results, but it seems related to _${search.query}_.`
+        `Your search for “${keyword}” yielded no results, but it seems related to _${query}_.`
       )
     }
 
     embed.addFields(
-      search.results.map(result => ({
+      results.map(result => ({
         name: result.fields.entry_question,
         value: result.fields.entry_url,
       }))
     )
 
     logger.logCommand(interaction, 'Reporting search results', {
-      results: search.results.map(result => ({
+      results: results.map(result => ({
         name: result.fields.entry_question,
         score: result._score,
       })),
@@ -77,7 +78,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     if (visible && member && guildId) {
       const userId = member.user.id
       logger.logCommand(interaction, 'Recording contribution')
-      client.leaderboardManager.register({ userId, channelId, guildId })
+      await Leaderboard.register({ userId, channelId, guildId })
     }
   } else {
     const message = `A ${method.toLowerCase()} search for _“${keyword}”_ yielded no results.`

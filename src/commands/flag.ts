@@ -60,21 +60,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')
 
   const { options, client } = interaction
-  const { flagsManager } = client
+  const { Flags } = client.managers
 
   const subCommand = options.getSubcommand()
 
   if (subCommand === 'get') {
     const flag = options.getString('name')
     if (flag) {
-      const value = await flagsManager.getFeatureFlag(flag)
+      const value = await Flags.getFeatureFlag(flag)
       return interaction.reply({
         content: `Flag \`${flag}\` is currently **${value ? 'ENABLED' : 'DISABLED'}**.`,
         flags: MessageFlags.Ephemeral,
       })
     }
 
-    const flags = await flagsManager.getFeatureFlags()
+    const flags = await Flags.getFeatureFlags()
     const content = `Feature flags:\n${flags
       .map(
         ({ key, value }) => `- \`${key}\`: ${value ? 'ENABLED' : 'DISABLED'}`
@@ -89,7 +89,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   if (subCommand === 'delete') {
     const flag = options.getString('name', true)
-    await flagsManager.deleteFeatureFlag(flag)
+    await Flags.deleteFeatureFlag(flag)
 
     return interaction.reply({
       content: `Flag \`${flag}\` has been deleted.`,
@@ -99,7 +99,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const flag = options.getString('name', true)
   const newValue = subCommand === 'enable'
-  await flagsManager.setFeatureFlag(flag, newValue)
+  await Flags.setFeatureFlag(flag, newValue)
 
   return interaction.reply({
     content: `Flag \`${flag}\` has been set to **${newValue ? 'ENABLED' : 'DISABLED'}**.`,

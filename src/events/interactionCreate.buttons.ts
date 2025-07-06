@@ -2,18 +2,19 @@ import type { ButtonInteraction } from 'discord.js'
 
 export async function handleButtons(interaction: ButtonInteraction) {
   const [action, threadId] = interaction.customId.split(':')
-  const { channels, faqManager, indexManager } = interaction.client
+  const { channels, managers } = interaction.client
+  const { Faq, Index } = managers
 
   if (action === 'retranslate') {
     const thread = await channels.fetch(threadId)
     if (!thread?.isThread()) return
 
-    const resolvedThread = await faqManager.resolveThread(thread)
+    const resolvedThread = await Faq.resolveThread(thread)
     await interaction.update({
       content: 'Retranslation started…',
       components: [],
     })
-    await indexManager.translateAndIndexThreadInAllLanguages(resolvedThread)
+    await Index.translateAndIndexThreadInAllLanguages(resolvedThread)
     await interaction.update({
       content: 'Retranslation and reindexing successful.',
       components: [],

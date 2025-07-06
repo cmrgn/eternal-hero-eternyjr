@@ -1,8 +1,10 @@
 import pg from 'pg'
 
-import { DATABASE_URL } from '../constants/config'
+if (!process.env.DATABASE_URL) {
+  throw new Error('Missing environment variable DATABASE_URL; aborting.')
+}
 
 export const pool = new pg.Pool({
-  connectionString: DATABASE_URL,
+  connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }, // for Heroku Postgres SSL
 })

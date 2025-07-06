@@ -52,7 +52,7 @@ For instance, searching for “augmentation” yields no result because the entr
 
 ### Key features
 
-- Language detection via localizationManager.
+- Language detection via localization manager.
 - Uses AI summarization to improve the response unless raw is selected.
 - Handles error cases gracefully if the language can’t be detected or no FAQ entries match.
 

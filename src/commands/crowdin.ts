@@ -93,14 +93,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 }
 
 async function commandProgress(interaction: ChatInputCommandInteraction) {
-  const { options } = interaction
-  const { crowdinManager } = interaction.client
+  const { options, client } = interaction
+  const { Crowdin } = client.managers
   const crowdinCode = options.getString('language') as CrowdinCode | undefined
   const visible = options.getBoolean('visible') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
 
   logger.logCommand(interaction, 'Getting project progress')
-  const projectProgress = await crowdinManager.getProjectProgress()
+  const projectProgress = await Crowdin.getProjectProgress()
 
   const header = '**Translation progress:**\n'
   const footer =
@@ -141,8 +141,8 @@ function formatLanguageProgress({
 }
 
 async function commandTerm(interaction: ChatInputCommandInteraction) {
-  const { options } = interaction
-  const { crowdinManager } = interaction.client
+  const { options, client } = interaction
+  const { Crowdin } = client.managers
   const key = options.getString('key', true)
   const crowdinCode = options.getString('language') as CrowdinCode | undefined
   const visible = options.getBoolean('visible') ?? false
@@ -150,7 +150,7 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply({ flags })
 
-  const translations = await crowdinManager.fetchAllProjectTranslations()
+  const translations = await Crowdin.fetchAllProjectTranslations()
   const string = translations.find(translation => translation.key === key)
 
   if (!string) {
@@ -160,7 +160,7 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
     })
   }
 
-  const languageObjects = crowdinManager.getLanguages({ withEnglish: false })
+  const languageObjects = Crowdin.getLanguages({ withEnglish: false })
 
   if (crowdinCode) {
     const languageObject = languageObjects.find(

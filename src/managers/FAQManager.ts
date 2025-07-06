@@ -34,7 +34,7 @@ export type ThreadEvents = {
 }
 
 export class FAQManager {
-  client: Client
+  #client: Client
   guildId: string
 
   #threads: AnyThreadChannel[]
@@ -52,7 +52,7 @@ export class FAQManager {
 
   constructor(client: Client) {
     this.#log('info', 'Instantiating manager')
-    this.client = client
+    this.#client = client
     // Force `guildId` to `DISCORD_SERVER_ID` to test with the real FAQ, even
     // of the test server
     this.guildId = IS_DEV
@@ -126,7 +126,7 @@ export class FAQManager {
 
   async getGuild() {
     this.#log('info', 'Getting guild object')
-    const { guilds } = this.client
+    const { guilds } = this.#client
     return guilds.cache.get(this.guildId) ?? (await guilds.fetch(this.guildId))
   }
 
@@ -282,16 +282,13 @@ export class FAQManager {
 
   bindEvents() {
     this.#log('info', 'Binding events onto the manager instance')
-    this.client.once(Events.ClientReady, this.cacheThreads.bind(this))
-    this.client.on(Events.ThreadCreate, this.onThreadCreate.bind(this))
-    this.client.on(Events.ThreadDelete, this.onThreadDelete.bind(this))
-    this.client.on(Events.ThreadUpdate, this.onThreadUpdate.bind(this))
-    this.client.on(Events.MessageUpdate, this.onMessageUpdate.bind(this))
-  }
-}
 
-export const initFAQManager = (client: Client) => {
-  const manager = new FAQManager(client)
-  manager.bindEvents()
-  return manager
+    this.#client.once(Events.ClientReady, this.cacheThreads.bind(this))
+    this.#client.on(Events.ThreadCreate, this.onThreadCreate.bind(this))
+    this.#client.on(Events.ThreadDelete, this.onThreadDelete.bind(this))
+    this.#client.on(Events.ThreadUpdate, this.onThreadUpdate.bind(this))
+    this.#client.on(Events.MessageUpdate, this.onMessageUpdate.bind(this))
+
+    return this
+  }
 }

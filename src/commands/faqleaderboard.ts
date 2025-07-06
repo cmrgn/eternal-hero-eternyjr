@@ -24,15 +24,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')
 
   const { guildId, client, options } = interaction
+  const { Leaderboard } = client.managers
   const size = options.getInteger('size') ?? 5
 
   if (!guildId) return
 
   logger.logCommand(interaction, 'Retrieving leaderboard data')
-  const leaderboard = await client.leaderboardManager.getLeaderboard(
-    guildId,
-    size
-  )
+  const leaderboard = await Leaderboard.getLeaderboard(guildId, size)
 
   const embed = createEmbed().setTitle('FAQ Leaderboard')
 

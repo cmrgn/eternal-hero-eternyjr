@@ -8,12 +8,8 @@ import { onGuildCreate } from './events/guildCreate'
 import { onMessageCreate } from './events/messageCreate'
 import { onInteractionCreate } from './events/interactionCreate'
 
-async function main() {
-  await client.login(DISCORD_TOKEN)
-  client.once(Events.ClientReady, onClientReady)
-  client.on(Events.GuildCreate, onGuildCreate)
-  client.on(Events.MessageCreate, onMessageCreate)
-  client.on(Events.InteractionCreate, onInteractionCreate)
-}
-
-main()
+client.login(DISCORD_TOKEN)
+client.once(Events.ClientReady, onClientReady)
+client.on(Events.GuildCreate, onGuildCreate)
+client.on(Events.MessageCreate, onMessageCreate)
+client.on(Events.InteractionCreate, onInteractionCreate)

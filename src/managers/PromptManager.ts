@@ -2,7 +2,6 @@ import type { Client } from 'discord.js'
 import OpenAI from 'openai'
 
 import { logger } from '../utils/logger'
-import { OPENAI_API_KEY } from '../constants/config'
 import type { LanguageObject } from '../constants/i18n'
 
 const SYSTEM_PROMPT = `
@@ -29,8 +28,8 @@ About tone and formatting:
 `
 
 export class PromptManager {
-  client: Client
-  openai: OpenAI
+  #client: Client
+  #openai: OpenAI
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('PromptManager', this.#severityThreshold)
@@ -38,16 +37,17 @@ export class PromptManager {
   constructor(client: Client) {
     this.#log('info', 'Instantiating manager')
 
-    if (!OPENAI_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       throw new Error('Missing environment variable OPENAI_API_KEY; aborting.')
     }
 
-    this.client = client
-    this.openai = new OpenAI({ apiKey: OPENAI_API_KEY })
+    this.#client = client
+    this.#openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   }
 
   async ensureChatGPTisEnabled() {
-    const isEnabled = await this.client.flagsManager.getFeatureFlag('chatgpt')
+    const { Flags } = this.#client.managers
+    const isEnabled = await Flags.getFeatureFlag('chatgpt')
 
     if (!isEnabled) throw new Error('ChatGPT usage is disabled; aborting.')
   }
@@ -71,7 +71,7 @@ export class PromptManager {
 
     await this.ensureChatGPTisEnabled()
 
-    const response = await this.openai.chat.completions.create({
+    const response = await this.#openai.chat.completions.create({
       model,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -114,9 +114,4 @@ export class PromptManager {
       Keep the tone helpful, clear, and concise. Your goal is to make the FAQ answer more approachable, but never less accurate.
       `)
   }
-}
-
-export const initPromptManager = (client: Client) => {
-  const promptManager = new PromptManager(client)
-  return promptManager
 }

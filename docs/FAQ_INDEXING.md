@@ -10,7 +10,7 @@ FAQ indexing is the process of taking FAQ content from Discord threads (or their
 
 - If a thread ID is provided (`/index thread`), the bot fetches that specific thread.
 - If indexing a whole language (`/index language`), it loads all threads from the FAQ manager.
-- Uses `faqManager.resolveThread()` to extract thread content.
+- Uses `Faq.resolveThread()` to extract thread content.
 
 ### Handle translation
 
@@ -25,8 +25,8 @@ FAQ indexing is the process of taking FAQ content from Discord threads (or their
 - Converts each thread into a **vector embedding**, representing the semantic meaning.
 - Uploads the embeddings to Pinecone under a namespace for the target language (e.g., `en`, `fr`).
 - The process uses:
-  - `indexManager.translateAndIndexThread()` — for non-English threads.
-  - `indexManager.indexRecords()` — for English (no translation needed).
+  - `Index.translateAndIndexThread()` — for non-English threads.
+  - `Index.indexRecords()` — for English (no translation needed).
 
 ### Progress reporting
 

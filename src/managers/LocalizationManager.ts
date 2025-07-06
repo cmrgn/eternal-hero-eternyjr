@@ -2,7 +2,6 @@ import type { Client } from 'discord.js'
 import * as deepl from 'deepl-node'
 import { type LanguageIdentifier, loadModule } from 'cld3-asm'
 
-import { DEEPL_API_KEY, DEEPL_GLOSSARY_ID } from '../constants/config'
 import {
   type CrowdinCode,
   CROWDIN_CODES,
@@ -17,9 +16,11 @@ export type LocalizationItem = {
 }
 
 export class LocalizationManager {
-  client: Client
+  #client: Client
+
+  #languageIdentifier: LanguageIdentifier | undefined
   deepl: deepl.DeepLClient
-  languageIdentifier: LanguageIdentifier | undefined
+  #deepLGlossaryId = 'b88f1891-8a05-4d87-965f-67de6b825693'
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('LocalizationManager', this.#severityThreshold)
@@ -27,18 +28,25 @@ export class LocalizationManager {
   constructor(client: Client) {
     this.#log('info', 'Instantiating manager')
 
-    if (!DEEPL_API_KEY) {
+    if (!process.env.DEEPL_API_KEY) {
       throw new Error('Missing environment variable DEEPL_API_KEY; aborting.')
     }
 
-    this.client = client
-    this.deepl = new deepl.DeepLClient(DEEPL_API_KEY)
+    this.#client = client
+    this.deepl = new deepl.DeepLClient(process.env.DEEPL_API_KEY)
     this.loadLanguageIdentifier()
+  }
+
+  async ensureDeepLisEnabled() {
+    const { Flags } = this.#client.managers
+    const isEnabled = await Flags.getFeatureFlag('deepl')
+
+    if (!isEnabled) throw new Error('DeepL usage is disabled; aborting.')
   }
 
   async loadLanguageIdentifier() {
     this.#log('info', 'Loading language identifier')
-    this.languageIdentifier = (await loadModule()).create(40)
+    this.#languageIdentifier = (await loadModule()).create(40)
   }
 
   isLanguageSupported(language: string): language is CrowdinCode {
@@ -50,8 +58,8 @@ export class LocalizationManager {
     // message posted on Discord. This is too verbose and pollutes the logs.
     // this.#log('info', 'Guessing language with cld3', { userInput })
 
-    if (!this.languageIdentifier) return null
-    const guess = this.languageIdentifier.findLanguage(userInput)
+    if (!this.#languageIdentifier) return null
+    const guess = this.#languageIdentifier.findLanguage(userInput)
 
     if (
       guess.probability >= 0.9 &&
@@ -67,7 +75,8 @@ export class LocalizationManager {
   async guessLanguageWithChatGPT(userInput: string) {
     this.#log('info', 'Guessing language with ChatGPT', { userInput })
 
-    const response = await this.client.promptManager.promptGPT(
+    const { Prompt } = this.#client.managers
+    const response = await Prompt.promptGPT(
       userInput,
       [
         'Return the ISO 639-1 code for the language of the message.',
@@ -113,9 +122,7 @@ export class LocalizationManager {
       targetLang: languageObject.deepLCode,
     })
 
-    if ((await this.client.flagsManager.getFeatureFlag('deepl')) === false) {
-      throw new Error('DeepL usage is disabled; aborting.')
-    }
+    await this.ensureDeepLisEnabled()
 
     // DeepL is quite agressive with line breaks and tend to remove them, which
     // is a problem when handling lists. A workaround is to give it a bunch of
@@ -131,15 +138,30 @@ export class LocalizationManager {
         splitSentences: 'off',
         formality: 'prefer_less',
         modelType: 'quality_optimized',
-        glossary: DEEPL_GLOSSARY_ID,
+        glossary: this.#deepLGlossaryId,
       }
     )
 
     return { name: name.text, content: content.map(c => c.text).join('\n') }
   }
-}
 
-export const initLocalizationManager = (client: Client) => {
-  const localizationManager = new LocalizationManager(client)
-  return localizationManager
+  async updateDeepLGlossary(pairs: [string, string][], targetLangCode: string) {
+    this.#log('info', 'Updating the DeepL glossary', {
+      count: pairs.length,
+      targetLang: targetLangCode,
+    })
+
+    await this.ensureDeepLisEnabled()
+
+    await this.deepl.updateMultilingualGlossaryDictionary(
+      this.#deepLGlossaryId,
+      {
+        sourceLangCode: 'en',
+        targetLangCode,
+        entries: new deepl.GlossaryEntries({
+          entries: Object.fromEntries(pairs),
+        }),
+      }
+    )
+  }
 }

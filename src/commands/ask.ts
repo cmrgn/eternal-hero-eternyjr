@@ -37,7 +37,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')
 
   const { options, client } = interaction
-  const { searchManager, localizationManager, promptManager } = client
+  const { Search, Localization, Prompt } = client.managers
 
   const query = options.getString('question', true)
   // @TODO: bring back the visibility option after the beta phase
@@ -50,7 +50,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ flags })
 
   logger.logCommand(interaction, 'Guessing the input’s language')
-  const guessedLanguage = await localizationManager.guessCrowdinLanguage(query)
+  const guessedLanguage = await Localization.guessCrowdinLanguage(query)
   const languageObject = LANGUAGE_OBJECTS.find(
     languageObject => languageObject.crowdinCode === guessedLanguage
   )
@@ -66,12 +66,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const { crowdinCode } = languageObject
 
   logger.logCommand(interaction, 'Performing the search', { crowdinCode })
-  const { results } = await searchManager.search(
-    query,
-    'VECTOR',
-    crowdinCode,
-    1
-  )
+  const { results } = await Search.search(query, 'VECTOR', crowdinCode, 1)
   const [result] = results
 
   if (!result) {
@@ -108,7 +103,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     question,
     crowdinCode,
   })
-  const localizedAnswer = await promptManager.summarize(query, context)
+  const localizedAnswer = await Prompt.summarize(query, context)
 
   embed.setDescription(localizedAnswer ?? answer)
 

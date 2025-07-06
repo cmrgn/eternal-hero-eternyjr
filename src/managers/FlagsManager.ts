@@ -4,7 +4,7 @@ import { logger } from '../utils/logger'
 import { pool } from '../utils/pg'
 
 export class FlagsManager {
-  client: Client
+  #client: Client
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('FlagsManager', this.#severityThreshold)
@@ -12,10 +12,13 @@ export class FlagsManager {
   constructor(client: Client) {
     this.#log('info', 'Instantiating manager')
 
-    this.client = client
+    this.#client = client
   }
 
-  async getFeatureFlag(key: string, options?: { silent: boolean }): Promise<boolean> {
+  async getFeatureFlag(
+    key: string,
+    options?: { silent: boolean }
+  ): Promise<boolean> {
     if (!options?.silent) this.#log('info', 'Reading feature flag', { key })
 
     const res = await pool.query(
@@ -57,9 +60,4 @@ export class FlagsManager {
       [key, value]
     )
   }
-}
-
-export const initFlagsManager = (client: Client) => {
-  const flagsManager = new FlagsManager(client)
-  return flagsManager
 }
