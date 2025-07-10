@@ -5,7 +5,7 @@ import {
 } from 'discord.js'
 
 import { logger } from '../utils/logger'
-import type { PineconeMetadata } from '../managers/SearchManager'
+import type { PineconeMetadata } from '../managers/IndexManager'
 import { ENGLISH_LANGUAGE_OBJECT, LANGUAGE_OBJECTS } from '../constants/i18n'
 
 export const scope = 'OFFICIAL'
