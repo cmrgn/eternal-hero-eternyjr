@@ -3,21 +3,8 @@ import type { SearchRecordsResponse } from '@pinecone-database/pinecone'
 import type { AnyThreadChannel } from 'discord.js'
 import Fuse, { type FuseResult } from 'fuse.js'
 
-import type { CrowdinCode } from '../constants/i18n'
 import { logger } from '../utils/logger'
-
-export type PineconeMetadata = {
-  entry_question: string
-  entry_answer: string
-  entry_tags: string[]
-  entry_indexed_at: string
-  entry_url: string
-}
-export type PineconeEntry = {
-  id: string
-  chunk_text: string
-} & PineconeMetadata
-export type PineconeNamespace = CrowdinCode
+import type { PineconeMetadata, PineconeNamespace } from './IndexManager'
 
 type Hit = SearchRecordsResponse['result']['hits'][number]
 type SearchResultVector = Hit & { fields: PineconeMetadata }

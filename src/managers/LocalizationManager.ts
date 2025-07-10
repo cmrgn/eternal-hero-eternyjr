@@ -109,10 +109,30 @@ export class LocalizationManager {
       targetLang: targetLangCode,
     })
 
-    const input = `${thread.name}\n${thread.content}`
-    const translation = await DeepL.translate(input, targetLangCode)
-    const [name, ...content] = translation.split('\n')
+    // If the thread has a single message, we can translate the thread name and
+    // the thread content in a single DeepL query for performance.
+    if (thread.messages.length === 1) {
+      const message = thread.messages[0]
+      const input = `${thread.name}\n${message.content}`
+      const translation = await DeepL.translate(input, targetLangCode)
+      const [name, ...content] = translation.split('\n')
 
-    return { name, content: content.join('\n') }
+      return { name, messages: [{ ...message, content: content.join('\n') }] }
+    }
+
+    const [name, ...messages] = await Promise.all([
+      DeepL.translate(thread.name, targetLangCode),
+      ...thread.messages.map(({ content }) =>
+        DeepL.translate(content, targetLangCode)
+      ),
+    ])
+
+    return {
+      name,
+      messages: thread.messages.map((message, index) => ({
+        ...message,
+        content: messages[index],
+      })),
+    }
   }
 }

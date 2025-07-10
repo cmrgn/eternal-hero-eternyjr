@@ -6,9 +6,21 @@ import {
 } from '@pinecone-database/pinecone'
 
 import type { ResolvedThread } from './FAQManager'
-import type { PineconeEntry, PineconeNamespace } from './SearchManager'
-import type { LanguageObject } from '../constants/i18n'
+import type { CrowdinCode, LanguageObject } from '../constants/i18n'
 import { logger } from '../utils/logger'
+
+export type PineconeMetadata = {
+  entry_question: string
+  entry_answer: string
+  entry_tags: string[]
+  entry_indexed_at: string
+  entry_url: string
+}
+export type PineconeEntry = {
+  id: string
+  chunk_text: string
+} & PineconeMetadata
+export type PineconeNamespace = CrowdinCode
 
 export class IndexManager {
   #client: Client
@@ -32,16 +44,26 @@ export class IndexManager {
     }).index('faq-index')
   }
 
-  prepareForIndexing(entry: ResolvedThread): PineconeEntry {
-    return {
-      id: `entry#${entry.id}`,
-      chunk_text: `${entry.name}\n\n${entry.content}`,
+  prepareForIndexing(entry: ResolvedThread): PineconeEntry[] {
+    return entry.messages.map(message => ({
+      // The index was originally built without considering multiple messages
+      // (and thus chunks) for a given thread. To avoid ending up with multiple
+      // Pinecone entries for the same message (e.g. a given FAQ thread indexed
+      // as `entry#<thread-id>` and `entry#<thread-id>#<message-id>`), keep the
+      // old naming convention for the first message of every entry, and only
+      // add the message ID if there is more than 1.
+      id:
+        message.id === entry.id
+          ? `entry#${entry.id}`
+          : `entry#${entry.id}#${message.id}`,
+      chunk_text: `${entry.name}\n\n${message.content}`,
       entry_question: entry.name,
-      entry_answer: entry.content,
+      entry_answer: message.content,
       entry_indexed_at: new Date().toISOString(),
       entry_tags: entry.tags,
-      entry_url: entry.url,
-    }
+      entry_url:
+        message.id === entry.id ? entry.url : `${entry.url}/${message.id}`,
+    }))
   }
 
   getNamespaceName(namespaceName: PineconeNamespace) {
@@ -80,8 +102,8 @@ export class IndexManager {
   async indexThread(thread: ResolvedThread, namespaceName: PineconeNamespace) {
     this.#log('info', 'Indexing thread', { action: 'UPSERT', id: thread.id })
 
-    const record = this.prepareForIndexing(thread)
-    await this.indexRecords([record], namespaceName)
+    const records = this.prepareForIndexing(thread)
+    await this.indexRecords(records, namespaceName)
   }
 
   async translateAndIndexThreadInAllLanguages(thread: ResolvedThread) {
@@ -104,7 +126,9 @@ export class IndexManager {
         id: threadId,
         namespace: this.getNamespaceName(namespaceName),
       })
-      await this.namespace(namespaceName).deleteOne(threadId)
+      await this.namespace(namespaceName).deleteMany({
+        id: { $regex: `^entry#${threadId}` },
+      })
     } catch (error) {
       // Unindexing may fail with a 404 if the resource didn’t exist in the
       // index to begin with
@@ -135,11 +159,11 @@ export class IndexManager {
 
     if (crowdinCode === 'en') return this.indexThread(thread, crowdinCode)
 
-    const { name, content } = await Localization.translateThread(
+    const { name, messages } = await Localization.translateThread(
       thread,
       languageObject
     )
-    await this.indexThread({ ...thread, name, content }, crowdinCode)
+    await this.indexThread({ ...thread, name, messages }, crowdinCode)
   }
 
   bindEvents() {

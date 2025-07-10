@@ -14,6 +14,7 @@ export type ResolvedThread = {
   isResolved: true
   id: string
   name: string
+  messages: { content: string; id: string }[]
   content: string
   tags: string[]
   url: string
@@ -277,13 +278,18 @@ export class FAQManager {
     )
   }
 
-  async resolveThreadContent(thread: AnyThreadChannel) {
+  async resolveThreadMessage(thread: AnyThreadChannel) {
     const firstMessage = await thread.fetchStarterMessage()
 
-    return this.cleanUpThreadContent(firstMessage?.content)
+    return [
+      {
+        content: this.cleanUpThreadContent(firstMessage?.content),
+        id: thread.id,
+      },
+    ]
   }
 
-  async resolveMultiThreadContent(
+  async resolveThreadMessages(
     thread: AnyThreadChannel,
     { skipFirst }: { skipFirst: boolean }
   ) {
@@ -296,9 +302,10 @@ export class FAQManager {
         // Drop the very first message (which may be a ToC) if needed
         .filter(message => (skipFirst ? message.id !== thread.id : true))
         // Clean up each message individually
-        .map(message => this.cleanUpThreadContent(message.content))
-        // Join them all into a single string
-        .join('\n')
+        .map(message => ({
+          content: this.cleanUpThreadContent(message.content),
+          id: message.id,
+        }))
     )
   }
 
@@ -309,15 +316,16 @@ export class FAQManager {
     // multiple messages, and all of it should be index.
     const hasMultiplePosts =
       thread.id === '1392774418651938846' || thread.id === '1324842936281595904'
-    const content = hasMultiplePosts
-      ? await this.resolveMultiThreadContent(thread, { skipFirst: true })
-      : await this.resolveThreadContent(thread)
+    const messages = hasMultiplePosts
+      ? await this.resolveThreadMessages(thread, { skipFirst: true })
+      : await this.resolveThreadMessage(thread)
 
     return {
       isResolved: true,
       id: thread.id,
       name: thread.name,
-      content: content,
+      messages: messages,
+      content: messages.map(message => message.content).join('\n'),
       tags: this.getThreadTags(thread),
       url: thread.url,
     }
