@@ -36,6 +36,7 @@ export class FAQManager {
 
   #threads: AnyThreadChannel[]
   #links: string[]
+  #tocId = '1315713544058310707'
 
   #listeners = {
     ThreadCreated: [] as ThreadEvents['ThreadCreated'][],
@@ -137,7 +138,11 @@ export class FAQManager {
       faq.threads.fetchArchived(),
     ])
 
-    const activeThreads = Array.from(activeThreadRes.threads.values())
+    // Ignore the pinned thread used as a table of contents since there is no
+    // point in translating or indexing it.
+    const activeThreads = Array.from(activeThreadRes.threads.values()).filter(
+      thread => thread.id !== this.#tocId
+    )
     const archivedThreads = Array.from(archivedThreadRes.threads.values())
     const threads = [...activeThreads, ...archivedThreads]
 
