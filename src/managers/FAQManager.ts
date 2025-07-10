@@ -277,16 +277,47 @@ export class FAQManager {
     )
   }
 
+  async resolveThreadContent(thread: AnyThreadChannel) {
+    const firstMessage = await thread.fetchStarterMessage()
+
+    return this.cleanUpThreadContent(firstMessage?.content)
+  }
+
+  async resolveMultiThreadContent(
+    thread: AnyThreadChannel,
+    { skipFirst }: { skipFirst: boolean }
+  ) {
+    const messages = await thread.messages.fetch()
+
+    return (
+      Array.from(messages.values())
+        // Messages come in reverse chronological order, so reverse the list
+        .reverse()
+        // Drop the very first message (which may be a ToC) if needed
+        .filter(message => (skipFirst ? message.id !== thread.id : true))
+        // Clean up each message individually
+        .map(message => this.cleanUpThreadContent(message.content))
+        // Join them all into a single string
+        .join('\n')
+    )
+  }
+
   async resolveThread(thread: AnyThreadChannel): Promise<ResolvedThread> {
     this.#log('info', 'Resolving thread', { id: thread.id })
 
-    const firstMessage = await thread.fetchStarterMessage()
+    // This is a bit of a hack for the beginner guide since it is spread over
+    // multiple messages, and all of it should be index.
+    const hasMultiplePosts =
+      thread.id === '1392774418651938846' || thread.id === '1324842936281595904'
+    const content = hasMultiplePosts
+      ? await this.resolveMultiThreadContent(thread, { skipFirst: true })
+      : await this.resolveThreadContent(thread)
 
     return {
       isResolved: true,
       id: thread.id,
       name: thread.name,
-      content: this.cleanUpThreadContent(firstMessage?.content),
+      content: content,
       tags: this.getThreadTags(thread),
       url: thread.url,
     }
