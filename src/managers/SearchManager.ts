@@ -115,16 +115,21 @@ export class SearchManager {
     limit = 1
   ) {
     const { Index } = this.#client.managers
+    // We query and rerank more entries than the amount of results we want in
+    // order to improve accuracy. For starters, querying is very cheap, so we
+    // can easily query a lot of content without a problem. Reranking is a bit
+    // more expensive, so we rerank the most promising candidates to sort them
+    // by relevance. Eventually, we return the number of results we expect.
     const response = await Index.namespace(namespaceName).searchRecords({
-      query: { topK: limit, inputs: { text: query } },
+      query: { topK: Math.max(20, limit), inputs: { text: query } },
       rerank: {
         model: 'bge-reranker-v2-m3',
-        topN: limit,
+        topN: Math.max(5, limit),
         rankFields: ['chunk_text'],
       },
     })
 
-    return response.result.hits as SearchResultVector[]
+    return response.result.hits.slice(0, limit) as SearchResultVector[]
   }
 
   // Perform a fuzzy search with Fuse.js. If it yields no result, it will
