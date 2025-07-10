@@ -12,17 +12,17 @@ export async function handleButtons(interaction: ButtonInteraction) {
 
     const resolvedThread = await Faq.resolveThread(thread)
     await interaction.update({
-      content: 'Retranslation started…',
+      content: `Retranslation of thread \`${id}\` started…`,
       components: [],
     })
     await Index.translateAndIndexThreadInAllLanguages(resolvedThread)
     await interaction.update({
-      content: 'Retranslation and reindexing successful.',
+      content: `Retranslation and reindexing of thread \`${id}\` successful.`,
       components: [],
     })
   } else if (action === 'skip-retranslate') {
     await interaction.update({
-      content: 'Retranslation skipped.',
+      content: `Retranslation of thread \`${id}\` skipped.`,
       components: [],
     })
   }
