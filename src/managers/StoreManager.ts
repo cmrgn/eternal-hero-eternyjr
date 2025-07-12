@@ -104,14 +104,16 @@ export class StoreManager {
         iapId,
       })
 
+    const languageObjects = Crowdin.getLanguages({ withEnglish: false }).filter(
+      languageObject => languageObject.locale in translation.translations
+    )
+
     await Promise.all([
       this.#googlePlay.updateIapLocalization(
         googlePlayIap,
         translation.translations
       ),
-      ...LANGUAGE_OBJECTS.filter(
-        languageObject => languageObject.locale in translation.translations
-      ).map(languageObject =>
+      ...languageObjects.map(languageObject =>
         this.#appleStore.updateIapLocalization(
           languageObject,
           appleStoreIap,
@@ -137,7 +139,6 @@ export class StoreManager {
     const googlePlayLimit = pLimit(5)
     await Promise.all(
       googlePlayIaps
-        .filter(iap => iap.sku)
         .map(iap => {
           const translation = translations.find(({ key }) => key === iap.sku)
           if (!translation) return
@@ -153,25 +154,31 @@ export class StoreManager {
 
     this.#log('info', 'Updating Apple Store in-app purchases localizations')
     const appleStoreLimit = pLimit(5)
-    const languages = Crowdin.getLanguages({ withEnglish: false })
+    const languageObjects = Crowdin.getLanguages({ withEnglish: false })
     await Promise.all(
-      appleStoreIaps.map(iap => {
-        return appleStoreLimit(() =>
-          Promise.all(
-            languages.map(language => {
-              const iapTranslations = translations.find(
-                ({ key }) => key === iap.attributes.productId
-              )
-              if (!iapTranslations) return
-              return this.#appleStore.updateIapLocalization(
-                language,
-                iap,
-                iapTranslations.translations[language.locale]
-              )
-            })
+      appleStoreIaps
+        .map(iap => {
+          const iapLocalizationEntry = translations.find(
+            ({ key }) => key === iap.attributes.productId
           )
-        )
-      })
+          if (!iapLocalizationEntry) return
+          return appleStoreLimit(() =>
+            Promise.all(
+              languageObjects
+                .filter(
+                  ({ locale }) => locale in iapLocalizationEntry.translations
+                )
+                .map(languageObject =>
+                  this.#appleStore.updateIapLocalization(
+                    languageObject,
+                    iap,
+                    iapLocalizationEntry.translations[languageObject.locale]
+                  )
+                )
+            )
+          )
+        })
+        .filter(Boolean)
     )
   }
 }
