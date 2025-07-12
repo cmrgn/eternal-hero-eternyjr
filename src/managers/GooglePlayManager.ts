@@ -20,6 +20,10 @@ export class GooglePlayManager {
 
   #packageName = 'games.rivvy.eternalherorpg'
 
+  #cachedIAPs: InAppPurchase[] | null = null
+  #lastFetchedAtIAPs = 0
+  #cacheTTL = 15 * 60 * 1000 // 15 minutes
+
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('GooglePlayManager', this.#severityThreshold)
 
@@ -54,12 +58,18 @@ export class GooglePlayManager {
   async fetchAllIaps() {
     this.#log('info', 'Fetching all IAPs')
 
+    const now = Date.now()
+
+    if (this.#cachedIAPs && now - this.#lastFetchedAtIAPs < this.#cacheTTL) {
+      return this.#cachedIAPs
+    }
+
     const response = await this.#ap.inappproducts.list({
       packageName: this.#packageName,
       maxResults: 1000, // optional, default is 100
     })
 
-    return (
+    const IAPs =
       response.data.inappproduct?.map(
         product =>
           ({
@@ -69,7 +79,13 @@ export class GooglePlayManager {
             listings: product.listings,
           }) as InAppPurchase
       ) ?? []
-    )
+
+    if (IAPs.length > 0) {
+      this.#cachedIAPs = IAPs
+      this.#lastFetchedAtIAPs = now
+    }
+
+    return IAPs
   }
 
   async updateIapLocalization(iap: InAppPurchase, listings: ListingsWithName) {
