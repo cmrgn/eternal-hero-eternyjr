@@ -7,6 +7,7 @@ import * as flag from './flag'
 import * as indexfaq from './indexfaq'
 import * as giveaway from './giveaway'
 import * as rule from './rule'
+import * as store from './store'
 import * as talk from './talk'
 import * as timeout from './timeout'
 
@@ -20,6 +21,7 @@ export const commands = {
   giveaway,
   indexfaq,
   rule,
+  store,
   talk,
   timeout,
 }

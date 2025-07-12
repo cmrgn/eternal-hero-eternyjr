@@ -149,7 +149,8 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply({ flags })
 
-  const translations = await Crowdin.fetchAllProjectTranslations()
+  const files = await Crowdin.fetchAllProjectTranslations()
+  const translations = await Crowdin.extractTranslationsFromFiles(files)
   const string = translations.find(translation => translation.key === key)
 
   if (!string) {

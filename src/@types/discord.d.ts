@@ -12,6 +12,7 @@ import type { LeaderboardManager } from '../managers/LeaderboardManager'
 import type { LocalizationManager } from '../managers/LocalizationManager'
 import type { PromptManager } from '../managers/PromptManager'
 import type { SearchManager } from '../managers/SearchManager'
+import type { StoreManager } from '../managers/StoreManager'
 import type { FlagsManager } from '../managers/FlagsManager'
 
 type Command = {
@@ -36,6 +37,7 @@ declare module 'discord.js' {
       Localization: LocalizationManager
       Prompt: PromptManager
       Search: SearchManager
+      Store: StoreManager
       Flags: FlagsManager
     }
   }
