@@ -9,9 +9,9 @@ export const scope = 'OFFICIAL'
 export const data = new SlashCommandBuilder()
   .setName('store')
   .addStringOption(option =>
-    option.setName('iap').setDescription('IAP identifier')
+    option.setName('iap').setDescription('In-app purchase identifier')
   )
-  .setDescription('Localize the store IAP')
+  .setDescription('Localize the store in-app purchases')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   const { client, options } = interaction
@@ -26,6 +26,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.editReply({
     content: iap
       ? `Successfully uploaded translations for \`${iap}\`.`
-      : 'Successfully uploaded IAP translations.',
+      : 'Successfully uploaded all in-app purchases translations.',
   })
 }

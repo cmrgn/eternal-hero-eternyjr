@@ -27,8 +27,8 @@ export class AppleStoreManager {
   #apiUrl = 'https://api.appstoreconnect.apple.com/v1'
   #appId = '6503089848'
 
-  #cachedIAPs: InAppPurchase[] | null = null
-  #lastFetchedAtIAPs = 0
+  #cachedIaps: InAppPurchase[] | null = null
+  #lastFetchedAtIaps = 0
   #cacheTTL = 15 * 60 * 1000 // 15 minutes
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
@@ -104,7 +104,7 @@ export class AppleStoreManager {
   }
 
   async fetchAllIaps() {
-    this.#log('info', 'Fetching all IAPs')
+    this.#log('info', 'Fetching all in-app purchases')
 
     const getAllPages = async (initialUrl: string) => {
       let results: InAppPurchase[] = []
@@ -121,22 +121,22 @@ export class AppleStoreManager {
     }
 
     const now = Date.now()
-    if (this.#cachedIAPs && now - this.#lastFetchedAtIAPs < this.#cacheTTL) {
-      return this.#cachedIAPs
+    if (this.#cachedIaps && now - this.#lastFetchedAtIaps < this.#cacheTTL) {
+      return this.#cachedIaps
     }
 
     const data = await getAllPages(
       `${this.#apiUrl}/apps/${this.#appId}/inAppPurchasesV2`
     )
 
-    this.#cachedIAPs = data
-    this.#lastFetchedAtIAPs = now
+    this.#cachedIaps = data
+    this.#lastFetchedAtIaps = now
 
     return data
   }
 
   async getIapInfo(data: InAppPurchase): Promise<LocalizedIap> {
-    this.#log('info', 'Getting IAP info', {
+    this.#log('info', 'Getting in-app purchase info', {
       id: data.id,
       slug: data.attributes.productId,
     })
@@ -182,7 +182,7 @@ export class AppleStoreManager {
 
     if (!translations) return
 
-    this.#log('info', 'Updating IAP localization', {
+    this.#log('info', 'Updating in-app purchase localization', {
       locale,
       id: iap.attributes.productId,
       translations,
@@ -219,7 +219,7 @@ export class AppleStoreManager {
       )
     }
 
-    this.#log('info', 'Successfully updated IAP localization', {
+    this.#log('info', 'Successfully updated in-app purchase localization', {
       locale,
       id: iap.attributes.productId,
       translations,

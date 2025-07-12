@@ -20,8 +20,8 @@ export class GooglePlayManager {
 
   #packageName = 'games.rivvy.eternalherorpg'
 
-  #cachedIAPs: InAppPurchase[] | null = null
-  #lastFetchedAtIAPs = 0
+  #cachedIaps: InAppPurchase[] | null = null
+  #lastFetchedAtIaps = 0
   #cacheTTL = 15 * 60 * 1000 // 15 minutes
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
@@ -56,12 +56,12 @@ export class GooglePlayManager {
   }
 
   async fetchAllIaps() {
-    this.#log('info', 'Fetching all IAPs')
+    this.#log('info', 'Fetching all in-app purchases')
 
     const now = Date.now()
 
-    if (this.#cachedIAPs && now - this.#lastFetchedAtIAPs < this.#cacheTTL) {
-      return this.#cachedIAPs
+    if (this.#cachedIaps && now - this.#lastFetchedAtIaps < this.#cacheTTL) {
+      return this.#cachedIaps
     }
 
     const response = await this.#ap.inappproducts.list({
@@ -69,7 +69,7 @@ export class GooglePlayManager {
       maxResults: 1000, // optional, default is 100
     })
 
-    const IAPs =
+    const iaps =
       response.data.inappproduct?.map(
         product =>
           ({
@@ -80,16 +80,16 @@ export class GooglePlayManager {
           }) as InAppPurchase
       ) ?? []
 
-    if (IAPs.length > 0) {
-      this.#cachedIAPs = IAPs
-      this.#lastFetchedAtIAPs = now
+    if (iaps.length > 0) {
+      this.#cachedIaps = iaps
+      this.#lastFetchedAtIaps = now
     }
 
-    return IAPs
+    return iaps
   }
 
   async updateIapLocalization(iap: InAppPurchase, listings: ListingsWithName) {
-    this.#log('info', 'Updating IAP localization', {
+    this.#log('info', 'Updating in-app purchase localization', {
       id: iap.sku,
       listings,
     })
@@ -107,7 +107,7 @@ export class GooglePlayManager {
       },
     })
 
-    this.#log('info', 'Successfully updated IAP localization', {
+    this.#log('info', 'Successfully updated in-app purchase localization', {
       id: iap.sku,
       listings,
     })

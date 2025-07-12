@@ -75,32 +75,38 @@ export class StoreManager {
   async updateIapLocalization(iapId: string) {
     const { Crowdin } = this.#client.managers
 
-    this.#log('info', 'Updating IAP localization', { iapId })
+    this.#log('info', 'Updating in-app purchase localization', { iapId })
 
     const files = await Crowdin.fetchStoreTranslations()
     const translations = this.formatStoreTranslations(files)
     const translation = translations.find(({ key }) => key === iapId)
     if (!translation)
-      return this.#log('warn', 'No translation found for IAP.', { iapId })
+      return this.#log('warn', 'No translation found for in-app purchase.', {
+        iapId,
+      })
 
-    this.#log('info', 'Updating Google Play IAP localization')
-    const [appleStoreIAPs, googlePlayIAPs] = await Promise.all([
+    this.#log('info', 'Updating Google Play in-app purchase localization')
+    const [appleStoreIaps, googlePlayIaps] = await Promise.all([
       this.#appleStore.fetchAllIaps(),
       this.#googlePlay.fetchAllIaps(),
     ])
-    const googlePlayIAP = googlePlayIAPs.find(iap => iap.sku === iapId)
-    if (!googlePlayIAP)
-      return this.#log('warn', 'No Google Play IAP found.', { iapId })
+    const googlePlayIap = googlePlayIaps.find(iap => iap.sku === iapId)
+    if (!googlePlayIap)
+      return this.#log('warn', 'No Google Play in-app purchase found.', {
+        iapId,
+      })
 
-    const appleStoreIAP = appleStoreIAPs.find(
+    const appleStoreIap = appleStoreIaps.find(
       iap => iap.attributes.productId === iapId
     )
-    if (!appleStoreIAP)
-      return this.#log('warn', 'No Apple Store IAP found.', { iapId })
+    if (!appleStoreIap)
+      return this.#log('warn', 'No Apple Store in-app purchase found.', {
+        iapId,
+      })
 
     await Promise.all([
       /*this.#googlePlay.updateIapLocalization(
-        googlePlayIAP,
+        googlePlayIap,
         translation.translations
       ),*/
       ...LANGUAGE_OBJECTS.filter(
@@ -108,7 +114,7 @@ export class StoreManager {
       ).map(languageObject =>
         this.#appleStore.updateIapLocalization(
           languageObject,
-          appleStoreIAP,
+          appleStoreIap,
           translation.translations[languageObject.locale]
         )
       ),
@@ -118,19 +124,19 @@ export class StoreManager {
   async updateIapLocalizations() {
     const { Crowdin } = this.#client.managers
 
-    this.#log('info', 'Updating IAP localizations')
+    this.#log('info', 'Updating in-app purchases localizations')
 
     const files = await Crowdin.fetchStoreTranslations()
     const translations = this.formatStoreTranslations(files)
-    const [appleStoreIAPs, googlePlayIAPs] = await Promise.all([
+    const [appleStoreIaps, googlePlayIaps] = await Promise.all([
       this.#appleStore.fetchAllIaps(),
       this.#googlePlay.fetchAllIaps(),
     ])
 
-    this.#log('info', 'Updating Google Play IAP localizations')
+    this.#log('info', 'Updating Google Play in-app purchases localizations')
     const googlePlayLimit = pLimit(5)
     await Promise.all(
-      googlePlayIAPs
+      googlePlayIaps
         // @TODO: remove comparison after test
         .filter(iap => iap.sku === 'costume_angel')
         .map(iap => {
@@ -146,14 +152,14 @@ export class StoreManager {
         .filter(Boolean)
     )
 
-    this.#log('info', 'Updating Apple Store IAP localizations')
+    this.#log('info', 'Updating Apple Store in-app purchases localizations')
     const appleStoreLimit = pLimit(5)
     // @TODO: remove filter after test
     const languages = Crowdin.getLanguages({ withEnglish: false }).filter(
       language => language.crowdinCode === 'fr'
     )
     await Promise.all(
-      appleStoreIAPs
+      appleStoreIaps
         // @TODO: remove comparison after test
         .filter(iap => iap.attributes.productId === 'costume_angel')
         .map(iap => {
