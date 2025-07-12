@@ -105,10 +105,10 @@ export class StoreManager {
       })
 
     await Promise.all([
-      /*this.#googlePlay.updateIapLocalization(
+      this.#googlePlay.updateIapLocalization(
         googlePlayIap,
         translation.translations
-      ),*/
+      ),
       ...LANGUAGE_OBJECTS.filter(
         languageObject => languageObject.locale in translation.translations
       ).map(languageObject =>
@@ -137,16 +137,15 @@ export class StoreManager {
     const googlePlayLimit = pLimit(5)
     await Promise.all(
       googlePlayIaps
-        // @TODO: remove comparison after test
-        .filter(iap => iap.sku === 'costume_angel')
+        .filter(iap => iap.sku)
         .map(iap => {
           const translation = translations.find(({ key }) => key === iap.sku)
           if (!translation) return
           return googlePlayLimit(() =>
-            this.#googlePlay.updateIapLocalization(iap, {
-              // @TODO: remove pick after test
-              'fr-FR': translation.translations['fr-FR'],
-            })
+            this.#googlePlay.updateIapLocalization(
+              iap,
+              translation.translations
+            )
           )
         })
         .filter(Boolean)
@@ -154,31 +153,25 @@ export class StoreManager {
 
     this.#log('info', 'Updating Apple Store in-app purchases localizations')
     const appleStoreLimit = pLimit(5)
-    // @TODO: remove filter after test
-    const languages = Crowdin.getLanguages({ withEnglish: false }).filter(
-      language => language.crowdinCode === 'fr'
-    )
+    const languages = Crowdin.getLanguages({ withEnglish: false })
     await Promise.all(
-      appleStoreIaps
-        // @TODO: remove comparison after test
-        .filter(iap => iap.attributes.productId === 'costume_angel')
-        .map(iap => {
-          return appleStoreLimit(() =>
-            Promise.all(
-              languages.map(language => {
-                const iapTranslations = translations.find(
-                  ({ key }) => key === iap.attributes.productId
-                )
-                if (!iapTranslations) return
-                return this.#appleStore.updateIapLocalization(
-                  language,
-                  iap,
-                  iapTranslations.translations[language.locale]
-                )
-              })
-            )
+      appleStoreIaps.map(iap => {
+        return appleStoreLimit(() =>
+          Promise.all(
+            languages.map(language => {
+              const iapTranslations = translations.find(
+                ({ key }) => key === iap.attributes.productId
+              )
+              if (!iapTranslations) return
+              return this.#appleStore.updateIapLocalization(
+                language,
+                iap,
+                iapTranslations.translations[language.locale]
+              )
+            })
           )
-        })
+        )
+      })
     )
   }
 }
