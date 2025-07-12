@@ -29,7 +29,7 @@ export const LANGUAGE_OBJECTS = [
     twoLettersCode: 'en' as const,
     crowdinCode: 'en' as const,
     deepLCode: 'en' as TargetLanguageCode,
-    locale: 'en-EN' as const,
+    locale: 'en-US' as const,
     languageName: 'English',
     role: 'en | English',
     channel: 'en-english',
