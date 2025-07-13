@@ -1,6 +1,5 @@
 import type { Client } from 'discord.js'
 import type { File } from 'decompress'
-import pLimit from 'p-limit'
 
 import { logger } from '../utils/logger'
 import {
@@ -9,7 +8,7 @@ import {
   type CrowdinCode,
 } from '../constants/i18n'
 import { AppleStoreManager } from './AppleStoreManager'
-import { GooglePlayManager, mergeListings } from './GooglePlayManager'
+import { GooglePlayManager } from './GooglePlayManager'
 
 export type IapLocalizationFields = {
   name?: string /* Apple Store */
@@ -24,16 +23,24 @@ export type IapLocalizationEntry = {
 
 export class StoreManager {
   #client: Client
-  #appleStore: AppleStoreManager
-  #googlePlay: GooglePlayManager
+  appleStore: AppleStoreManager
+  googlePlay: GooglePlayManager
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('StoreManager', this.#severityThreshold)
 
   constructor(client: Client) {
     this.#client = client
-    this.#appleStore = new AppleStoreManager()
-    this.#googlePlay = new GooglePlayManager()
+    this.appleStore = new AppleStoreManager()
+    this.googlePlay = new GooglePlayManager()
+  }
+
+  async getStoreTranslations(crowdinCode: CrowdinCode) {
+    this.#log('info', 'Getting in-app purchases translations')
+    const { Crowdin } = this.#client.managers
+    const files = await Crowdin.fetchStoreTranslations()
+    const file = files.filter(file => file.path.startsWith(crowdinCode))
+    return this.formatStoreTranslations(file)
   }
 
   formatStoreTranslations(files: File[]): IapLocalizationEntry[] {
@@ -45,7 +52,7 @@ export class StoreManager {
       const crowdinCode = file.path.split('/')[0] as CrowdinCode
       // biome-ignore lint/style/noNonNullAssertion: safe
       const locale = LANGUAGE_OBJECTS.find(
-        lo => lo.crowdinCode === crowdinCode
+        languageObject => languageObject.crowdinCode === crowdinCode
       )!.locale
       const json = file.data.toString('utf-8')
       const content: Record<string, { name: string; description: string }> =
@@ -72,120 +79,10 @@ export class StoreManager {
     return Array.from(iapMap.values())
   }
 
-  async updateIapLocalization(crowdinCode: CrowdinCode, iapId: string) {
-    const { Crowdin } = this.#client.managers
-
-    this.#log('info', 'Updating in-app purchase localization', { iapId })
-
-    const files = await Crowdin.fetchStoreTranslations()
-    const file = files.filter(file => file.path.startsWith(crowdinCode))
-    const translations = this.formatStoreTranslations(file)
-    const translation = translations.find(({ key }) => key === iapId)
-    if (!translation)
-      return this.#log('warn', 'No translation found for in-app purchase.', {
-        iapId,
-      })
-
-    this.#log('info', 'Updating Google Play in-app purchase localization')
-    const [appleStoreIaps, googlePlayIaps] = await Promise.all([
-      this.#appleStore.fetchAllIaps(),
-      this.#googlePlay.fetchAllIaps(),
+  fetchAllIaps() {
+    return Promise.all([
+      this.appleStore.fetchAllIaps(),
+      this.googlePlay.fetchAllIaps(),
     ])
-    const googlePlayIap = googlePlayIaps.find(iap => iap.sku === iapId)
-    if (!googlePlayIap)
-      return this.#log('warn', 'No Google Play in-app purchase found.', {
-        iapId,
-      })
-
-    const appleStoreIap = appleStoreIaps.find(
-      iap => iap.attributes.productId === iapId
-    )
-    if (!appleStoreIap)
-      return this.#log('warn', 'No Apple Store in-app purchase found.', {
-        iapId,
-      })
-
-    const languageObjects = Crowdin.getLanguages({ withEnglish: false }).filter(
-      languageObject =>
-        languageObject.locale in translation.translations &&
-        languageObject.crowdinCode === crowdinCode
-    )
-
-    await Promise.all([
-      this.#googlePlay.updateIapLocalization(
-        googlePlayIap,
-        translation.translations
-      ),
-      ...languageObjects.map(languageObject =>
-        this.#appleStore.updateIapLocalization(
-          languageObject,
-          appleStoreIap,
-          translation.translations[languageObject.locale]
-        )
-      ),
-    ])
-  }
-
-  async updateIapLocalizations(crowdinCode: CrowdinCode) {
-    const { Crowdin } = this.#client.managers
-
-    this.#log('info', 'Updating in-app purchases localizations')
-
-    const files = await Crowdin.fetchStoreTranslations()
-    const file = files.filter(file => file.path.startsWith(crowdinCode))
-    const translations = this.formatStoreTranslations(file)
-    const [appleStoreIaps, googlePlayIaps] = await Promise.all([
-      this.#appleStore.fetchAllIaps(),
-      this.#googlePlay.fetchAllIaps(),
-    ])
-
-    this.#log('info', 'Updating Google Play in-app purchases localizations')
-    const googlePlayLimit = pLimit(5)
-    await Promise.all(
-      googlePlayIaps
-        .map(iap => {
-          const translation = translations.find(({ key }) => key === iap.sku)
-          if (!translation) return
-          return googlePlayLimit(() =>
-            this.#googlePlay.updateIapLocalization(
-              iap,
-              translation.translations
-            )
-          )
-        })
-        .filter(Boolean)
-    )
-
-    this.#log('info', 'Updating Apple Store in-app purchases localizations')
-    const appleStoreLimit = pLimit(5)
-    const languageObjects = Crowdin.getLanguages({ withEnglish: false })
-    await Promise.all(
-      appleStoreIaps
-        .map(iap => {
-          const iapLocalizationEntry = translations.find(
-            ({ key }) => key === iap.attributes.productId
-          )
-          if (!iapLocalizationEntry) return
-          return appleStoreLimit(() =>
-            Promise.all(
-              languageObjects
-                .filter(
-                  languageObject =>
-                    languageObject.locale in
-                      iapLocalizationEntry.translations &&
-                    languageObject.crowdinCode === crowdinCode
-                )
-                .map(languageObject =>
-                  this.#appleStore.updateIapLocalization(
-                    languageObject,
-                    iap,
-                    iapLocalizationEntry.translations[languageObject.locale]
-                  )
-                )
-            )
-          )
-        })
-        .filter(Boolean)
-    )
   }
 }
