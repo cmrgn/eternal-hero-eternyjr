@@ -13,6 +13,7 @@ import { LeaderboardManager } from './managers/LeaderboardManager'
 import { LocalizationManager } from './managers/LocalizationManager'
 import { PromptManager } from './managers/PromptManager'
 import { SearchManager } from './managers/SearchManager'
+import { StoreManager } from './managers/StoreManager'
 
 export const client = new Client({
   intents: [
@@ -44,3 +45,4 @@ client.managers.Crowdin = new CrowdinManager(client)
 client.managers.Index = new IndexManager(client).bindEvents()
 client.managers.Prompt = new PromptManager(client)
 client.managers.Localization = new LocalizationManager(client)
+client.managers.Store = new StoreManager(client)

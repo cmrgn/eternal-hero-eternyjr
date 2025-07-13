@@ -1,6 +1,6 @@
 import type { Client } from 'discord.js'
 import { default as Crowdin } from '@crowdin/crowdin-api-client'
-import decompress from 'decompress'
+import decompress, { type File } from 'decompress'
 import csvtojson from 'csvtojson'
 import fetch from 'node-fetch'
 
@@ -28,10 +28,11 @@ export class CrowdinManager {
   #client: Client
 
   #crowdin: Crowdin
-  #projectId = 797774
+  #gameProjectId = 797774
+  #storeProjectId = 808178
 
-  #cachedTranslations: LocalizationItem[] | null = null
-  #lastFetchedAt = 0
+  #cachedFilesMap: Map<number, File[]> = new Map()
+  #lastFetchedAtMap: Map<number, number> = new Map()
   #cacheTTL = 15 * 60 * 1000 // 15 minutes
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
@@ -57,45 +58,46 @@ export class CrowdinManager {
     })
   }
 
-  async getProject() {
-    this.#log('info', 'Resolving project')
-    const projects = await this.#crowdin.projectsGroupsApi.listProjects()
-    const project = projects.data.find(
-      ({ data: { id } }) => id === this.#projectId
-    )
-    if (!project) throw new Error('Cannot find Crowdin project.')
-
-    return project.data
-  }
-
-  async getProjectProgress() {
+  async getProjectProgress(projectId = this.#gameProjectId) {
     this.#log('info', 'Getting project progress')
 
     const { data: projectProgress } =
-      await this.#crowdin.translationStatusApi.getProjectProgress(
-        this.#projectId
-      )
+      await this.#crowdin.translationStatusApi.getProjectProgress(projectId)
 
     return projectProgress
   }
 
-  async buildProject() {
-    this.#log('info', 'Building project')
+  async buildProject(projectId: number) {
+    this.#log('info', 'Building project', { projectId })
 
-    const {
-      data: { id: buildId },
-    } = await this.#crowdin.translationsApi.buildProject(this.#projectId)
+    try {
+      const {
+        data: { id: buildId },
+      } = await this.#crowdin.translationsApi.buildProject(projectId)
+      return buildId
+    } catch (error) {
+      this.#log(
+        'warn',
+        'Building project failed, falling back to latest build',
+        { projectId }
+      )
 
-    return buildId
+      const builds = await this.#crowdin.translationsApi.listProjectBuilds(
+        projectId,
+        { limit: 1 }
+      )
+
+      return builds.data[0].data.id
+    }
   }
 
-  async waitForBuild(buildId: number) {
-    this.#log('info', 'Waiting for build to finish', { buildId })
+  async waitForBuild(buildId: number, projectId: number) {
+    this.#log('info', 'Waiting for build to finish', { projectId, buildId })
 
     let status = 'inProgress'
     while (status === 'inProgress') {
       const { data } = await this.#crowdin.translationsApi.checkBuildStatus(
-        this.#projectId,
+        projectId,
         buildId
       )
       status = data.status
@@ -104,12 +106,12 @@ export class CrowdinManager {
     }
   }
 
-  async downloadBuildArtefact(buildId: number) {
-    this.#log('info', 'Downloading build artefact', { buildId })
+  async downloadBuildArtefact(buildId: number, projectId: number) {
+    this.#log('info', 'Downloading build artefact', { projectId, buildId })
 
     // Retrieve the URL to download the zip file with all CSV translation files
     const { data } = await this.#crowdin.translationsApi.downloadTranslations(
-      this.#projectId,
+      projectId,
       buildId
     )
 
@@ -121,6 +123,10 @@ export class CrowdinManager {
     // Unzip the archive
     const files = await decompress(zipBuffer)
 
+    return files
+  }
+
+  async extractTranslationsFromFiles(files: File[]) {
     // Convert each CSV file into JSON
     const jsons: CrowdinItem[][] = []
     for (const file of files) {
@@ -139,28 +145,45 @@ export class CrowdinManager {
       )
   }
 
-  async fetchAllProjectTranslations(forceRefresh = false) {
-    this.#log('info', 'Fetching all project translations')
+  async fetchAllProjectTranslations(
+    forceRefresh = false,
+    projectId = this.#gameProjectId
+  ) {
+    this.#log('info', 'Fetching all project files', {
+      projectId,
+      forceRefresh,
+    })
 
     const now = Date.now()
+    const cachedFiles = this.#cachedFilesMap.get(projectId)
+    const lastFetchedAt = this.#lastFetchedAtMap.get(projectId) ?? 0
 
-    if (
-      !forceRefresh &&
-      this.#cachedTranslations &&
-      now - this.#lastFetchedAt < this.#cacheTTL
-    ) {
-      this.#log('info', 'Reading all project translations from cache')
-      return this.#cachedTranslations
+    if (!forceRefresh && cachedFiles && now - lastFetchedAt < this.#cacheTTL) {
+      this.#log('info', 'Reading all project files from cache', {
+        projectId,
+      })
+      return cachedFiles
     }
 
-    const buildId = await this.buildProject()
-    await this.waitForBuild(buildId)
-    const data = await this.downloadBuildArtefact(buildId)
+    const buildId = await this.buildProject(projectId)
+    await this.waitForBuild(buildId, projectId)
+    const files = await this.downloadBuildArtefact(buildId, projectId)
 
-    this.#cachedTranslations = data
-    this.#lastFetchedAt = now
+    this.#cachedFilesMap.set(projectId, files)
+    this.#lastFetchedAtMap.set(projectId, now)
 
-    return data
+    return files
+  }
+
+  async fetchStoreTranslations(forceRefresh = false) {
+    this.#log('info', 'Fetching store translations')
+
+    const files = await this.fetchAllProjectTranslations(
+      forceRefresh,
+      this.#storeProjectId
+    )
+
+    return files.filter(file => file.path.includes('iap-store'))
   }
 
   onCrowdinLanguages(

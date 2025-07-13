@@ -237,7 +237,8 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
 async function commandDeepl(interaction: ChatInputCommandInteraction) {
   const { client } = interaction
   const { DeepL, Crowdin } = client.managers
-  const translations = await Crowdin.fetchAllProjectTranslations()
+  const files = await Crowdin.fetchAllProjectTranslations()
+  const translations = await Crowdin.extractTranslationsFromFiles(files)
 
   await Crowdin.onCrowdinLanguages(
     async ({ twoLettersCode: targetLangCode }) => {
@@ -309,18 +310,4 @@ async function commandStats(interaction: ChatInputCommandInteraction) {
   `
 
   return interaction.editReply({ content })
-}
-
-function cleanUpTranslation(string: string) {
-  return (
-    string
-      // Remove line breaks
-      .replace(/\n/g, '')
-      // Replace pluralization tokens with the singular form
-      .replace(/\{0:plural:([^|}]+)\|[^}]+\}/g, (_, singular) => singular)
-      // Remove tags
-      .replace(/<[a-z=]+>/g, '')
-      .replace(/<\/[a-z=]+>/g, '')
-      .trim()
-  )
 }
