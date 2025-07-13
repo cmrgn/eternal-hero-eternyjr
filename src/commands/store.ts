@@ -6,8 +6,8 @@ import {
 import pMap from 'p-map'
 
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
-import { InAppPurchase as GooglePlayInAppPurchase } from '../managers/GooglePlayManager'
-import { InAppPurchase as AppleStoreInAppPurchase } from '../managers/AppleStoreManager'
+import type { InAppPurchase as GooglePlayInAppPurchase } from '../managers/GooglePlayManager'
+import type { InAppPurchase as AppleStoreInAppPurchase } from '../managers/AppleStoreManager'
 
 export const scope = 'OFFICIAL'
 
