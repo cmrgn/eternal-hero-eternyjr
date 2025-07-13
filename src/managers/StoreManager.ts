@@ -36,10 +36,12 @@ export class StoreManager {
   }
 
   async getStoreTranslations(crowdinCode: CrowdinCode) {
-    this.#log('info', 'Getting in-app purchases translations')
+    this.#log('info', 'Getting in-app purchases translations', { crowdinCode })
+
     const { Crowdin } = this.#client.managers
     const files = await Crowdin.fetchStoreTranslations()
     const file = files.filter(file => file.path.startsWith(crowdinCode))
+
     return this.formatStoreTranslations(file)
   }
 

@@ -122,7 +122,8 @@ export function mergeListings(
   const merged = { ...base }
 
   for (const [lang, values] of Object.entries(overrides)) {
-    const locale = lang as Locale
+    // Okay Google… 🫠
+    const locale = (lang === 'vi-VN' ? 'vi' : lang) as Locale
     merged[locale] = base[locale] ?? {}
     merged[locale].title = values.title
     merged[locale].description = values.description
