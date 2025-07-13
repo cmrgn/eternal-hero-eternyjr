@@ -72,13 +72,14 @@ export class StoreManager {
     return Array.from(iapMap.values())
   }
 
-  async updateIapLocalization(iapId: string) {
+  async updateIapLocalization(crowdinCode: CrowdinCode, iapId: string) {
     const { Crowdin } = this.#client.managers
 
     this.#log('info', 'Updating in-app purchase localization', { iapId })
 
     const files = await Crowdin.fetchStoreTranslations()
-    const translations = this.formatStoreTranslations(files)
+    const file = files.filter(file => file.path.startsWith(crowdinCode))
+    const translations = this.formatStoreTranslations(file)
     const translation = translations.find(({ key }) => key === iapId)
     if (!translation)
       return this.#log('warn', 'No translation found for in-app purchase.', {
@@ -105,7 +106,9 @@ export class StoreManager {
       })
 
     const languageObjects = Crowdin.getLanguages({ withEnglish: false }).filter(
-      languageObject => languageObject.locale in translation.translations
+      languageObject =>
+        languageObject.locale in translation.translations &&
+        languageObject.crowdinCode === crowdinCode
     )
 
     await Promise.all([
@@ -123,13 +126,14 @@ export class StoreManager {
     ])
   }
 
-  async updateIapLocalizations() {
+  async updateIapLocalizations(crowdinCode: CrowdinCode) {
     const { Crowdin } = this.#client.managers
 
     this.#log('info', 'Updating in-app purchases localizations')
 
     const files = await Crowdin.fetchStoreTranslations()
-    const translations = this.formatStoreTranslations(files)
+    const file = files.filter(file => file.path.startsWith(crowdinCode))
+    const translations = this.formatStoreTranslations(file)
     const [appleStoreIaps, googlePlayIaps] = await Promise.all([
       this.#appleStore.fetchAllIaps(),
       this.#googlePlay.fetchAllIaps(),
@@ -166,7 +170,10 @@ export class StoreManager {
             Promise.all(
               languageObjects
                 .filter(
-                  ({ locale }) => locale in iapLocalizationEntry.translations
+                  languageObject =>
+                    languageObject.locale in
+                      iapLocalizationEntry.translations &&
+                    languageObject.crowdinCode === crowdinCode
                 )
                 .map(languageObject =>
                   this.#appleStore.updateIapLocalization(
