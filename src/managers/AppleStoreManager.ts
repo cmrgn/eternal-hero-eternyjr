@@ -23,6 +23,7 @@ type AttributesWithLocale = { attributes: { locale: string } }
 
 export class AppleStoreManager {
   #jwt: string
+  #jwtTtl = 5 * 60 // 5 minutes
 
   #apiUrl = 'https://api.appstoreconnect.apple.com/v1'
   #appId = '6503089848'
@@ -70,7 +71,7 @@ export class AppleStoreManager {
     const kid = process.env.APPLE_STORE_KEY_ID
 
     const now = Math.round(new Date().getTime() / 1000)
-    const expireIn = now + 299 // 300 === 5 minutes
+    const expireIn = now + this.#jwtTtl - 1
     const token = jwt.sign(
       {
         iss: issuer,
@@ -141,9 +142,8 @@ export class AppleStoreManager {
       slug: data.attributes.productId,
     })
 
-    const relatedUrl =
-      data.relationships.inAppPurchaseLocalizations.links.related
-    const response = await this.callApi(relatedUrl)
+    const { related } = data.relationships.inAppPurchaseLocalizations.links
+    const response = await this.callApi(related)
     const en = response.data.find(
       (loc: AttributesWithLocale) => loc.attributes.locale === 'en-US'
     )
@@ -188,16 +188,15 @@ export class AppleStoreManager {
       translations,
     })
 
-    const relatedUrl =
-      iap.relationships.inAppPurchaseLocalizations.links.related
-    const existingId = await this.getLocalizationId(locale, relatedUrl)
+    const { related } = iap.relationships.inAppPurchaseLocalizations.links
+    const existingId = await this.getLocalizationId(locale, related)
     const payload = {
       data: {
         type: 'inAppPurchaseLocalizations',
         attributes: {
           locale,
-          name: translations.name ?? undefined,
-          description: translations.description ?? undefined,
+          name: translations.name,
+          description: translations.description,
         },
         relationships: {
           inAppPurchaseV2: { data: { type: 'inAppPurchases', id: iap.id } },
@@ -218,11 +217,5 @@ export class AppleStoreManager {
         payload
       )
     }
-
-    this.#log('info', 'Successfully updated in-app purchase localization', {
-      locale,
-      id: iap.attributes.productId,
-      translations,
-    })
   }
 }

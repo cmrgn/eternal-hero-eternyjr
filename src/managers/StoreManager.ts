@@ -51,9 +51,9 @@ export class StoreManager {
     for (const file of files) {
       const crowdinCode = file.path.split('/')[0] as CrowdinCode
       // biome-ignore lint/style/noNonNullAssertion: safe
-      const locale = LANGUAGE_OBJECTS.find(
+      const { locale } = LANGUAGE_OBJECTS.find(
         languageObject => languageObject.crowdinCode === crowdinCode
-      )!.locale
+      )!
       const json = file.data.toString('utf-8')
       const content: Record<string, { name: string; description: string }> =
         JSON.parse(json)

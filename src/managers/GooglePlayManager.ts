@@ -96,7 +96,7 @@ export class GooglePlayManager {
 
     if (!iap.sku) return
 
-    const response = await this.#ap.inappproducts.patch({
+    return this.#ap.inappproducts.patch({
       packageName: this.#packageName,
       sku: iap.sku,
       autoConvertMissingPrices: true,
@@ -106,13 +106,6 @@ export class GooglePlayManager {
         listings: mergeListings(iap.listings, listings),
       },
     })
-
-    this.#log('info', 'Successfully updated in-app purchase localization', {
-      id: iap.sku,
-      listings,
-    })
-
-    return response
   }
 }
 
