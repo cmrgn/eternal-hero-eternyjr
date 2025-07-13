@@ -312,12 +312,16 @@ export class FAQManager {
   async resolveThread(thread: AnyThreadChannel): Promise<ResolvedThread> {
     this.#log('info', 'Resolving thread', { id: thread.id })
 
+    const BEGINNER_GUIDE = '1324842936281595904'
+    const BEGINNER_GUIDE_DEV = '1392774418651938846'
+    const UPGRADE_ORDER = '1315710373374197850'
     // This is a bit of a hack for the beginner guide since it is spread over
     // multiple messages, and all of it should be index.
-    const hasMultiplePosts =
-      thread.id === '1392774418651938846' || thread.id === '1324842936281595904'
+    const isBeginnerGuide =
+      thread.id === BEGINNER_GUIDE || thread.id === BEGINNER_GUIDE_DEV
+    const hasMultiplePosts = isBeginnerGuide || thread.id === UPGRADE_ORDER
     const messages = hasMultiplePosts
-      ? await this.resolveThreadMessages(thread, { skipFirst: true })
+      ? await this.resolveThreadMessages(thread, { skipFirst: isBeginnerGuide })
       : await this.resolveThreadMessage(thread)
 
     return {
