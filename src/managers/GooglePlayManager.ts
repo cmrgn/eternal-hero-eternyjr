@@ -48,9 +48,12 @@ export class GooglePlayManager {
       )
     }
 
+    const pkey = process.env.GOOGLE_PLAY_PRIVATE_KEY.replace(/\\n/g, '\n')
+    const email = process.env.GOOGLE_PLAY_CLIENT_EMAIL
+
     return new google.auth.JWT({
-      email: process.env.GOOGLE_PLAY_CLIENT_EMAIL,
-      key: process.env.GOOGLE_PLAY_PRIVATE_KEY,
+      email,
+      key: pkey,
       scopes: ['https://www.googleapis.com/auth/androidpublisher'],
     })
   }
