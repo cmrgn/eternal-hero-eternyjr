@@ -190,7 +190,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   await interaction.editReply({
     content: iapId
-      ? `Successfully uploaded translations for \`${iapId}\`.`
-      : 'Successfully uploaded all in-app purchases translations.',
+      ? `Successfully updated translations in \`${crowdinCode}\` for \`${iapId}\`.`
+      : `Successfully updated translations in \`${crowdinCode}\`.`,
   })
 }
