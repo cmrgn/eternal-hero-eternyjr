@@ -197,6 +197,11 @@ export class DiscordManager {
     )
     if (cachedChannel) return cachedChannel
     const fetchedChannel = await client.channels.fetch(channel.id)
+
+    if (!fetchedChannel?.isTextBased()) {
+      throw new Error('Retrieved channel is not a text-based channel.')
+    }
+
     return fetchedChannel as GuildBasedChannel
   }
 
