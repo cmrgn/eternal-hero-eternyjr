@@ -22,8 +22,7 @@ export class FlagsManager {
     const { Database } = this.#client.managers
     const exists = await Database.db
       .selectFrom('feature_flags')
-      .select(eb => eb.val<boolean>(true).as('exists'))
-      .where('key', '=', key)
+      .select('key')
       .limit(1)
       .executeTakeFirst()
 
