@@ -13,7 +13,11 @@
     "deploy-commands": "tsx src/scripts/deploy-commands.ts",
     "delete-commands": "tsx src/scripts/delete-commands.ts",
     "migrate": "node-pg-migrate -d -m ./migrations --no-reject-unauthorized",
-    "migrate-create": "node-pg-migrate create -m ./migrations"
+    "migrate-create": "node-pg-migrate create -m ./migrations",
+    "lint": "tsc --noEmit && biome lint --diagnostic-level=error --no-errors-on-unmatched ./src/**/*.ts",
+    "lint:fix": "biome check --write ./src/**/*.ts",
+    "lint:staged": "biome check --error-on-warnings --no-errors-on-unmatched --staged ./src/**/*.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@crowdin/crowdin-api-client": "^1.45.0",
@@ -40,13 +44,14 @@
     "pg": "^8.16.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.9.4",
+    "@biomejs/biome": "2.0.6",
     "@types/decompress": "^4.2.7",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/memoizee": "^0.4.12",
     "@types/ms": "^2.1.0",
     "@types/node-fetch": "^2.6.12",
     "@types/pg": "^8.15.2",
+    "husky": "^9.1.7",
     "node-pg-migrate": "^8.0.1",
     "tsup": "^8.5.0",
     "tsx": "^4.19.4",
