@@ -23,6 +23,7 @@ import type { ResolvedThread } from './FAQManager'
 import { logger } from '../utils/logger'
 import { commands } from '../commands'
 import type { LanguageObject } from '../constants/i18n'
+import { stripIndent } from '../utils/stripIndent'
 
 export type InteractionLike = {
   client: Client
@@ -269,18 +270,4 @@ export class DiscordManager {
         .setStyle(ButtonStyle[cancelBtn.style ?? 'Secondary'])
     )
   }
-}
-
-function minIndent(string: string) {
-  const match = string.match(/^[ \t]*(?=\S)/gm)
-  if (!match) return 0
-  return match.reduce((r, a) => Math.min(r, a.length), Number.POSITIVE_INFINITY)
-}
-
-// Copied directly from the strip-indent package
-function stripIndent(string: string) {
-  const indent = minIndent(string)
-  if (indent === 0) return string
-  const regex = new RegExp(`^[ \\t]{${indent}}`, 'gm')
-  return string.replace(regex, '')
 }
