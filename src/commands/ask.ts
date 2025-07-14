@@ -7,6 +7,7 @@ import {
 import { logger } from '../utils/logger'
 import type { PineconeMetadata } from '../managers/IndexManager'
 import { ENGLISH_LANGUAGE_OBJECT, LANGUAGE_OBJECTS } from '../constants/i18n'
+import { DiscordManager } from '../managers/DiscordManager'
 
 export const scope = 'OFFICIAL'
 
@@ -86,7 +87,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   embed.addFields(
     { name: 'Source', value: url, inline: true },
-    { name: 'Indexed on', value: Discord.toTimestamp(indexedAt), inline: true }
+    {
+      name: 'Indexed on',
+      value: DiscordManager.toTimestamp(indexedAt),
+      inline: true,
+    }
   )
 
   if (raw) {

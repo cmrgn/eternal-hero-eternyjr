@@ -8,7 +8,7 @@ import pMap from 'p-map'
 
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { logger } from '../utils/logger'
-import type { PineconeEntry } from '../managers/IndexManager'
+import { IndexManager, type PineconeEntry } from '../managers/IndexManager'
 
 export const scope = 'OFFICIAL'
 
@@ -205,7 +205,8 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
     await interaction.editReply('Indexing all FAQ threads…')
     await Index.indexRecords(
       threadsWithContent.reduce<PineconeEntry[]>(
-        (records, thread) => records.concat(Index.prepareForIndexing(thread)),
+        (records, thread) =>
+          records.concat(IndexManager.prepareForIndexing(thread)),
         []
       ),
       crowdinCode

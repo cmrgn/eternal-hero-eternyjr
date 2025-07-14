@@ -8,6 +8,7 @@ import {
 import type { ResolvedThread } from './FAQManager'
 import type { CrowdinCode, LanguageObject } from '../constants/i18n'
 import { logger } from '../utils/logger'
+import { withRetry } from '../utils/withRetry'
 
 export type PineconeMetadata = {
   entry_question: string
@@ -44,7 +45,7 @@ export class IndexManager {
     }).index('faq-index')
   }
 
-  prepareForIndexing(entry: ResolvedThread): PineconeEntry[] {
+  static prepareForIndexing(entry: ResolvedThread): PineconeEntry[] {
     return entry.messages.map(message => ({
       // The index was originally built without considering multiple messages
       // (and thus chunks) for a given thread. To avoid ending up with multiple
@@ -93,7 +94,7 @@ export class IndexManager {
 
     while (entries.length) {
       const batch = entries.splice(0, 90)
-      await namespace.upsertRecords(batch)
+      await withRetry(() => namespace.upsertRecords(batch))
     }
 
     return count
@@ -102,7 +103,7 @@ export class IndexManager {
   async indexThread(thread: ResolvedThread, namespaceName: PineconeNamespace) {
     this.#log('info', 'Indexing thread', { action: 'UPSERT', id: thread.id })
 
-    const records = this.prepareForIndexing(thread)
+    const records = IndexManager.prepareForIndexing(thread)
     await this.indexRecords(records, namespaceName)
   }
 
@@ -121,18 +122,29 @@ export class IndexManager {
 
   async unindexThread(threadId: string, namespaceName: PineconeNamespace) {
     try {
-      this.#log('info', 'Indexing thread', {
-        action: 'DELETE',
-        id: threadId,
-        namespace: this.getNamespaceName(namespaceName),
-      })
-      await this.namespace(namespaceName).deleteMany({
-        id: { $regex: `^entry#${threadId}` },
+      await withRetry(attempt => {
+        this.#log('info', 'Unindexing thread', {
+          attempt,
+          id: threadId,
+          namespace: this.getNamespaceName(namespaceName),
+        })
+
+        return this.namespace(namespaceName).deleteMany({
+          id: { $regex: `^entry#${threadId}` },
+        })
       })
     } catch (error) {
       // Unindexing may fail with a 404 if the resource didn’t exist in the
       // index to begin with
       const isError = error instanceof Error
+
+      if (isError && error.message.includes('404')) {
+        this.#log('info', 'Thread not found in index; skipping deletion', {
+          threadId,
+          namespace: this.getNamespaceName(namespaceName),
+        })
+      }
+
       if (!isError || !error.message.includes('404')) throw error
     }
   }

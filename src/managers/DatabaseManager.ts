@@ -25,6 +25,10 @@ export class DatabaseManager {
     const dialect = new PostgresDialect({ pool })
     this.db = new Kysely<DB>({ dialect })
   }
+
+  destroy() {
+    return this.db.destroy()
+  }
 }
 
 export interface DB {

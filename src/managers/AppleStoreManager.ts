@@ -108,28 +108,19 @@ export class AppleStoreManager {
     return token
   }
 
-  async callApi<T>(
+  callApi<T>(
     path: string,
     method = 'GET',
     payload?: unknown
   ): Promise<AppleApiResponse<T>> {
-    return withRetry(async attempt => {
+    return withRetry(attempt => {
       const body = JSON.stringify(payload)
+      const context = { path, method, body, attempt }
+      const headers = this.headers
 
-      this.#log('info', 'Calling Apple Store API', {
-        path,
-        method,
-        body,
-        attempt,
-      })
+      this.#log('info', 'Calling Apple Store API', context)
 
-      const data = await fetchJson(path, {
-        method,
-        body,
-        headers: this.headers,
-      })
-
-      return data as AppleApiResponse<T>
+      return fetchJson(path, { method, body, headers })
     })
   }
 

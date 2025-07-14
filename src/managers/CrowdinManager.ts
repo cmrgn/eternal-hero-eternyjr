@@ -11,6 +11,7 @@ import {
   type CrowdinCode,
   type LanguageObject,
 } from '../constants/i18n'
+import { withRetry } from '../utils/withRetry'
 
 export type {
   LanguagesModel,
@@ -59,10 +60,10 @@ export class CrowdinManager {
   }
 
   async getProjectProgress(projectId = this.#gameProjectId) {
-    this.#log('info', 'Getting project progress')
-
-    const { data: projectProgress } =
-      await this.#crowdin.translationStatusApi.getProjectProgress(projectId)
+    const { data: projectProgress } = await withRetry(attempt => {
+      this.#log('info', 'Getting project progress', { attempt })
+      return this.#crowdin.translationStatusApi.getProjectProgress(projectId)
+    })
 
     return projectProgress
   }
@@ -73,19 +74,22 @@ export class CrowdinManager {
     try {
       const {
         data: { id: buildId },
-      } = await this.#crowdin.translationsApi.buildProject(projectId)
+      } = await withRetry(attempt => {
+        this.#log('info', 'Building project', { projectId, attempt })
+        return this.#crowdin.translationsApi.buildProject(projectId)
+      })
       return buildId
     } catch (error) {
-      this.#log(
-        'warn',
-        'Building project failed, falling back to latest build',
-        { projectId }
-      )
-
-      const builds = await this.#crowdin.translationsApi.listProjectBuilds(
-        projectId,
-        { limit: 1 }
-      )
+      const builds = await withRetry(attempt => {
+        this.#log(
+          'warn',
+          'Building project failed, falling back to latest build',
+          { projectId, attempt }
+        )
+        return this.#crowdin.translationsApi.listProjectBuilds(projectId, {
+          limit: 1,
+        })
+      })
 
       return builds.data[0].data.id
     }
@@ -96,52 +100,76 @@ export class CrowdinManager {
 
     let status = 'inProgress'
     while (status === 'inProgress') {
-      const { data } = await this.#crowdin.translationsApi.checkBuildStatus(
-        projectId,
-        buildId
-      )
+      const { data } = await withRetry(attempt => {
+        this.#log('info', 'Waiting for build to finish', {
+          projectId,
+          buildId,
+          attempt,
+        })
+        return this.#crowdin.translationsApi.checkBuildStatus(
+          projectId,
+          buildId
+        )
+      })
       status = data.status
       if (status === 'failed') throw new Error('Crowdin build failed')
-      if (status !== 'finished') await new Promise(res => setTimeout(res, 1000))
+      if (status !== 'finished') await new Promise(res => setTimeout(res, 2000))
     }
   }
 
   async downloadBuildArtefact(buildId: number, projectId: number) {
-    this.#log('info', 'Downloading build artefact', { projectId, buildId })
+    return withRetry(async attempt => {
+      this.#log('info', 'Downloading build artefact', {
+        projectId,
+        buildId,
+        attempt,
+      })
 
-    // Retrieve the URL to download the zip file with all CSV translation files
-    const { data } = await this.#crowdin.translationsApi.downloadTranslations(
-      projectId,
-      buildId
-    )
+      // Retrieve the URL to download the zip file with all CSV translation files
+      const { data } = await this.#crowdin.translationsApi.downloadTranslations(
+        projectId,
+        buildId
+      )
 
-    // Download the archive
-    const response = await fetch(data.url)
-    if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`)
-    const zipBuffer = await response.buffer()
+      // Download the archive
+      const response = await withRetry(() => fetch(data.url))
+      if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`)
+      const zipBuffer = await response.buffer()
 
-    // Unzip the archive
-    const files = await decompress(zipBuffer)
+      // Unzip the archive
+      return decompress(zipBuffer)
+    })
+  }
 
-    return files
+  async parseTranslationFiles(files: File[]) {
+    const jsons: CrowdinItem[][] = []
+
+    for (const file of files) {
+      const content = file.data.toString('utf-8')
+      try {
+        const json = await csvtojson().fromString(content)
+        jsons.push(json)
+      } catch (error) {
+        this.#log('warn', 'Failed to parse CSV', { path: file.path, error })
+      }
+    }
+
+    return jsons
   }
 
   async extractTranslationsFromFiles(files: File[]) {
     // Convert each CSV file into JSON
-    const jsons: CrowdinItem[][] = []
-    for (const file of files) {
-      const content = file.data.toString('utf-8')
-      const json = await csvtojson().fromString(content)
-      jsons.push(json)
-    }
+    const jsons = await this.parseTranslationFiles(files)
 
     // Flatten all JSON structures into a single array, and reshape the entries
     // for convenience
     return jsons
       .reduce((acc, array) => acc.concat(array), [])
       .map(
-        ({ Key: key, Context, ...translations }) =>
-          ({ key, translations }) as LocalizationItem
+        ({ Key, Context, ...translations }): LocalizationItem => ({
+          key: Key,
+          translations,
+        })
       )
   }
 
@@ -161,6 +189,8 @@ export class CrowdinManager {
     if (!forceRefresh && cachedFiles && now - lastFetchedAt < this.#cacheTTL) {
       this.#log('info', 'Reading all project files from cache', {
         projectId,
+        age: now - lastFetchedAt,
+        ttl: this.#cacheTTL,
       })
       return cachedFiles
     }
@@ -176,7 +206,7 @@ export class CrowdinManager {
   }
 
   async fetchStoreTranslations(forceRefresh = false) {
-    this.#log('info', 'Fetching store translations')
+    this.#log('info', 'Fetching store translations', { forceRefresh })
 
     const files = await this.fetchAllProjectTranslations(
       forceRefresh,

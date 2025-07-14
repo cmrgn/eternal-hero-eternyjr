@@ -24,6 +24,7 @@ import { logger } from '../utils/logger'
 import { commands } from '../commands'
 import type { LanguageObject } from '../constants/i18n'
 import { stripIndent } from '../utils/stripIndent'
+import { withRetry } from '../utils/withRetry'
 
 export type InteractionLike = {
   client: Client
@@ -166,8 +167,8 @@ export class DiscordManager {
 
   async sendInteractionAlert(interaction: InteractionLike, message: string) {
     const userId = interaction.user?.id ?? interaction.userId
-    const channel = await interaction.client.channels.fetch(
-      this.#alertChannelId
+    const channel = await withRetry(() =>
+      interaction.client.channels.fetch(this.#alertChannelId)
     )
     if (!channel?.isSendable()) return
     if (interaction.guildId === this.TEST_SERVER_ID) return
@@ -196,7 +197,9 @@ export class DiscordManager {
       ({ id }) => id === channel.id
     )
     if (cachedChannel) return cachedChannel
-    const fetchedChannel = await client.channels.fetch(channel.id)
+    const fetchedChannel = await withRetry(() =>
+      client.channels.fetch(channel.id)
+    )
 
     if (!fetchedChannel?.isTextBased()) {
       throw new Error('Retrieved channel is not a text-based channel.')
@@ -248,7 +251,7 @@ export class DiscordManager {
     return this.#rest.delete(endpoint)
   }
 
-  toTimestamp(input: string | Date) {
+  static toTimestamp(input: string | Date) {
     if (typeof input === 'string') {
       return `<t:${Math.round(new Date(input).valueOf() / 1000)}:d>`
     }

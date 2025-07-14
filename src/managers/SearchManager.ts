@@ -5,6 +5,7 @@ import Fuse, { type FuseResult } from 'fuse.js'
 
 import { logger } from '../utils/logger'
 import type { PineconeMetadata, PineconeNamespace } from './IndexManager'
+import { withRetry } from '../utils/withRetry'
 
 type Hit = SearchRecordsResponse['result']['hits'][number]
 type SearchResultVector = Hit & { fields: PineconeMetadata }
@@ -66,8 +67,8 @@ export class SearchManager {
       try {
         const hits = await this.searchVector(query, namespaceName, limit)
         const results = hits
-          .filter(this.isHitRelevant)
-          .map(this.normalizeResult)
+          .filter(SearchManager.isHitRelevant)
+          .map(SearchManager.normalizeResult)
 
         return { query, results }
       } catch (error) {
@@ -84,9 +85,9 @@ export class SearchManager {
     if (type === 'FUZZY') {
       const hits = this.searchFuzzy(query)
       const results = hits.results
-        .filter(this.isHitRelevant)
+        .filter(SearchManager.isHitRelevant)
         .slice(0, limit)
-        .map(this.normalizeResult)
+        .map(SearchManager.normalizeResult)
 
       return { query: hits.keyword, results }
     }
@@ -107,14 +108,16 @@ export class SearchManager {
     // can easily query a lot of content without a problem. Reranking is a bit
     // more expensive, so we rerank the most promising candidates to sort them
     // by relevance. Eventually, we return the number of results we expect.
-    const response = await Index.namespace(namespaceName).searchRecords({
-      query: { topK: Math.max(20, limit), inputs: { text: query } },
-      rerank: {
-        model: 'bge-reranker-v2-m3',
-        topN: Math.max(5, limit),
-        rankFields: ['chunk_text'],
-      },
-    })
+    const response = await withRetry(() =>
+      Index.namespace(namespaceName).searchRecords({
+        query: { topK: Math.max(20, limit), inputs: { text: query } },
+        rerank: {
+          model: 'bge-reranker-v2-m3',
+          topN: Math.max(5, limit),
+          rankFields: ['chunk_text'],
+        },
+      })
+    )
 
     return response.result.hits.slice(0, limit) as SearchResultVector[]
   }
@@ -131,18 +134,22 @@ export class SearchManager {
     })
 
     // Base search, yielding results
-    const results = primaryFuse.search(keyword).filter(this.isHitRelevant)
+    const results = primaryFuse
+      .search(keyword)
+      .filter(SearchManager.isHitRelevant)
     if (results.length) return { keyword, results }
 
     // Base search without results, no alternative search available
-    const altKeywords = this.#altFuse.search(keyword).filter(this.isHitRelevant)
+    const altKeywords = this.#altFuse
+      .search(keyword)
+      .filter(SearchManager.isHitRelevant)
     const altKeyword = altKeywords[0]
     if (!altKeyword) return { keyword, results: [] }
 
     // Alternative search available, but no results either
     const altResults = primaryFuse
       .search(altKeyword.item.to)
-      .filter(this.isHitRelevant)
+      .filter(SearchManager.isHitRelevant)
     if (!altResults.length) return { keyword: altKeyword.item.to, results: [] }
 
     // Alternative search yielded results
@@ -152,7 +159,7 @@ export class SearchManager {
   // Figure out whether the given result is a relevant one. Note: this needs to
   // happen **before** result normalization since it uses the raw score from
   // Fuse.js, and not the normalized one.
-  isHitRelevant(hit: SearchResultVector | FuseResult<unknown>) {
+  static isHitRelevant(hit: SearchResultVector | FuseResult<unknown>) {
     if ('_score' in hit) return hit._score > 0.3
     if ('score' in hit && hit.score) return hit.score <= 0.65
     return false
@@ -162,7 +169,9 @@ export class SearchManager {
   // results to make it more convenient to use the search. Note: the content of
   // each FAQ entry and its tags will be missing, since the fuzzy search only
   // operates on entry names.
-  normalizeResult(result: SearchResultVector | SearchResultFuse): SearchResult {
+  static normalizeResult(
+    result: SearchResultVector | SearchResultFuse
+  ): SearchResult {
     if ('refIndex' in result) {
       return {
         _id: `entry#${result.item.id}`,

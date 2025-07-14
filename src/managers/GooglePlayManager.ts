@@ -107,30 +107,27 @@ export class GooglePlayManager {
       requestBody: {
         packageName: this.#packageName,
         sku: iap.sku,
-        listings: mergeListings(iap.listings, listings),
+        listings: GooglePlayManager.mergeListings(iap.listings, listings),
       },
     })
   }
-}
 
-export function mergeListings(
-  base?: Listings | null,
-  overrides?: Listings | null
-) {
-  base ??= {} as Listings
-  overrides ??= {} as Listings
+  static mergeListings(base?: Listings | null, overrides?: Listings | null) {
+    base ??= {} as Listings
+    overrides ??= {} as Listings
 
-  const merged = { ...base }
+    const merged = { ...base }
 
-  for (const [lang, values] of Object.entries(overrides)) {
-    // Okay Google… 🫠
-    const locale = (lang === 'vi-VN' ? 'vi' : lang) as Locale
-    merged[locale] = Object.assign(
-      { title: '', description: '' },
-      base[locale],
-      { title: values.title, description: values.description }
-    )
+    for (const [lang, values] of Object.entries(overrides)) {
+      // Okay Google… 🫠
+      const locale = (lang === 'vi-VN' ? 'vi' : lang) as Locale
+      merged[locale] = Object.assign(
+        { title: '', description: '' },
+        base[locale],
+        { title: values.title, description: values.description }
+      )
+    }
+
+    return merged
   }
-
-  return merged
 }

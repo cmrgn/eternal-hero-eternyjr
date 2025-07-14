@@ -4,6 +4,7 @@ import OpenAI from 'openai'
 import { logger } from '../utils/logger'
 import type { LanguageObject } from '../constants/i18n'
 import { getExcerpt } from '../utils/getExcerpt'
+import { withRetry } from '../utils/withRetry'
 
 const SYSTEM_PROMPT = `
 Sole purpose:
@@ -46,37 +47,40 @@ export class PromptManager {
     this.#openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   }
 
-  async ensureChatGPTisEnabled() {
+  async ensureChatGPTIsEnabled() {
     const { Flags } = this.#client.managers
     const isEnabled = await Flags.getFeatureFlag('chatgpt')
 
     if (!isEnabled) throw new Error('ChatGPT usage is disabled; aborting.')
   }
 
-  async promptGPT(
+  async callChatCompletion(
     userPrompt: string,
     systemPrompt = SYSTEM_PROMPT,
     model = 'gpt-4o'
   ) {
-    this.#log('info', 'Prompting ChatGPT', {
-      model,
-      prompt: getExcerpt(userPrompt),
-    })
+    await this.ensureChatGPTIsEnabled()
 
-    await this.ensureChatGPTisEnabled()
+    const response = await withRetry(attempt => {
+      this.#log('info', 'Prompting ChatGPT', {
+        attempt,
+        model,
+        prompt: getExcerpt(userPrompt),
+      })
 
-    const response = await this.#openai.chat.completions.create({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
+      return this.#openai.chat.completions.create({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      })
     })
 
     return response.choices[0].message?.content?.trim()
   }
 
-  summarize(
+  async summarize(
     userQuestion: string,
     context: {
       question: string
@@ -89,7 +93,7 @@ export class PromptManager {
       threadName: context.question,
     })
 
-    return this.promptGPT(`
+    const response = await this.callChatCompletion(`
       The player asked: “${userQuestion}”
   
       Here is the best match from the FAQ:
@@ -107,5 +111,7 @@ export class PromptManager {
   
       Keep the tone helpful, clear, and concise. Your goal is to make the FAQ answer more approachable, but never less accurate.
       `)
+
+    return response
   }
 }

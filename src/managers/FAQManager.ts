@@ -145,8 +145,8 @@ export class FAQManager {
     const guild = await this.getGuild()
     const faq = this.getFAQForum(guild)
     const [activeThreadRes, archivedThreadRes] = await Promise.all([
-      faq.threads.fetchActive(),
-      faq.threads.fetchArchived(),
+      withRetry(() => faq.threads.fetchActive()),
+      withRetry(() => faq.threads.fetchArchived()),
     ])
 
     // Ignore the pinned thread used as a table of contents since there is no
@@ -248,8 +248,8 @@ export class FAQManager {
     // equal to the new content after normalization, do nothing since the edit
     // is essentially moot
     if (
-      this.cleanUpThreadContent(oldMessage.content) ===
-      this.cleanUpThreadContent(newMessage.content)
+      FAQManager.cleanUpThreadContent(oldMessage.content) ===
+      FAQManager.cleanUpThreadContent(newMessage.content)
     ) {
       return this.#log('info', 'Content unchanged; ignoring thread update', {
         id: thread.id,
@@ -275,7 +275,7 @@ export class FAQManager {
       .filter(Boolean)
   }
 
-  cleanUpThreadContent(content?: string | null) {
+  static cleanUpThreadContent(content?: string | null) {
     return (
       (content ?? '')
         // Removed the related entries footer from the message
@@ -296,7 +296,7 @@ export class FAQManager {
 
     return [
       {
-        content: this.cleanUpThreadContent(firstMessage?.content),
+        content: FAQManager.cleanUpThreadContent(firstMessage?.content),
         id: thread.id,
       },
     ]
@@ -316,7 +316,7 @@ export class FAQManager {
         .filter(message => (skipFirst ? message.id !== thread.id : true))
         // Clean up each message individually
         .map(message => ({
-          content: this.cleanUpThreadContent(message.content),
+          content: FAQManager.cleanUpThreadContent(message.content),
           id: message.id,
         }))
     )
