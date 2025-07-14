@@ -9,6 +9,7 @@ import {
 } from 'discord.js'
 
 import { logger } from '../utils/logger'
+import { withRetry } from '../utils/withRetry'
 
 export type ResolvedThread = {
   isResolved: true
@@ -128,7 +129,10 @@ export class FAQManager {
   async getGuild() {
     this.#log('info', 'Getting guild object')
     const { guilds } = this.#client
-    return guilds.cache.get(this.guildId) ?? (await guilds.fetch(this.guildId))
+    return (
+      guilds.cache.get(this.guildId) ??
+      (await withRetry(() => guilds.fetch(this.guildId)))
+    )
   }
 
   async fetchThreads() {
@@ -214,7 +218,8 @@ export class FAQManager {
     const { Discord } = this.#client.managers
 
     if (Discord.shouldIgnoreInteraction(newMessage)) return
-    if (newMessage.partial) newMessage = await newMessage.fetch()
+    if (newMessage.partial)
+      newMessage = await withRetry(() => newMessage.fetch())
 
     const { guild } = newMessage
     if (!guild) return
@@ -279,7 +284,7 @@ export class FAQManager {
   }
 
   async resolveThreadMessage(thread: AnyThreadChannel) {
-    const firstMessage = await thread.fetchStarterMessage()
+    const firstMessage = await withRetry(() => thread.fetchStarterMessage())
 
     return [
       {
@@ -293,7 +298,7 @@ export class FAQManager {
     thread: AnyThreadChannel,
     { skipFirst }: { skipFirst: boolean }
   ) {
-    const messages = await thread.messages.fetch()
+    const messages = await withRetry(() => thread.messages.fetch())
 
     return (
       Array.from(messages.values())
