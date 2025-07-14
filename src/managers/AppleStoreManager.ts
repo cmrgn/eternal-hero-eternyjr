@@ -2,12 +2,15 @@ import jwt from 'jsonwebtoken'
 
 import { logger } from '../utils/logger'
 import type { LanguageObject, Locale } from '../constants/i18n'
-import type { IapLocalizationFields } from './StoreManager'
+import { withRetry } from '../utils/withRetry'
+import { fetchJson } from '../utils/fetchJson'
 
-type LocalizedIap = {
+export type IapLocalizationFields = { name: string; description: string }
+
+type LocalizedIap = IapLocalizationFields & {
   id: string
   slug: string
-} & IapLocalizationFields
+}
 
 type RelationshipLink = {
   links: { self: string; related: string; next?: string }
@@ -15,11 +18,19 @@ type RelationshipLink = {
 export type InAppPurchase = RelationshipLink & {
   type: 'inAppPurchases'
   id: string
-  attributes: { name: string; productId: string }
+  attributes: {
+    name?: string
+    description?: string
+    productId: string
+    locale: string
+  }
   relationships: { inAppPurchaseLocalizations: RelationshipLink }
 }
 
-type AttributesWithLocale = { attributes: { locale: string } }
+type AppleApiResponse<T> = {
+  data: T[]
+  links?: { next?: string }
+}
 
 export class AppleStoreManager {
   #jwt: string | null = null
@@ -97,20 +108,29 @@ export class AppleStoreManager {
     return token
   }
 
-  async callApi(path: string, method = 'GET', payload?: unknown) {
-    this.#log('info', 'Calling Apple Store API', {
-      path,
-      method,
-      payload: JSON.stringify(payload),
-    })
+  async callApi<T>(
+    path: string,
+    method = 'GET',
+    payload?: unknown
+  ): Promise<AppleApiResponse<T>> {
+    return withRetry(async attempt => {
+      const body = JSON.stringify(payload)
 
-    const response = await fetch(path, {
-      method,
-      body: JSON.stringify(payload),
-      headers: this.headers,
-    })
+      this.#log('info', 'Calling Apple Store API', {
+        path,
+        method,
+        body,
+        attempt,
+      })
 
-    return response.json()
+      const data = await fetchJson(path, {
+        method,
+        body,
+        headers: this.headers,
+      })
+
+      return data as AppleApiResponse<T>
+    })
   }
 
   async fetchAllIaps() {
@@ -121,8 +141,8 @@ export class AppleStoreManager {
       let nextUrl: string | null = initialUrl
 
       while (nextUrl) {
-        type Response = RelationshipLink & { data: InAppPurchase[] }
-        const response = (await this.callApi(nextUrl)) as Response
+        const response: AppleApiResponse<InAppPurchase> =
+          await this.callApi(nextUrl)
         results = results.concat(...response.data)
         nextUrl = response.links?.next ?? null
       }
@@ -139,8 +159,10 @@ export class AppleStoreManager {
       `${this.#apiUrl}/apps/${this.#appId}/inAppPurchasesV2`
     )
 
-    this.#cachedIaps = data
-    this.#lastFetchedAtIaps = now
+    if (data.length > 0) {
+      this.#cachedIaps = data
+      this.#lastFetchedAtIaps = now
+    }
 
     return data
   }
@@ -152,10 +174,9 @@ export class AppleStoreManager {
     })
 
     const { related } = data.relationships.inAppPurchaseLocalizations.links
-    const response = await this.callApi(related)
-    const en = response.data.find(
-      (loc: AttributesWithLocale) => loc.attributes.locale === 'en-US'
-    )
+    const response: AppleApiResponse<InAppPurchase> =
+      await this.callApi(related)
+    const en = response.data.find(loc => loc.attributes.locale === 'en-US')
 
     return {
       id: data.id,
@@ -172,10 +193,9 @@ export class AppleStoreManager {
     })
 
     try {
-      const response = await this.callApi(relatedUrl)
-      const match = response.data.find(
-        (loc: AttributesWithLocale) => loc.attributes.locale === locale
-      )
+      const response: AppleApiResponse<InAppPurchase> =
+        await this.callApi(relatedUrl)
+      const match = response.data.find(loc => loc.attributes.locale === locale)
       return match?.id ?? null
     } catch {
       return null

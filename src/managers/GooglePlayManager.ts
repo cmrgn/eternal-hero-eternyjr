@@ -2,12 +2,12 @@ import { type androidpublisher_v3, google } from 'googleapis'
 
 import { logger } from '../utils/logger'
 import type { Locale } from '../constants/i18n'
-import type { IapLocalizationFields } from './StoreManager'
+import { withRetry } from '../utils/withRetry'
 
-export type Listing = Omit<IapLocalizationFields, 'name'>
-export type Listings = Partial<Record<Locale, Listing>>
-export type ListingWithName = IapLocalizationFields
-export type ListingsWithName = Partial<Record<Locale, ListingWithName>>
+export type IapLocalizationFields = { title: string; description: string }
+
+type Listing = IapLocalizationFields
+type Listings = Partial<Record<Locale, Listing>>
 export type InAppPurchase = {
   sku?: string | null
   status?: string | null
@@ -67,20 +67,21 @@ export class GooglePlayManager {
       return this.#cachedIaps
     }
 
-    const response = await this.#ap.inappproducts.list({
-      packageName: this.#packageName,
-      maxResults: 1000, // optional, default is 100
-    })
+    const response = await withRetry(() =>
+      this.#ap.inappproducts.list({
+        packageName: this.#packageName,
+        maxResults: 1000, // optional, default is 100
+      })
+    )
 
-    const iaps =
+    const iaps: InAppPurchase[] =
       response.data.inappproduct?.map(
-        product =>
-          ({
-            sku: product.sku,
-            status: product.status,
-            defaultLanguage: product.defaultLanguage,
-            listings: product.listings,
-          }) as InAppPurchase
+        ({ sku, status, defaultLanguage, listings }) => ({
+          sku,
+          status,
+          defaultLanguage,
+          listings,
+        })
       ) ?? []
 
     if (iaps.length > 0) {
@@ -91,7 +92,7 @@ export class GooglePlayManager {
     return iaps
   }
 
-  async updateIapLocalization(iap: InAppPurchase, listings: ListingsWithName) {
+  async updateIapLocalization(iap: InAppPurchase, listings: Listings) {
     this.#log('info', 'Updating in-app purchase localization', {
       id: iap.sku,
       listings,
@@ -124,9 +125,11 @@ export function mergeListings(
   for (const [lang, values] of Object.entries(overrides)) {
     // Okay Google… 🫠
     const locale = (lang === 'vi-VN' ? 'vi' : lang) as Locale
-    merged[locale] = base[locale] ?? {}
-    merged[locale].title = values.title
-    merged[locale].description = values.description
+    merged[locale] = Object.assign(
+      { title: '', description: '' },
+      base[locale],
+      { title: values.title, description: values.description }
+    )
   }
 
   return merged

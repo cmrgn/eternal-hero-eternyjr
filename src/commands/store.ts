@@ -60,13 +60,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const translations = await Store.getStoreTranslations(crowdinCode)
 
   if (iapId) {
-    const iapTranslations = translations.find(({ key }) => key === iapId)
+    const iapTranslations = translations.get(iapId)
     if (!iapTranslations) {
       return interaction.editReply({
         content: `Could not find an in-app purchase for \`${iapId}\`.`,
       })
     }
-    const iapTranslation = iapTranslations.translations[languageObject.locale]
 
     if (platform === 'BOTH' || platform === 'GOOGLE_PLAY') {
       const googlePlayIaps = await Store.googlePlay.fetchAllIaps()
@@ -81,7 +80,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         content: `Updating localization for \`${iapId}\` in \`${crowdinCode}\` on Google Play…`,
       })
       await Store.googlePlay.updateIapLocalization(googlePlayIap, {
-        [languageObject.locale]: iapTranslation,
+        [languageObject.locale]: iapTranslations[languageObject.locale],
       })
     }
 
@@ -101,7 +100,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       await Store.appleStore.updateIapLocalization(
         languageObject,
         appleStoreIap,
-        iapTranslation
+        iapTranslations[languageObject.locale]
       )
     }
   } else {
@@ -128,16 +127,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       await pMap(
         googlePlayIaps.entries(),
         async ([index, iap]) => {
-          const iapTranslations = translations.find(
-            ({ key }) => key === iap.sku
-          )
+          const iapTranslations = iap.sku && translations.get(iap.sku)
           if (iapTranslations) {
-            const iapTranslation =
-              iapTranslations.translations[languageObject.locale]
-
             await notifyGooglePlay(iap, index)
             await Store.googlePlay.updateIapLocalization(iap, {
-              [languageObject.locale]: iapTranslation,
+              [languageObject.locale]: iapTranslations[languageObject.locale],
             })
           }
         },
@@ -168,18 +162,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       await pMap(
         appleStoreIaps.entries(),
         async ([index, iap]) => {
-          const iapTranslations = translations.find(
-            ({ key }) => key === iap.attributes.productId
-          )
+          const iapTranslations = translations.get(iap.attributes.productId)
           if (iapTranslations) {
-            const iapTranslation =
-              iapTranslations.translations[languageObject.locale]
-
             await notifyAppleStore(iap, index)
             await Store.appleStore.updateIapLocalization(
               languageObject,
               iap,
-              iapTranslation
+              iapTranslations[languageObject.locale]
             )
           }
         },

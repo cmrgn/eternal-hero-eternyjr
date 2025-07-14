@@ -7,19 +7,17 @@ import {
   type Locale,
   type CrowdinCode,
 } from '../constants/i18n'
-import { AppleStoreManager } from './AppleStoreManager'
-import { GooglePlayManager } from './GooglePlayManager'
+import {
+  AppleStoreManager,
+  type IapLocalizationFields as AppleStoreIapLocalizationFields,
+} from './AppleStoreManager'
+import {
+  GooglePlayManager,
+  type IapLocalizationFields as GooglePlayIapLocalizationFields,
+} from './GooglePlayManager'
 
-export type IapLocalizationFields = {
-  name?: string /* Apple Store */
-  title?: string /* Google Play */
-  description?: string /* Both */
-}
-
-export type IapLocalizationEntry = {
-  key: string
-  translations: Record<Locale, IapLocalizationFields>
-}
+export type IapLocalizationFields = AppleStoreIapLocalizationFields &
+  GooglePlayIapLocalizationFields
 
 export class StoreManager {
   #client: Client
@@ -45,39 +43,49 @@ export class StoreManager {
     return this.formatStoreTranslations(file)
   }
 
-  formatStoreTranslations(files: File[]): IapLocalizationEntry[] {
+  parseFileData(file: File) {
+    const json = file.data.toString('utf-8')
+    const data: Record<string, { name: string; description: string }> =
+      JSON.parse(json)
+
+    if (!data || typeof data !== 'object') {
+      this.#log('warn', 'Invalid JSON in Crowdin file', { path: file.path })
+    }
+
+    return data
+  }
+
+  formatStoreTranslations(files: File[]) {
     this.#log('info', 'Formatting store translations', { files: files.length })
 
-    const iapMap: Map<string, IapLocalizationEntry> = new Map()
+    const iapMap = new Map<string, Record<Locale, IapLocalizationFields>>()
 
     for (const file of files) {
       const crowdinCode = file.path.split('/')[0] as CrowdinCode
-      // biome-ignore lint/style/noNonNullAssertion: safe
-      const { locale } = LANGUAGE_OBJECTS.find(
+      const languageObject = LANGUAGE_OBJECTS.find(
         languageObject => languageObject.crowdinCode === crowdinCode
-      )!
-      const json = file.data.toString('utf-8')
-      const content: Record<string, { name: string; description: string }> =
-        JSON.parse(json)
+      )
+
+      if (!languageObject) {
+        throw new Error(
+          `Could not retrieve language object for \`${crowdinCode}\`.`
+        )
+      }
+
+      const { locale } = languageObject
+      const content = this.parseFileData(file)
 
       for (const [key, value] of Object.entries(content)) {
-        if (!iapMap.has(key)) {
-          iapMap.set(key, { key, translations: {} } as IapLocalizationEntry)
-        }
+        if (!iapMap.has(key))
+          iapMap.set(key, {} as Record<Locale, IapLocalizationFields>)
 
+        // Compatibility: Crowdin keys use `name`, Apple Store uses `name`, but
+        // Google Play uses `title` (copied from `name`)
         // biome-ignore lint/style/noNonNullAssertion: safe
-        const entry = iapMap.get(key)!
-
-        if (!entry.translations[locale]) {
-          entry.translations[locale] = {}
-        }
-
-        entry.translations[locale].name = value.name
-        entry.translations[locale].title = value.name
-        entry.translations[locale].description = value.description
+        iapMap.get(key)![locale] = { ...value, title: value.name }
       }
     }
 
-    return Array.from(iapMap.values())
+    return iapMap
   }
 }
