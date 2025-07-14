@@ -22,7 +22,8 @@ export type InAppPurchase = RelationshipLink & {
 type AttributesWithLocale = { attributes: { locale: string } }
 
 export class AppleStoreManager {
-  #jwt: string
+  #jwt: string | null = null
+  #jwtIssuedAt = 0
   #jwtTtl = 5 * 60 // 5 minutes
 
   #apiUrl = 'https://api.appstoreconnect.apple.com/v1'
@@ -41,6 +42,14 @@ export class AppleStoreManager {
   }
 
   get headers() {
+    const now = Math.floor(Date.now() / 1000)
+    const expiresAt = this.#jwtIssuedAt + this.#jwtTtl - 1
+
+    if (!this.#jwt || now >= expiresAt) {
+      this.#jwt = this.generateJwt()
+      this.#jwtIssuedAt = now
+    }
+
     return {
       Authorization: `Bearer ${this.#jwt}`,
       'Content-Type': 'application/json',
