@@ -38,7 +38,13 @@ export class FAQManager {
 
   #threads: AnyThreadChannel[]
   #links: string[]
-  #tocId = '1315713544058310707'
+  #faqForum: ForumChannel | null = null
+
+  #specialThreads = {
+    TABLE_OF_CONTENTS: '1315713544058310707',
+    MULTI_POSTS_WITH_TOC: ['1324842936281595904', '1392774418651938846'],
+    MULTI_POSTS_WITHOUT_TOC: ['1315710373374197850'],
+  }
 
   #listeners = {
     ThreadCreated: [] as ThreadEvents['ThreadCreated'][],
@@ -146,7 +152,7 @@ export class FAQManager {
     // Ignore the pinned thread used as a table of contents since there is no
     // point in translating or indexing it.
     const activeThreads = Array.from(activeThreadRes.threads.values()).filter(
-      thread => thread.id !== this.#tocId
+      thread => thread.id !== this.#specialThreads.TABLE_OF_CONTENTS
     )
     const archivedThreads = Array.from(archivedThreadRes.threads.values())
     const threads = [...activeThreads, ...archivedThreads]
@@ -161,9 +167,16 @@ export class FAQManager {
   }
 
   getFAQForum(guild: Guild) {
+    if (this.#faqForum) return this.#faqForum
+
+    this.#log('info', 'Retrieving FAQ forum', { guildId: guild.id })
+
     const faq = guild.channels.cache.find(({ name }) => name === '❓│faq-guide')
     if (!faq) throw new Error('Could not find the FAQ forum.')
-    return faq as ForumChannel
+
+    this.#faqForum = faq as ForumChannel
+
+    return this.#faqForum
   }
 
   belongsToFAQ({ parentId, guild }: { parentId: string | null; guild: Guild }) {
@@ -312,16 +325,14 @@ export class FAQManager {
   async resolveThread(thread: AnyThreadChannel): Promise<ResolvedThread> {
     this.#log('info', 'Resolving thread', { id: thread.id })
 
-    const BEGINNER_GUIDE = '1324842936281595904'
-    const BEGINNER_GUIDE_DEV = '1392774418651938846'
-    const UPGRADE_ORDER = '1315710373374197850'
-    // This is a bit of a hack for the beginner guide since it is spread over
-    // multiple messages, and all of it should be index.
-    const isBeginnerGuide =
-      thread.id === BEGINNER_GUIDE || thread.id === BEGINNER_GUIDE_DEV
-    const hasMultiplePosts = isBeginnerGuide || thread.id === UPGRADE_ORDER
+    const { MULTI_POSTS_WITHOUT_TOC, MULTI_POSTS_WITH_TOC } =
+      this.#specialThreads
+    const hasMultiplePosts =
+      MULTI_POSTS_WITHOUT_TOC.includes(thread.id) ||
+      MULTI_POSTS_WITH_TOC.includes(thread.id)
+    const hasToC = MULTI_POSTS_WITH_TOC.includes(thread.id)
     const messages = hasMultiplePosts
-      ? await this.resolveThreadMessages(thread, { skipFirst: isBeginnerGuide })
+      ? await this.resolveThreadMessages(thread, { skipFirst: hasToC })
       : await this.resolveThreadMessage(thread)
 
     return {
