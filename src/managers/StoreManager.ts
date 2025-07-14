@@ -80,11 +80,4 @@ export class StoreManager {
 
     return Array.from(iapMap.values())
   }
-
-  fetchAllIaps() {
-    return Promise.all([
-      this.appleStore.fetchAllIaps(),
-      this.googlePlay.fetchAllIaps(),
-    ])
-  }
 }
