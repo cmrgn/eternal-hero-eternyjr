@@ -1,19 +1,8 @@
-import {
-  type ChatInputCommandInteraction,
-  MessageFlags,
-  SlashCommandBuilder,
-} from 'discord.js'
+import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
 
-import type {
-  ResponseObject,
-  TranslationStatusModel,
-} from '../managers/CrowdinManager'
+import type { ResponseObject, TranslationStatusModel } from '../managers/CrowdinManager'
 import { logger } from '../utils/logger'
-import {
-  type CrowdinCode,
-  LANGUAGE_OBJECTS,
-  type LanguageObject,
-} from '../constants/i18n'
+import { type CrowdinCode, LANGUAGE_OBJECTS, type LanguageObject } from '../constants/i18n'
 import type { LocalizationItem } from '../managers/LocalizationManager'
 
 export const scope = 'OFFICIAL'
@@ -38,9 +27,7 @@ export const data = new SlashCommandBuilder()
           )
       )
       .addBooleanOption(option =>
-        option
-          .setName('visible')
-          .setDescription('Whether it should show for everyone')
+        option.setName('visible').setDescription('Whether it should show for everyone')
       )
   )
   .addSubcommand(subcommand =>
@@ -48,10 +35,7 @@ export const data = new SlashCommandBuilder()
       .setName('term')
       .setDescription('Get the translations for a specific term')
       .addStringOption(option =>
-        option
-          .setName('key')
-          .setDescription('Translation key')
-          .setRequired(true)
+        option.setName('key').setDescription('Translation key').setRequired(true)
       )
       .addStringOption(option =>
         option
@@ -67,9 +51,7 @@ export const data = new SlashCommandBuilder()
           )
       )
       .addBooleanOption(option =>
-        option
-          .setName('visible')
-          .setDescription('Whether it should show for everyone')
+        option.setName('visible').setDescription('Whether it should show for everyone')
       )
   )
   .setDescription('Interact with Crowdin')
@@ -106,9 +88,7 @@ async function commandProgress(interaction: ChatInputCommandInteraction) {
     '\n\n-# If you think your translation progress is not accurate, make sure you have saved your translations in Crowdin. Drafts do not count towards completion.'
 
   if (crowdinCode) {
-    const languageData = projectProgress.find(
-      ({ data }) => data.languageId === crowdinCode
-    )
+    const languageData = projectProgress.find(({ data }) => data.languageId === crowdinCode)
 
     if (!languageData) {
       logger.logCommand(interaction, 'Missing language object', {
@@ -127,8 +107,7 @@ async function commandProgress(interaction: ChatInputCommandInteraction) {
   }
 
   return interaction.reply({
-    content:
-      header + projectProgress.map(formatLanguageProgress).join('\n') + footer,
+    content: header + projectProgress.map(formatLanguageProgress).join('\n') + footer,
     flags,
   })
 }
@@ -163,9 +142,7 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
   const languageObjects = Crowdin.getLanguages({ withEnglish: false })
 
   if (crowdinCode) {
-    const languageObject = languageObjects.find(
-      object => object.crowdinCode === crowdinCode
-    )
+    const languageObject = languageObjects.find(object => object.crowdinCode === crowdinCode)
 
     if (!languageObject) {
       logger.logCommand(interaction, 'Missing language object', {
@@ -183,12 +160,8 @@ Translations for term \`${key}\`:
     return interaction.editReply({ content })
   }
 
-  const filled = languageObjects.filter(
-    ({ crowdinCode }) => crowdinCode in string.translations
-  )
-  const missing = languageObjects.filter(
-    ({ crowdinCode }) => !(crowdinCode in string.translations)
-  )
+  const filled = languageObjects.filter(({ crowdinCode }) => crowdinCode in string.translations)
+  const missing = languageObjects.filter(({ crowdinCode }) => !(crowdinCode in string.translations))
   const missCount = Object.keys(missing).length
   const content = `
 Translations for term \`${key}\`:

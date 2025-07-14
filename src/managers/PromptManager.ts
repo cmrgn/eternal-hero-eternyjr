@@ -54,11 +54,7 @@ export class PromptManager {
     if (!isEnabled) throw new Error('ChatGPT usage is disabled; aborting.')
   }
 
-  async callChatCompletion(
-    userPrompt: string,
-    systemPrompt = SYSTEM_PROMPT,
-    model = 'gpt-4o'
-  ) {
+  async callChatCompletion(userPrompt: string, systemPrompt = SYSTEM_PROMPT, model = 'gpt-4o') {
     await this.ensureChatGPTIsEnabled()
 
     const response = await withRetry(attempt => {

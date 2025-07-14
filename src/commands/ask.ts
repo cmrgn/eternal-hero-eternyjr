@@ -1,8 +1,4 @@
-import {
-  type ChatInputCommandInteraction,
-  MessageFlags,
-  SlashCommandBuilder,
-} from 'discord.js'
+import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
 
 import { logger } from '../utils/logger'
 import type { PineconeMetadata } from '../managers/IndexManager'
@@ -14,15 +10,10 @@ export const scope = 'OFFICIAL'
 export const data = new SlashCommandBuilder()
   .setName('ask')
   .addStringOption(option =>
-    option
-      .setName('question')
-      .setDescription('Question to ask the FAQ')
-      .setRequired(true)
+    option.setName('question').setDescription('Question to ask the FAQ').setRequired(true)
   )
   .addBooleanOption(option =>
-    option
-      .setName('raw')
-      .setDescription('Whether to skip rephrasing by ChatGPT')
+    option.setName('raw').setDescription('Whether to skip rephrasing by ChatGPT')
   )
   /*
   .addBooleanOption(option =>

@@ -1,8 +1,4 @@
-import {
-  type ChatInputCommandInteraction,
-  MessageFlags,
-  SlashCommandBuilder,
-} from 'discord.js'
+import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
 
 import { logger } from '../utils/logger'
 
@@ -27,8 +23,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   // Send the message in the channel
   await channel.send(message)
 
-  // Acknowledge the message was sent, and immediately delete acknowledgement
-  // (since it’s required by Discord but unnecessary for the user)
+  // Acknowledge the message was sent, and immediately delete acknowledgement (since it’s required
+  // by Discord but unnecessary for the user)
   await interaction.reply({ content: 'Sent.', flags: MessageFlags.Ephemeral })
   await interaction.deleteReply()
 }

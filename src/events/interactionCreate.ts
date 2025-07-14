@@ -25,11 +25,7 @@ export async function onInteractionCreate(interaction: Interaction) {
     const message = 'There was an error while executing this command.'
     const { Ephemeral } = MessageFlags
 
-    logger.logCommand(
-      interaction,
-      'There was an error while executing this command.',
-      { error }
-    )
+    logger.logCommand(interaction, 'There was an error while executing this command.', { error })
 
     if (interaction.replied || interaction.deferred)
       await interaction.followUp({ content: message, flags: Ephemeral })

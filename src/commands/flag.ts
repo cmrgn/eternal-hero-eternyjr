@@ -53,10 +53,7 @@ export const data = new SlashCommandBuilder()
       .setName('get')
       .setDescription('Check 1 or all feature flags')
       .addStringOption(opt =>
-        opt
-          .setName('name')
-          .setDescription('The feature flag to check')
-          .setAutocomplete(true)
+        opt.setName('name').setDescription('The feature flag to check').setAutocomplete(true)
       )
   )
 
@@ -87,9 +84,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const flags = await Flags.getFeatureFlags()
     const content = `Feature flags:\n${flags
-      .map(
-        ({ key, value }) => `- \`${key}\`: ${value ? 'ENABLED' : 'DISABLED'}`
-      )
+      .map(({ key, value }) => `- \`${key}\`: ${value ? 'ENABLED' : 'DISABLED'}`)
       .join('\n')}`
 
     return interaction.reply({

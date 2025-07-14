@@ -69,21 +69,15 @@ export class AppleStoreManager {
 
   generateJwt() {
     if (!process.env.APPLE_STORE_ISSUER_ID) {
-      throw new Error(
-        'Missing environment variable APPLE_STORE_ISSUER_ID; aborting.'
-      )
+      throw new Error('Missing environment variable APPLE_STORE_ISSUER_ID; aborting.')
     }
 
     if (!process.env.APPLE_STORE_KEY_ID) {
-      throw new Error(
-        'Missing environment variable APPLE_STORE_KEY_ID; aborting.'
-      )
+      throw new Error('Missing environment variable APPLE_STORE_KEY_ID; aborting.')
     }
 
     if (!process.env.APPLE_STORE_PRIVATE_KEY) {
-      throw new Error(
-        'Missing environment variable APPLE_STORE_PRIVATE_KEY; aborting.'
-      )
+      throw new Error('Missing environment variable APPLE_STORE_PRIVATE_KEY; aborting.')
     }
 
     const pkey = process.env.APPLE_STORE_PRIVATE_KEY.replace(/\\n/g, '\n')
@@ -108,11 +102,7 @@ export class AppleStoreManager {
     return token
   }
 
-  callApi<T>(
-    path: string,
-    method = 'GET',
-    payload?: unknown
-  ): Promise<AppleApiResponse<T>> {
+  callApi<T>(path: string, method = 'GET', payload?: unknown): Promise<AppleApiResponse<T>> {
     return withRetry(attempt => {
       const body = JSON.stringify(payload)
       const context = { path, method, body, attempt }
@@ -132,8 +122,7 @@ export class AppleStoreManager {
       let nextUrl: string | null = initialUrl
 
       while (nextUrl) {
-        const response: AppleApiResponse<InAppPurchase> =
-          await this.callApi(nextUrl)
+        const response: AppleApiResponse<InAppPurchase> = await this.callApi(nextUrl)
         results = results.concat(...response.data)
         nextUrl = response.links?.next ?? null
       }
@@ -146,9 +135,7 @@ export class AppleStoreManager {
       return this.#cachedIaps
     }
 
-    const data = await getAllPages(
-      `${this.#apiUrl}/apps/${this.#appId}/inAppPurchasesV2`
-    )
+    const data = await getAllPages(`${this.#apiUrl}/apps/${this.#appId}/inAppPurchasesV2`)
 
     if (data.length > 0) {
       this.#cachedIaps = data
@@ -165,8 +152,7 @@ export class AppleStoreManager {
     })
 
     const { related } = data.relationships.inAppPurchaseLocalizations.links
-    const response: AppleApiResponse<InAppPurchase> =
-      await this.callApi(related)
+    const response: AppleApiResponse<InAppPurchase> = await this.callApi(related)
     const en = response.data.find(loc => loc.attributes.locale === 'en-US')
 
     return {
@@ -184,8 +170,7 @@ export class AppleStoreManager {
     })
 
     try {
-      const response: AppleApiResponse<InAppPurchase> =
-        await this.callApi(relatedUrl)
+      const response: AppleApiResponse<InAppPurchase> = await this.callApi(relatedUrl)
       const match = response.data.find(loc => loc.attributes.locale === locale)
       return match?.id ?? null
     } catch {
@@ -231,11 +216,7 @@ export class AppleStoreManager {
         payload
       )
     } else {
-      await this.callApi(
-        `${this.#apiUrl}/inAppPurchaseLocalizations`,
-        'POST',
-        payload
-      )
+      await this.callApi(`${this.#apiUrl}/inAppPurchaseLocalizations`, 'POST', payload)
     }
   }
 }

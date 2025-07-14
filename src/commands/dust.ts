@@ -1,8 +1,4 @@
-import {
-  type ChatInputCommandInteraction,
-  MessageFlags,
-  SlashCommandBuilder,
-} from 'discord.js'
+import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
 
 import { logger } from '../utils/logger'
 
@@ -35,16 +31,10 @@ export const data = new SlashCommandBuilder()
       .setMaxValue(1_000)
   )
   .addIntegerOption(option =>
-    option
-      .setName('raw_dust')
-      .setDescription('Amount of dust')
-      .setRequired(true)
+    option.setName('raw_dust').setDescription('Amount of dust').setRequired(true)
   )
   .addIntegerOption(option =>
-    option
-      .setName('divine_essences')
-      .setDescription('Amount of divine essences')
-      .setRequired(true)
+    option.setName('divine_essences').setDescription('Amount of divine essences').setRequired(true)
   )
   .addIntegerOption(option =>
     option
@@ -80,13 +70,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const viaClanBonds = legKeysViaBonds * 570
   const viaEssences = totalEssences * 2880 + essencesViaLegKeys * 4266
 
-  const total =
-    rawDust +
-    viaRareKeys +
-    viaEpicKeys +
-    viaLegKeys +
-    viaClanBonds +
-    viaEssences
+  const total = rawDust + viaRareKeys + viaEpicKeys + viaLegKeys + viaClanBonds + viaEssences
 
   const { format } = new Intl.NumberFormat('en-US')
   const embed = Discord.createEmbed()

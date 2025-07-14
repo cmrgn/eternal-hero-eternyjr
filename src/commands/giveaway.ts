@@ -14,10 +14,7 @@ import { logger } from '../utils/logger'
 export const scope = 'PUBLIC'
 
 const messageIdOption = (option: SlashCommandStringOption) => {
-  return option
-    .setName('message_id')
-    .setDescription('Message ID of the giveaway')
-    .setRequired(true)
+  return option.setName('message_id').setDescription('Message ID of the giveaway').setRequired(true)
 }
 
 export const data = new SlashCommandBuilder()
@@ -27,14 +24,9 @@ export const data = new SlashCommandBuilder()
       .setName('start')
       .setDescription('Start a new giveaway')
       .addStringOption(option =>
-        option
-          .setName('duration')
-          .setDescription('Duration (e.g. 6h, 2d, 1w)')
-          .setRequired(true)
+        option.setName('duration').setDescription('Duration (e.g. 6h, 2d, 1w)').setRequired(true)
       )
-      .addStringOption(option =>
-        option.setName('prize').setDescription('Prize').setRequired(true)
-      )
+      .addStringOption(option => option.setName('prize').setDescription('Prize').setRequired(true))
       .addIntegerOption(option =>
         option.setName('winner_count').setDescription('Amount of winners')
       )
@@ -45,9 +37,7 @@ export const data = new SlashCommandBuilder()
       .setDescription('Reroll the winner of an ended giveaway')
       .addStringOption(messageIdOption)
       .addIntegerOption(option =>
-        option
-          .setName('new_winner_count')
-          .setDescription('New amount of winners')
+        option.setName('new_winner_count').setDescription('New amount of winners')
       )
   )
   .addSubcommand(subcommand =>
@@ -56,17 +46,11 @@ export const data = new SlashCommandBuilder()
       .setDescription('Edit an active giveaway')
       .addStringOption(messageIdOption)
       .addStringOption(option =>
-        option
-          .setName('extra_duration')
-          .setDescription('Additional duration (e.g. 6h, 2d, 1w)')
+        option.setName('extra_duration').setDescription('Additional duration (e.g. 6h, 2d, 1w)')
       )
-      .addStringOption(option =>
-        option.setName('new_prize').setDescription('New prize')
-      )
+      .addStringOption(option => option.setName('new_prize').setDescription('New prize'))
       .addIntegerOption(option =>
-        option
-          .setName('new_winner_count')
-          .setDescription('New amount of winners')
+        option.setName('new_winner_count').setDescription('New amount of winners')
       )
   )
   .addSubcommand(subcommand =>
@@ -91,10 +75,7 @@ const MESSAGES = {
   drawing: 'Ends {timestamp}',
 }
 
-function initiatorAnswer(
-  messageId: string,
-  action: string
-): InteractionReplyOptions {
+function initiatorAnswer(messageId: string, action: string): InteractionReplyOptions {
   return {
     content: `:white_check_mark: Giveaway ${messageId} was successfully ${action}.`,
     flags: MessageFlags.Ephemeral,
@@ -108,17 +89,12 @@ function initiatorError(message?: string): InteractionReplyOptions {
   }
 }
 
-function getGiveaway(
-  interaction: ChatInputCommandInteraction,
-  messageId: string
-) {
+function getGiveaway(interaction: ChatInputCommandInteraction, messageId: string) {
   const { client } = interaction
   const { Giveaways } = client.managers
 
   return Giveaways.giveaways.find(
-    giveaway =>
-      giveaway.guildId === interaction.guildId &&
-      giveaway.messageId === messageId
+    giveaway => giveaway.guildId === interaction.guildId && giveaway.messageId === messageId
   )
 }
 

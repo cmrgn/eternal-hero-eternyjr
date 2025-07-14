@@ -16,8 +16,7 @@ export class FlagsManager {
   }
 
   async hasFeatureFlag(key: string, options?: { silent: boolean }) {
-    if (!options?.silent)
-      this.#log('info', 'Checking if feature flag exists', { key })
+    if (!options?.silent) this.#log('info', 'Checking if feature flag exists', { key })
 
     const { Database } = this.#client.managers
     const exists = await Database.db
@@ -46,10 +45,7 @@ export class FlagsManager {
     this.#log('info', 'Delete feature flag', { key })
 
     const { Database } = this.#client.managers
-    const response = await Database.db
-      .deleteFrom('feature_flags')
-      .where('key', '=', key)
-      .execute()
+    const response = await Database.db.deleteFrom('feature_flags').where('key', '=', key).execute()
 
     return response.length > 0
   }
@@ -58,10 +54,7 @@ export class FlagsManager {
     this.#log('info', 'Reading all feature flags')
 
     const { Database } = this.#client.managers
-    const flags = await Database.db
-      .selectFrom('feature_flags')
-      .select(['key', 'value'])
-      .execute()
+    const flags = await Database.db.selectFrom('feature_flags').select(['key', 'value']).execute()
 
     return flags
   }

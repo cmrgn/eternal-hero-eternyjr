@@ -2,11 +2,7 @@ import type { Client } from 'discord.js'
 import type { File } from 'decompress'
 
 import { logger } from '../utils/logger'
-import {
-  LANGUAGE_OBJECTS,
-  type Locale,
-  type CrowdinCode,
-} from '../constants/i18n'
+import { LANGUAGE_OBJECTS, type Locale, type CrowdinCode } from '../constants/i18n'
 import {
   AppleStoreManager,
   type IapLocalizationFields as AppleStoreIapLocalizationFields,
@@ -45,8 +41,7 @@ export class StoreManager {
 
   parseFileData(file: File) {
     const json = file.data.toString('utf-8')
-    const data: Record<string, { name: string; description: string }> =
-      JSON.parse(json)
+    const data: Record<string, { name: string; description: string }> = JSON.parse(json)
 
     if (!data || typeof data !== 'object') {
       this.#log('warn', 'Invalid JSON in Crowdin file', { path: file.path })
@@ -67,20 +62,17 @@ export class StoreManager {
       )
 
       if (!languageObject) {
-        throw new Error(
-          `Could not retrieve language object for \`${crowdinCode}\`.`
-        )
+        throw new Error(`Could not retrieve language object for \`${crowdinCode}\`.`)
       }
 
       const { locale } = languageObject
       const content = this.parseFileData(file)
 
       for (const [key, value] of Object.entries(content)) {
-        if (!iapMap.has(key))
-          iapMap.set(key, {} as Record<Locale, IapLocalizationFields>)
+        if (!iapMap.has(key)) iapMap.set(key, {} as Record<Locale, IapLocalizationFields>)
 
-        // Compatibility: Crowdin keys use `name`, Apple Store uses `name`, but
-        // Google Play uses `title` (copied from `name`)
+        // Compatibility: Crowdin keys use `name`, Apple Store uses `name`, but Google Play uses
+        // `title` (copied from `name`)
         // biome-ignore lint/style/noNonNullAssertion: safe
         iapMap.get(key)![locale] = { ...value, title: value.name }
       }

@@ -218,8 +218,7 @@ export const LANGUAGE_OBJECTS = [
         'ดูเหมือนว่าคุณกำลังพยายามเชื่อมโยงบัญชีเกมของคุณกับบัญชี Discord แต่ดูเหมือนว่าคุณได้วาง ID เกมของคุณแทนคำสั่งเชื่อมโยง โปรดปฏิบัติตามคำแนะนำใน %s อย่างระมัดระวัง',
       internationalization:
         'เซิร์ฟเวอร์ Discord ของเรารองรับเฉพาะภาษาอังกฤษเท่านั้น (กฎ 3.1) โปรดใช้ภาษาอังกฤษหรือพิจารณาเข้าร่วม %s เพื่อพูดภาษาไทย',
-      no_results:
-        'ขออภัย ไม่พบเนื้อหาที่เกี่ยวข้องกับคำถามของคุณ โปรดลองเขียนคำถามใหม่หรือถามคำถามอื่น',
+      no_results: 'ขออภัย ไม่พบเนื้อหาที่เกี่ยวข้องกับคำถามของคุณ โปรดลองเขียนคำถามใหม่หรือถามคำถามอื่น',
     },
   },
   {
@@ -272,8 +271,7 @@ export const LANGUAGE_OBJECTS = [
         '您似乎正在尝试将您的游戏帐户关联到您的 Discord 帐户。但是，您粘贴的似乎是您的游戏 ID，而不是关联命令。请仔细按照 %s 中的说明操作。',
       internationalization:
         '我们的 Discord 服务器仅支持英语（规则 3.1）。请坚持使用英语，或考虑加入 %s 使用中文交流。',
-      no_results:
-        '很遗憾，我们未找到与您的问题相关的内容。请尝试重新表述或提出其他问题。',
+      no_results: '很遗憾，我们未找到与您的问题相关的内容。请尝试重新表述或提出其他问题。',
     },
   },
 ]
@@ -281,7 +279,7 @@ export const LOCALES = LANGUAGE_OBJECTS.map(object => object.locale)
 export const LANGUAGES = LANGUAGE_OBJECTS.map(object => object.twoLettersCode)
 export const CROWDIN_CODES = LANGUAGE_OBJECTS.map(object => object.crowdinCode)
 
-// biome-ignore lint/style/noNonNullAssertion: <explanation>
+// biome-ignore lint/style/noNonNullAssertion: safe
 export const ENGLISH_LANGUAGE_OBJECT = LANGUAGE_OBJECTS.find(
   locale => locale.twoLettersCode === 'en'
 )!

@@ -9,9 +9,7 @@ import { sql } from 'kysely'
 
 import { logger } from '../utils/logger'
 
-type DiscordMessage = OmitPartialGroupDMChannel<
-  Message<boolean> | PartialMessage
->
+type DiscordMessage = OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>
 
 export class LeaderboardManager {
   #client: Client
@@ -97,8 +95,8 @@ export class LeaderboardManager {
       return this.#log('info', 'FAQ leaderboard is disabled; aborting.')
     }
 
-    // Perform a quick and cheap check to figure out whether the message
-    // contains any link whatsoever, otherwise return early.
+    // Perform a quick and cheap check to figure out whether the message contains any link
+    // whatsoever, otherwise return early.
     if (!Faq.containsLinkLike(content)) return
     if (!Faq.links.some(link => content.includes(link))) return
 
@@ -134,18 +132,15 @@ export class LeaderboardManager {
     return this.faqLinksOnCreateOrDelete(Events.MessageDelete, interaction)
   }
 
-  async faqLinksOnUpdate(
-    oldMessage: DiscordMessage,
-    newMessage: DiscordMessage
-  ) {
+  async faqLinksOnUpdate(oldMessage: DiscordMessage, newMessage: DiscordMessage) {
     const { client, guildId, channelId, member } = newMessage
     const { Faq, Discord } = client.managers
 
     if (!member || !guildId) return
     if (Discord.shouldIgnoreInteraction(newMessage)) return
 
-    // Perform a quick and cheap check to figure out whether the message contains
-    // any link whatsoever, otherwise return early.
+    // Perform a quick and cheap check to figure out whether the message contains any link
+    // whatsoever, otherwise return early.
     const hadOldMessageLinks =
       oldMessage.content &&
       Faq.containsLinkLike(oldMessage.content) &&
@@ -177,8 +172,7 @@ export class LeaderboardManager {
   bindEvents() {
     this.#log('info', 'Binding events onto the manager instance')
 
-    // Look for FAQ links in any message in order to maintain the FAQ
-    // leaderboard.
+    // Look for FAQ links in any message in order to maintain the FAQ leaderboard.
     this.#client.on(Events.MessageCreate, this.faqLinksOnCreate.bind(this))
     this.#client.on(Events.MessageDelete, this.faqLinksOnDelete.bind(this))
     this.#client.on(Events.MessageUpdate, this.faqLinksOnUpdate.bind(this))

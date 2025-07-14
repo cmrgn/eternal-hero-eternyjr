@@ -37,15 +37,11 @@ export class GooglePlayManager {
 
   generateAuth() {
     if (!process.env.GOOGLE_PLAY_CLIENT_EMAIL) {
-      throw new Error(
-        'Missing environment variable GOOGLE_PLAY_CLIENT_EMAIL; aborting.'
-      )
+      throw new Error('Missing environment variable GOOGLE_PLAY_CLIENT_EMAIL; aborting.')
     }
 
     if (!process.env.GOOGLE_PLAY_PRIVATE_KEY) {
-      throw new Error(
-        'Missing environment variable GOOGLE_PLAY_PRIVATE_KEY; aborting.'
-      )
+      throw new Error('Missing environment variable GOOGLE_PLAY_PRIVATE_KEY; aborting.')
     }
 
     const pkey = process.env.GOOGLE_PLAY_PRIVATE_KEY.replace(/\\n/g, '\n')
@@ -75,14 +71,12 @@ export class GooglePlayManager {
     )
 
     const iaps: InAppPurchase[] =
-      response.data.inappproduct?.map(
-        ({ sku, status, defaultLanguage, listings }) => ({
-          sku,
-          status,
-          defaultLanguage,
-          listings,
-        })
-      ) ?? []
+      response.data.inappproduct?.map(({ sku, status, defaultLanguage, listings }) => ({
+        sku,
+        status,
+        defaultLanguage,
+        listings,
+      })) ?? []
 
     if (iaps.length > 0) {
       this.#cachedIaps = iaps
@@ -121,11 +115,10 @@ export class GooglePlayManager {
     for (const [lang, values] of Object.entries(overrides)) {
       // Okay Google… 🫠
       const locale = (lang === 'vi-VN' ? 'vi' : lang) as Locale
-      merged[locale] = Object.assign(
-        { title: '', description: '' },
-        base[locale],
-        { title: values.title, description: values.description }
-      )
+      merged[locale] = Object.assign({ title: '', description: '' }, base[locale], {
+        title: values.title,
+        description: values.description,
+      })
     }
 
     return merged

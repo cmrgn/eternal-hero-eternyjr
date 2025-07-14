@@ -6,9 +6,7 @@ const logCommand = (
   extra?: Record<PropertyKey, unknown>
 ) => {
   const guild = interaction.guild
-  const channel = guild?.channels.cache.find(
-    channel => channel.id === interaction.channelId
-  )
+  const channel = guild?.channels.cache.find(channel => channel.id === interaction.channelId)
 
   console.log(`[Command: ${interaction.commandName}]`, message, {
     ...extra,
@@ -23,7 +21,7 @@ export const LOG_SEVERITIES = ['info', 'warn', 'error'] as const
 
 const log =
   (scope: string, severityThreshold: number) =>
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: safe
   (type: (typeof LOG_SEVERITIES)[number], message: string, ...args: any[]) => {
     if (LOG_SEVERITIES.indexOf(type) >= severityThreshold)
       console[type](`[${scope}]`, message, ...args)

@@ -1,8 +1,4 @@
-import {
-  type ChatInputCommandInteraction,
-  MessageFlags,
-  SlashCommandBuilder,
-} from 'discord.js'
+import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
 import pMap from 'p-map'
 
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
@@ -37,9 +33,7 @@ export const data = new SlashCommandBuilder()
         { name: 'Google Play', value: 'GOOGLE_PLAY' }
       )
   )
-  .addStringOption(option =>
-    option.setName('iap').setDescription('In-app purchase identifier')
-  )
+  .addStringOption(option => option.setName('iap').setDescription('In-app purchase identifier'))
   .setDescription('Localize the store in-app purchases')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -50,7 +44,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const platform = options.getString('platform') ?? 'BOTH'
   const crowdinCode = options.getString('language', true) as CrowdinCode
 
-  // biome-ignore lint/style/noNonNullAssertion: <explanation>
+  // biome-ignore lint/style/noNonNullAssertion: safe
   const languageObject = Crowdin.getLanguages({ withEnglish: false }).find(
     languageObject => languageObject.crowdinCode === crowdinCode
   )!
@@ -86,9 +80,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     if (platform === 'BOTH' || platform === 'APPLE_STORE') {
       const appleStoreIaps = await Store.appleStore.fetchAllIaps()
-      const appleStoreIap = appleStoreIaps.find(
-        iap => iap.attributes.productId === iapId
-      )
+      const appleStoreIap = appleStoreIaps.find(iap => iap.attributes.productId === iapId)
       if (!appleStoreIap) {
         return interaction.editReply({
           content: `Could not find an Apple in-app purchase for \`${iapId}\`.`,

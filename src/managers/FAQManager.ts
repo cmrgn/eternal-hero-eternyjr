@@ -80,14 +80,8 @@ export class FAQManager {
 
   on(eventName: 'ThreadCreated', listener: ThreadEvents['ThreadCreated']): void
   on(eventName: 'ThreadDeleted', listener: ThreadEvents['ThreadDeleted']): void
-  on(
-    eventName: 'ThreadNameUpdated',
-    listener: ThreadEvents['ThreadNameUpdated']
-  ): void
-  on(
-    eventName: 'ThreadContentUpdated',
-    listener: ThreadEvents['ThreadContentUpdated']
-  ): void
+  on(eventName: 'ThreadNameUpdated', listener: ThreadEvents['ThreadNameUpdated']): void
+  on(eventName: 'ThreadContentUpdated', listener: ThreadEvents['ThreadContentUpdated']): void
   on(
     eventName: keyof ThreadEvents,
     listener:
@@ -98,21 +92,13 @@ export class FAQManager {
   ) {
     switch (eventName) {
       case 'ThreadCreated':
-        return this.#listeners[eventName].push(
-          listener as ThreadEvents['ThreadCreated']
-        )
+        return this.#listeners[eventName].push(listener as ThreadEvents['ThreadCreated'])
       case 'ThreadDeleted':
-        return this.#listeners[eventName].push(
-          listener as ThreadEvents['ThreadDeleted']
-        )
+        return this.#listeners[eventName].push(listener as ThreadEvents['ThreadDeleted'])
       case 'ThreadNameUpdated':
-        return this.#listeners[eventName].push(
-          listener as ThreadEvents['ThreadNameUpdated']
-        )
+        return this.#listeners[eventName].push(listener as ThreadEvents['ThreadNameUpdated'])
       case 'ThreadContentUpdated':
-        return this.#listeners[eventName].push(
-          listener as ThreadEvents['ThreadContentUpdated']
-        )
+        return this.#listeners[eventName].push(listener as ThreadEvents['ThreadContentUpdated'])
     }
   }
 
@@ -126,19 +112,13 @@ export class FAQManager {
   }
 
   containsLinkLike(content: string) {
-    return (
-      content.includes('<#') ||
-      content.includes('https://discord.com/channels/')
-    )
+    return content.includes('<#') || content.includes('https://discord.com/channels/')
   }
 
   async getGuild() {
     this.#log('info', 'Getting guild object')
     const { guilds } = this.#client
-    return (
-      guilds.cache.get(this.guildId) ??
-      (await withRetry(() => guilds.fetch(this.guildId)))
-    )
+    return guilds.cache.get(this.guildId) ?? (await withRetry(() => guilds.fetch(this.guildId)))
   }
 
   async fetchThreads() {
@@ -149,8 +129,8 @@ export class FAQManager {
       withRetry(() => faq.threads.fetchArchived()),
     ])
 
-    // Ignore the pinned thread used as a table of contents since there is no
-    // point in translating or indexing it.
+    // Ignore the pinned thread used as a table of contents since there is no point in translating
+    // or indexing it.
     const activeThreads = Array.from(activeThreadRes.threads.values()).filter(
       thread => thread.id !== this.#specialThreads.TABLE_OF_CONTENTS
     )
@@ -193,8 +173,7 @@ export class FAQManager {
     this.cacheThreads()
 
     const resolvedThread = await this.resolveThread(thread)
-    for (const listener of this.#listeners.ThreadCreated)
-      listener(resolvedThread)
+    for (const listener of this.#listeners.ThreadCreated) listener(resolvedThread)
   }
 
   async onThreadDelete(thread: AnyThreadChannel) {
@@ -221,8 +200,7 @@ export class FAQManager {
     this.#threads = this.#threads.map(t => (t.id === next.id ? next : t))
 
     const resolvedThread = await this.resolveThread(next)
-    for (const listener of this.#listeners.ThreadNameUpdated)
-      listener(resolvedThread)
+    for (const listener of this.#listeners.ThreadNameUpdated) listener(resolvedThread)
   }
 
   async onMessageUpdate(
@@ -232,21 +210,18 @@ export class FAQManager {
     const { Discord } = this.#client.managers
 
     if (Discord.shouldIgnoreInteraction(newMessage)) return
-    if (newMessage.partial)
-      newMessage = await withRetry(() => newMessage.fetch())
+    if (newMessage.partial) newMessage = await withRetry(() => newMessage.fetch())
 
     const { guild, channel: thread } = newMessage
     if (!guild || !thread?.isThread()) return
 
     // Make sure the parent of the thread is the FAQ forum, abort if not
-    if (!this.belongsToFAQ({ parentId: thread.parent?.id ?? null, guild }))
-      return
+    if (!this.belongsToFAQ({ parentId: thread.parent?.id ?? null, guild })) return
 
     this.#log('info', 'Responding to thread content update', { id: thread.id })
 
-    // If the old content is accessible in the Discord cache and strictly
-    // equal to the new content after normalization, do nothing since the edit
-    // is essentially moot
+    // If the old content is accessible in the Discord cache and strictly equal to the new content
+    // after normalization, do nothing since the edit is essentially moot
     if (
       FAQManager.cleanUpThreadContent(oldMessage.content) ===
       FAQManager.cleanUpThreadContent(newMessage.content)
@@ -267,11 +242,7 @@ export class FAQManager {
     if (!(parent instanceof ForumChannel)) return []
 
     return appliedTags
-      .map(
-        id =>
-          (parent as ForumChannel).availableTags.find(t => t.id === id)?.name ??
-          ''
-      )
+      .map(id => (parent as ForumChannel).availableTags.find(t => t.id === id)?.name ?? '')
       .filter(Boolean)
   }
 
@@ -302,10 +273,7 @@ export class FAQManager {
     ]
   }
 
-  async resolveThreadMessages(
-    thread: AnyThreadChannel,
-    { skipFirst }: { skipFirst: boolean }
-  ) {
+  async resolveThreadMessages(thread: AnyThreadChannel, { skipFirst }: { skipFirst: boolean }) {
     const messages = await withRetry(() => thread.messages.fetch())
 
     return (
@@ -325,11 +293,9 @@ export class FAQManager {
   async resolveThread(thread: AnyThreadChannel): Promise<ResolvedThread> {
     this.#log('info', 'Resolving thread', { id: thread.id })
 
-    const { MULTI_POSTS_WITHOUT_TOC, MULTI_POSTS_WITH_TOC } =
-      this.#specialThreads
+    const { MULTI_POSTS_WITHOUT_TOC, MULTI_POSTS_WITH_TOC } = this.#specialThreads
     const hasMultiplePosts =
-      MULTI_POSTS_WITHOUT_TOC.includes(thread.id) ||
-      MULTI_POSTS_WITH_TOC.includes(thread.id)
+      MULTI_POSTS_WITHOUT_TOC.includes(thread.id) || MULTI_POSTS_WITH_TOC.includes(thread.id)
     const hasToC = MULTI_POSTS_WITH_TOC.includes(thread.id)
     const messages = hasMultiplePosts
       ? await this.resolveThreadMessages(thread, { skipFirst: hasToC })

@@ -48,13 +48,11 @@ export class DiscordManager {
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('DiscordManager', this.#severityThreshold)
 
-  // This is the only manager that doesn’t expect a client because it is also
-  // used outside of the runtime of the bot, such as for scripts
+  // This is the only manager that doesn’t expect a client because it is also used outside of the
+  // runtime of the bot, such as for scripts
   constructor() {
     if (!process.env.DISCORD_CLIENT_ID) {
-      throw new Error(
-        'Missing environment variable DISCORD_CLIENT_ID; aborting.'
-      )
+      throw new Error('Missing environment variable DISCORD_CLIENT_ID; aborting.')
     }
 
     this.#clientId = process.env.DISCORD_CLIENT_ID
@@ -112,10 +110,9 @@ export class DiscordManager {
       style: 'currency',
       currency: 'EUR',
     })
-    // The previous content may not be defined if the message is a partial. We
-    // cannot refetch it, because it will fetch the latest version of the mes-
-    // sage which will yield a null diff. So either we have the old content in
-    // the Discord cache and we can diff, or we can’t.
+    // The previous content may not be defined if the message is a partial. We cannot refetch it,
+    // because it will fetch the latest version of the mes- sage which will yield a null diff. So
+    // either we have the old content in the Discord cache and we can diff, or we can’t.
     const contentDiff = oldMessage.content
       ? diffWords(oldMessage.content, message.content)
           .map(part => {
@@ -145,8 +142,7 @@ export class DiscordManager {
   createEmbed(withThumbnail = true) {
     const embed = new EmbedBuilder().setColor(this.BOT_COLOR).setTimestamp()
 
-    if (withThumbnail)
-      embed.setThumbnail('https://ehmb.netlify.app/eh_icon.png')
+    if (withThumbnail) embed.setThumbnail('https://ehmb.netlify.app/eh_icon.png')
 
     return embed
   }
@@ -154,12 +150,12 @@ export class DiscordManager {
   shouldIgnoreInteraction(interaction: {
     guildId: string | null
   }) {
-    // The bot is meant to be used in a guild, so if there is no guild ID, then
-    // the interaction should be ignored.
+    // The bot is meant to be used in a guild, so if there is no guild ID, then the interaction
+    // should be ignored.
     if (!interaction.guildId) return
 
-    // Prevent the production bot from answering in the test server, and the test
-    // bot from answering in any other server than the test one
+    // Prevent the production bot from answering in the test server, and the test bot from answering
+    // in any other server than the test one
     if (this.IS_PROD && interaction.guildId === this.TEST_SERVER_ID) return true
     if (this.IS_DEV && interaction.guildId !== this.TEST_SERVER_ID) return true
     return false
@@ -167,9 +163,7 @@ export class DiscordManager {
 
   async sendInteractionAlert(interaction: InteractionLike, message: string) {
     const userId = interaction.user?.id ?? interaction.userId
-    const channel = await withRetry(() =>
-      interaction.client.channels.fetch(this.#alertChannelId)
-    )
+    const channel = await withRetry(() => interaction.client.channels.fetch(this.#alertChannelId))
     if (!channel?.isSendable()) return
     if (interaction.guildId === this.TEST_SERVER_ID) return
 
@@ -189,17 +183,11 @@ export class DiscordManager {
     }
   }
 
-  async getChannelFromInteraction(
-    interaction: OmitPartialGroupDMChannel<Message<boolean>>
-  ) {
+  async getChannelFromInteraction(interaction: OmitPartialGroupDMChannel<Message<boolean>>) {
     const { guild, channel, client } = interaction
-    const cachedChannel = guild?.channels.cache.find(
-      ({ id }) => id === channel.id
-    )
+    const cachedChannel = guild?.channels.cache.find(({ id }) => id === channel.id)
     if (cachedChannel) return cachedChannel
-    const fetchedChannel = await withRetry(() =>
-      client.channels.fetch(channel.id)
-    )
+    const fetchedChannel = await withRetry(() => client.channels.fetch(channel.id))
 
     if (!fetchedChannel?.isTextBased()) {
       throw new Error('Retrieved channel is not a text-based channel.')
@@ -243,11 +231,7 @@ export class DiscordManager {
       guildId,
       commandId,
     })
-    const endpoint = Routes.applicationGuildCommand(
-      this.#clientId,
-      guildId,
-      commandId
-    )
+    const endpoint = Routes.applicationGuildCommand(this.#clientId, guildId, commandId)
     return this.#rest.delete(endpoint)
   }
 

@@ -13,27 +13,17 @@ export const scope = 'PUBLIC'
 export const data = new SlashCommandBuilder()
   .setName('faq')
   .addStringOption(option =>
-    option
-      .setName('keyword')
-      .setDescription('The search keyword')
-      .setRequired(true)
+    option.setName('keyword').setDescription('The search keyword').setRequired(true)
   )
   .addBooleanOption(option =>
-    option
-      .setName('visible')
-      .setDescription('Whether it should show for everyone')
+    option.setName('visible').setDescription('Whether it should show for everyone')
   )
-  .addUserOption(option =>
-    option.setName('user').setDescription('User to mention')
-  )
+  .addUserOption(option => option.setName('user').setDescription('User to mention'))
   .addStringOption(option =>
     option
       .setName('method')
       .setDescription('Search method')
-      .addChoices(
-        { name: 'Fuzzy', value: 'FUZZY' },
-        { name: 'Vector', value: 'VECTOR' }
-      )
+      .addChoices({ name: 'Fuzzy', value: 'FUZZY' }, { name: 'Vector', value: 'VECTOR' })
   )
   .setDescription('Search the FAQ')
 

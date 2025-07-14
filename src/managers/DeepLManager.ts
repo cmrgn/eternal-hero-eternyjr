@@ -46,9 +46,9 @@ export class DeepLManager {
 
     if (!input.trim()) return ''
 
-    // DeepL is quite agressive with line breaks and tends to remove them, which
-    // is a problem when handling lists. A workaround is to give it a bunch of
-    // individual chunks, and concatenate them back with a line break.
+    // DeepL is quite agressive with line breaks and tends to remove them, which is a problem when
+    // handling lists. A workaround is to give it a bunch of individual chunks, and concatenate them
+    // back with a line break.
     const chunks = input.split('\n').filter(Boolean)
 
     const response = await withRetry(() =>
@@ -64,10 +64,7 @@ export class DeepLManager {
     return response.map(chunk => chunk.text).join('\n')
   }
 
-  async updateDeepLGlossary(
-    translations: LocalizationItem[],
-    targetLangCode: string
-  ) {
+  async updateDeepLGlossary(translations: LocalizationItem[], targetLangCode: string) {
     this.#log('info', 'Updating the DeepL glossary', {
       count: translations.length,
       targetLang: targetLangCode,
@@ -99,15 +96,13 @@ export class DeepLManager {
   }
 
   formatPairs(translations: LocalizationItem[], targetLangCode: CrowdinCode) {
-    // These 5 Item_*_Name keys are the five torso items, which are called
-    // “<Something> Chest” in English. This causes translations to use that word
-    // when translating the word “chest” (as in treasure chest). By excluding
-    // them from the glossary, we can improve translations for all
+    // These 5 Item_*_Name keys are the five torso items, which are called “<Something> Chest” in
+    // English. This causes translations to use that word when translating the word “chest” (as in
+    // treasure chest). By excluding them from the glossary, we can improve translations for all
     // mentioning world chests.
-    const IGNORED_KEYS =
-      'Item_29_Name,Item_37_Name,Item_44_Name,Item_52_Name,Item_60_Name'.split(
-        ','
-      )
+    const IGNORED_KEYS = 'Item_29_Name,Item_37_Name,Item_44_Name,Item_52_Name,Item_60_Name'.split(
+      ','
+    )
 
     const errors: string[] = []
 

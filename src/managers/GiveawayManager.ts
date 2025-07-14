@@ -1,8 +1,4 @@
-import {
-  type Giveaway,
-  type GiveawayData,
-  GiveawaysManager,
-} from 'discord-giveaways'
+import { type Giveaway, type GiveawayData, GiveawaysManager } from 'discord-giveaways'
 import type { Client } from 'discord.js'
 
 import { logger } from '../utils/logger'
@@ -23,12 +19,10 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
       .where('environment', '=', environment)
       .execute()
 
-    // It seems that the `discord-giveaways` module uses the `Giveaway` and
-    // `GiveawayData` types interchangeably. Upserting is done with the latter
-    // while reading is done with the former — which doesn’t make sense but here
-    // we are. The consensus seems to be that the database should store only the
-    // data for each giveaway, but this method somehow expects full Giveaways
-    // back.
+    // It seems that the `discord-giveaways` module uses the `Giveaway` and `GiveawayData` types
+    // interchangeably. Upserting is done with the latter while reading is done with the former —
+    // which doesn’t make sense but here we are. The consensus seems to be that the database should
+    // store only the data for each giveaway, but this method somehow expects full Giveaways back.
     return rows.map(row => row.data as unknown as Giveaway)
   }
 
@@ -90,14 +84,11 @@ export const initGiveawayManager = (client: Client) => {
       embedColor: Discord.BOT_COLOR,
       embedColorEnd: Discord.BOT_COLOR,
       reaction: '🎉',
-      // Unless it’s run in the mod channels (for testing purposes), prevent
-      // moderators from winning a giveaway.
+      // Unless it’s run in the mod channels (for testing purposes), prevent moderators from winning
+      // a giveaway.
       exemptMembers: (member, { channelId }) => {
-        if (['1373605591766925412', '1262282620268576809'].includes(channelId))
-          return false
-        return Boolean(
-          member.roles.cache.find(role => role.name === 'Community Mod')
-        )
+        if (['1373605591766925412', '1262282620268576809'].includes(channelId)) return false
+        return Boolean(member.roles.cache.find(role => role.name === 'Community Mod'))
       },
     },
   })

@@ -13,10 +13,7 @@ import { IndexManager, type PineconeEntry } from '../managers/IndexManager'
 export const scope = 'OFFICIAL'
 
 const LANGUAGE_CHOICES = Object.values(LANGUAGE_OBJECTS)
-  .filter(
-    languageObject =>
-      languageObject.isOnCrowdin || languageObject.crowdinCode === 'en'
-  )
+  .filter(languageObject => languageObject.isOnCrowdin || languageObject.crowdinCode === 'en')
   .map(languageObject => ({
     name: languageObject.languageName,
     value: languageObject.crowdinCode,
@@ -43,10 +40,7 @@ export const data = new SlashCommandBuilder()
       .setName('thread')
       .setDescription('Thread to index')
       .addStringOption(option =>
-        option
-          .setName('thread_id')
-          .setDescription('Specific thread to index')
-          .setRequired(true)
+        option.setName('thread_id').setDescription('Specific thread to index').setRequired(true)
       )
       .addStringOption(option =>
         option
@@ -163,9 +157,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
     })
   }
 
-  return interaction.editReply(
-    `Finished indexing thread with ID \`${threadId}\`.`
-  )
+  return interaction.editReply(`Finished indexing thread with ID \`${threadId}\`.`)
 }
 
 async function commandLanguage(interaction: ChatInputCommandInteraction) {
@@ -183,8 +175,8 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
     throw new Error(`Could not retrieve language object for ${crowdinCode}`)
   }
 
-  // This function is responsible for reporting the current progress by editing
-  // the original message while respecting Discord’s rate limits
+  // This function is responsible for reporting the current progress by editing the original message
+  // while respecting Discord’s rate limits
   const notify = discordEditLimiter.wrap(
     (thread: (typeof threadsWithContent)[number], index: number) =>
       interaction.editReply({
@@ -197,25 +189,22 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
       })
   )
 
-  // When indexing the English FAQ, there is no need for translation which is
-  // why the whole concurrency exists in the first place. It can safely be done
-  // in a single action (which will be batched in the manager to respect
-  // Pinecone’s limits).
+  // When indexing the English FAQ, there is no need for translation which is why the whole
+  // concurrency exists in the first place. It can safely be done in a single action (which will be
+  // batched in the manager to respect Pinecone’s limits).
   if (crowdinCode === 'en') {
     await interaction.editReply('Indexing all FAQ threads…')
     await Index.indexRecords(
       threadsWithContent.reduce<PineconeEntry[]>(
-        (records, thread) =>
-          records.concat(IndexManager.prepareForIndexing(thread)),
+        (records, thread) => records.concat(IndexManager.prepareForIndexing(thread)),
         []
       ),
       crowdinCode
     )
   }
 
-  // Iterate over all threads with the given concurrency, and for each thread,
-  // translate it if the expected language is not English, and upsert it into
-  // the relevant Pinecone namespace
+  // Iterate over all threads with the given concurrency, and for each thread, translate it if the
+  // expected language is not English, and upsert it into the relevant Pinecone namespace
   else {
     logger.logCommand(interaction, 'Processing all threads')
 
@@ -263,16 +252,12 @@ async function commandStats(interaction: ChatInputCommandInteraction) {
     (acc, thread) => acc + thread.content.trim().split(/\s+/).length,
     0
   )
-  const charCount = threads.reduce(
-    (acc, thread) => acc + thread.content.trim().length,
-    0
-  )
+  const charCount = threads.reduce((acc, thread) => acc + thread.content.trim().length, 0)
   const { character: charUsed } = await DeepL.getUsage()
   const pcUsage = await Index.index.describeIndexStats()
 
   const totalRecordCounts = Object.entries(pcUsage.namespaces ?? {}).reduce(
-    (acc, [name, data]) =>
-      acc + (name.startsWith('test-') ? 0 : data.recordCount),
+    (acc, [name, data]) => acc + (name.startsWith('test-') ? 0 : data.recordCount),
     0
   )
   const numberFormatter = new Intl.NumberFormat('en-US')

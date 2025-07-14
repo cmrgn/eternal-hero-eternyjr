@@ -1,11 +1,7 @@
 import type { Client } from 'discord.js'
 import { type LanguageIdentifier, loadModule } from 'cld3-asm'
 
-import {
-  type CrowdinCode,
-  CROWDIN_CODES,
-  type LanguageObject,
-} from '../constants/i18n'
+import { type CrowdinCode, CROWDIN_CODES, type LanguageObject } from '../constants/i18n'
 import type { ResolvedThread } from './FAQManager'
 import { logger } from '../utils/logger'
 
@@ -38,8 +34,8 @@ export class LocalizationManager {
   }
 
   guessLanguageWithCld3(userInput: string) {
-    // Commenting out this log since this function is called on *every* *single*
-    // message posted on Discord. This is too verbose and pollutes the logs.
+    // Commenting out this log since this function is called on *every* *single* message posted on
+    // Discord. This is too verbose and pollutes the logs.
     // this.#log('info', 'Guessing language with cld3', { userInput })
 
     if (!this.#languageIdentifier) return null
@@ -100,10 +96,7 @@ export class LocalizationManager {
     return null
   }
 
-  async translateThread(
-    thread: ResolvedThread,
-    languageObject: LanguageObject
-  ) {
+  async translateThread(thread: ResolvedThread, languageObject: LanguageObject) {
     const { DeepL } = this.#client.managers
     const targetLangCode = languageObject.deepLCode
 
@@ -112,8 +105,8 @@ export class LocalizationManager {
       targetLang: targetLangCode,
     })
 
-    // If the thread has a single message, we can translate the thread name and
-    // the thread content in a single DeepL query for performance.
+    // If the thread has a single message, we can translate the thread name and the thread content
+    // in a single DeepL query for performance.
     if (thread.messages.length === 1) {
       const message = thread.messages[0]
       const input = `${thread.name}\n${message.content}`
@@ -125,9 +118,7 @@ export class LocalizationManager {
 
     const [name, ...messages] = await Promise.all([
       DeepL.translate(thread.name, targetLangCode),
-      ...thread.messages.map(({ content }) =>
-        DeepL.translate(content, targetLangCode)
-      ),
+      ...thread.messages.map(({ content }) => DeepL.translate(content, targetLangCode)),
     ])
 
     return {

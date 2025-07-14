@@ -1,9 +1,5 @@
 import type { Client } from 'discord.js'
-import {
-  Pinecone,
-  type Index,
-  type RecordMetadata,
-} from '@pinecone-database/pinecone'
+import { Pinecone, type Index, type RecordMetadata } from '@pinecone-database/pinecone'
 
 import type { ResolvedThread } from './FAQManager'
 import type { CrowdinCode, LanguageObject } from '../constants/i18n'
@@ -34,9 +30,7 @@ export class IndexManager {
     this.#log('info', 'Instantiating manager')
 
     if (!process.env.PINECONE_API_KEY) {
-      throw new Error(
-        'Missing environment variable PINECONE_API_KEY; aborting.'
-      )
+      throw new Error('Missing environment variable PINECONE_API_KEY; aborting.')
     }
 
     this.#client = client
@@ -47,31 +41,25 @@ export class IndexManager {
 
   static prepareForIndexing(entry: ResolvedThread): PineconeEntry[] {
     return entry.messages.map(message => ({
-      // The index was originally built without considering multiple messages
-      // (and thus chunks) for a given thread. To avoid ending up with multiple
-      // Pinecone entries for the same message (e.g. a given FAQ thread indexed
-      // as `entry#<thread-id>` and `entry#<thread-id>#<message-id>`), keep the
-      // old naming convention for the first message of every entry, and only
-      // add the message ID if there is more than 1.
-      id:
-        message.id === entry.id
-          ? `entry#${entry.id}`
-          : `entry#${entry.id}#${message.id}`,
+      // The index was originally built without considering multiple messages (and thus chunks) for
+      // a given thread. To avoid ending up with multiple Pinecone entries for the same message (e.
+      // g. a given FAQ thread indexed as `entry#<thread-id>` and `entry#<thread-id>#<message-id>`),
+      // keep the old naming convention for the first message of every entry, and only add the
+      // message ID if there is more than 1.
+      id: message.id === entry.id ? `entry#${entry.id}` : `entry#${entry.id}#${message.id}`,
       chunk_text: `${entry.name}\n\n${message.content}`,
       entry_question: entry.name,
       entry_answer: message.content,
       entry_indexed_at: new Date().toISOString(),
       entry_tags: entry.tags,
-      entry_url:
-        message.id === entry.id ? entry.url : `${entry.url}/${message.id}`,
+      entry_url: message.id === entry.id ? entry.url : `${entry.url}/${message.id}`,
     }))
   }
 
   getNamespaceName(namespaceName: PineconeNamespace) {
     const { Discord } = this.#client.managers
-    // This is intended to avoid polluting the production indexes during
-    // development; this will create the same indexes as production, but
-    // prefixed with this prefix
+    // This is intended to avoid polluting the production indexes during development; this will
+    // create the same indexes as production, but prefixed with this prefix
     const prefix = Discord.IS_DEV ? 'test-' : ''
     return prefix + namespaceName
   }
@@ -80,10 +68,7 @@ export class IndexManager {
     return this.index.namespace(this.getNamespaceName(namespaceName))
   }
 
-  async indexRecords(
-    entries: PineconeEntry[],
-    namespaceName: PineconeNamespace
-  ) {
+  async indexRecords(entries: PineconeEntry[], namespaceName: PineconeNamespace) {
     const count = entries.length
     const namespace = this.namespace(namespaceName)
 
@@ -115,9 +100,7 @@ export class IndexManager {
       id: thread.id,
     })
 
-    return Crowdin.onCrowdinLanguages(language =>
-      this.translateAndIndexThread(thread, language)
-    )
+    return Crowdin.onCrowdinLanguages(language => this.translateAndIndexThread(thread, language))
   }
 
   async unindexThread(threadId: string, namespaceName: PineconeNamespace) {
@@ -134,8 +117,7 @@ export class IndexManager {
         })
       })
     } catch (error) {
-      // Unindexing may fail with a 404 if the resource didn’t exist in the
-      // index to begin with
+      // Unindexing may fail with a 404 if the resource didn’t exist in the index to begin with
       const isError = error instanceof Error
 
       if (isError && error.message.includes('404')) {
@@ -162,19 +144,13 @@ export class IndexManager {
     )
   }
 
-  async translateAndIndexThread(
-    thread: ResolvedThread,
-    languageObject: LanguageObject
-  ) {
+  async translateAndIndexThread(thread: ResolvedThread, languageObject: LanguageObject) {
     const { Localization } = this.#client.managers
     const { crowdinCode } = languageObject
 
     if (crowdinCode === 'en') return this.indexThread(thread, crowdinCode)
 
-    const { name, messages } = await Localization.translateThread(
-      thread,
-      languageObject
-    )
+    const { name, messages } = await Localization.translateThread(thread, languageObject)
     await this.indexThread({ ...thread, name, messages }, crowdinCode)
   }
 
