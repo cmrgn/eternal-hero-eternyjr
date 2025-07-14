@@ -204,7 +204,8 @@ export class FAQManager {
     if (prev.name === next.name) return
 
     this.#log('info', 'Responding to thread name update', { id: next.id })
-    this.cacheThreads()
+    // Update the cache without refetching all threads; just update this one
+    this.#threads = this.#threads.map(t => (t.id === next.id ? next : t))
 
     const resolvedThread = await this.resolveThread(next)
     for (const listener of this.#listeners.ThreadNameUpdated)
