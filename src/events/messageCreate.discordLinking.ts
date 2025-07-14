@@ -1,6 +1,5 @@
 import { bold, channelMention, type GuildMember } from 'discord.js'
-
-import { LANGUAGE_OBJECTS, ENGLISH_LANGUAGE_OBJECT } from '../constants/i18n'
+import { ENGLISH_LANGUAGE_OBJECT, LANGUAGE_OBJECTS } from '../constants/i18n'
 import type { EnsuredInteraction } from './messageCreate'
 
 const LANGUAGE_ROLES = LANGUAGE_OBJECTS.map(languageObject => languageObject.role)

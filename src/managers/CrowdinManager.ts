@@ -1,13 +1,12 @@
-import type { Client } from 'discord.js'
 import { default as Crowdin } from '@crowdin/crowdin-api-client'
-import decompress, { type File } from 'decompress'
 import csvtojson from 'csvtojson'
+import decompress, { type File } from 'decompress'
+import type { Client } from 'discord.js'
 import fetch from 'node-fetch'
-
+import { type CrowdinCode, LANGUAGE_OBJECTS, type LanguageObject } from '../constants/i18n'
 import { logger } from '../utils/logger'
-import type { LocalizationItem } from './LocalizationManager'
-import { LANGUAGE_OBJECTS, type CrowdinCode, type LanguageObject } from '../constants/i18n'
 import { withRetry } from '../utils/withRetry'
+import type { LocalizationItem } from './LocalizationManager'
 
 export type {
   LanguagesModel,
@@ -71,15 +70,15 @@ export class CrowdinManager {
       const {
         data: { id: buildId },
       } = await withRetry(attempt => {
-        this.#log('info', 'Building project', { projectId, attempt })
+        this.#log('info', 'Building project', { attempt, projectId })
         return this.#crowdin.translationsApi.buildProject(projectId)
       })
       return buildId
-    } catch (error) {
+    } catch {
       const builds = await withRetry(attempt => {
         this.#log('warn', 'Building project failed, falling back to latest build', {
-          projectId,
           attempt,
+          projectId,
         })
         return this.#crowdin.translationsApi.listProjectBuilds(projectId, {
           limit: 1,
@@ -91,15 +90,15 @@ export class CrowdinManager {
   }
 
   async waitForBuild(buildId: number, projectId: number) {
-    this.#log('info', 'Waiting for build to finish', { projectId, buildId })
+    this.#log('info', 'Waiting for build to finish', { buildId, projectId })
 
     let status = 'inProgress'
     while (status === 'inProgress') {
       const { data } = await withRetry(attempt => {
         this.#log('info', 'Waiting for build to finish', {
-          projectId,
-          buildId,
           attempt,
+          buildId,
+          projectId,
         })
         return this.#crowdin.translationsApi.checkBuildStatus(projectId, buildId)
       })
@@ -112,9 +111,9 @@ export class CrowdinManager {
   async downloadBuildArtefact(buildId: number, projectId: number) {
     return withRetry(async attempt => {
       this.#log('info', 'Downloading build artefact', {
-        projectId,
-        buildId,
         attempt,
+        buildId,
+        projectId,
       })
 
       // Retrieve the URL to download the zip file with all CSV translation files
@@ -139,7 +138,7 @@ export class CrowdinManager {
         const json = await csvtojson().fromString(content)
         jsons.push(json)
       } catch (error) {
-        this.#log('warn', 'Failed to parse CSV', { path: file.path, error })
+        this.#log('warn', 'Failed to parse CSV', { error, path: file.path })
       }
     }
 
@@ -163,8 +162,8 @@ export class CrowdinManager {
 
   async fetchAllProjectTranslations(forceRefresh = false, projectId = this.#gameProjectId) {
     this.#log('info', 'Fetching all project files', {
-      projectId,
       forceRefresh,
+      projectId,
     })
 
     const now = Date.now()
@@ -173,8 +172,8 @@ export class CrowdinManager {
 
     if (!forceRefresh && cachedFiles && now - lastFetchedAt < this.#cacheTTL) {
       this.#log('info', 'Reading all project files from cache', {
-        projectId,
         age: now - lastFetchedAt,
+        projectId,
         ttl: this.#cacheTTL,
       })
       return cachedFiles

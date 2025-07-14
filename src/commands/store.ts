@@ -1,10 +1,9 @@
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
 import pMap from 'p-map'
-
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
-import type { InAppPurchase as GooglePlayInAppPurchase } from '../managers/GooglePlayManager'
 import type { InAppPurchase as AppleStoreInAppPurchase } from '../managers/AppleStoreManager'
 import { DiscordManager } from '../managers/DiscordManager'
+import type { InAppPurchase as GooglePlayInAppPurchase } from '../managers/GooglePlayManager'
 
 export const scope = 'OFFICIAL'
 
@@ -45,10 +44,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const platform = options.getString('platform') ?? 'BOTH'
   const crowdinCode = options.getString('language', true) as CrowdinCode
 
-  // biome-ignore lint/style/noNonNullAssertion: safe
   const languageObject = Crowdin.getLanguages({ withEnglish: false }).find(
     languageObject => languageObject.crowdinCode === crowdinCode
-  )!
+  )
+
+  if (!languageObject) {
+    throw new Error(`Could not retrieve language object for \`${crowdinCode}\`.`)
+  }
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
   await interaction.editReply({ content: 'Fetching store translations…' })

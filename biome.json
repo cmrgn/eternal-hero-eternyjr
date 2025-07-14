@@ -1,35 +1,46 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.0.6/schema.json",
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on",
+        "useSortedKeys": "on"
+      }
+    },
+    "enabled": true
+  },
   "formatter": {
+    "attributePosition": "auto",
     "enabled": true,
     "formatWithErrors": false,
     "indentStyle": "space",
     "indentWidth": 2,
     "lineEnding": "lf",
-    "lineWidth": 100,
-    "attributePosition": "auto"
-  },
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true,
-      "performance": { "noAccumulatingSpread": "off" }
-    }
+    "lineWidth": 100
   },
   "javascript": {
     "formatter": {
-      "quoteProperties": "asNeeded",
-      "trailingCommas": "es5",
-      "semicolons": "asNeeded",
       "arrowParentheses": "asNeeded",
-      "bracketSpacing": true,
       "bracketSameLine": false,
-      "quoteStyle": "single"
+      "bracketSpacing": true,
+      "quoteProperties": "asNeeded",
+      "quoteStyle": "single",
+      "semicolons": "asNeeded",
+      "trailingCommas": "es5"
+    }
+  },
+  "linter": {
+    "domains": {
+      "project": "recommended"
+    },
+    "enabled": true,
+    "rules": {
+      "performance": { "noAccumulatingSpread": "off" },
+      "recommended": true
     }
   },
   "vcs": {
-    "enabled": true,
-    "clientKind": "git"
+    "clientKind": "git",
+    "enabled": true
   }
 }

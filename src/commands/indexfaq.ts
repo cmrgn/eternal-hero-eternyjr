@@ -5,11 +5,10 @@ import {
   SlashCommandBuilder,
 } from 'discord.js'
 import pMap from 'p-map'
-
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
-import { logger } from '../utils/logger'
-import { IndexManager, type PineconeEntry } from '../managers/IndexManager'
 import { DiscordManager } from '../managers/DiscordManager'
+import { IndexManager, type PineconeEntry } from '../managers/IndexManager'
+import { logger } from '../utils/logger'
 
 export const scope = 'OFFICIAL'
 
@@ -127,7 +126,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
       )
 
       if (!languageObject) {
-        throw new Error(`Could not retrieve language object for ${crowdinCode}`)
+        throw new Error(`Could not retrieve language object for \`${crowdinCode}\`.`)
       }
 
       await interaction.editReply(
@@ -173,7 +172,7 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
   const discordEditLimiter = DiscordManager.getDiscordEditLimiter()
 
   if (!languageObject) {
-    throw new Error(`Could not retrieve language object for ${crowdinCode}`)
+    throw new Error(`Could not retrieve language object for \`${crowdinCode}\`.`)
   }
 
   // This function is responsible for reporting the current progress by editing the original message
@@ -264,8 +263,8 @@ async function commandStats(interaction: ChatInputCommandInteraction) {
   const numberFormatter = new Intl.NumberFormat('en-US')
   const nf = numberFormatter.format
   const currencyFormatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
     currency: 'EUR',
+    style: 'currency',
   })
   const cf = currencyFormatter.format
 

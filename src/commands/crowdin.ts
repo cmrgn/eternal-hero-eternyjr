@@ -1,9 +1,8 @@
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
-
-import type { ResponseObject, TranslationStatusModel } from '../managers/CrowdinManager'
-import { logger } from '../utils/logger'
 import { type CrowdinCode, LANGUAGE_OBJECTS, type LanguageObject } from '../constants/i18n'
+import type { ResponseObject, TranslationStatusModel } from '../managers/CrowdinManager'
 import type { LocalizationItem } from '../managers/LocalizationManager'
+import { logger } from '../utils/logger'
 
 export const scope = 'OFFICIAL'
 

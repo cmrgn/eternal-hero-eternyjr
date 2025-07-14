@@ -1,12 +1,11 @@
-import type { Client } from 'discord.js'
 import * as deepl from 'deepl-node'
 import { GlossaryEntries } from 'deepl-node'
-
-import { logger } from '../utils/logger'
+import type { Client } from 'discord.js'
 import type { CrowdinCode } from '../constants/i18n'
-import type { LocalizationItem } from './LocalizationManager'
 import { getExcerpt } from '../utils/getExcerpt'
+import { logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
+import type { LocalizationItem } from './LocalizationManager'
 
 export class DeepLManager {
   #client: Client
@@ -53,11 +52,11 @@ export class DeepLManager {
 
     const response = await withRetry(() =>
       this.#deepl.translateText(chunks, 'en', targetLangCode, {
+        formality: 'prefer_less',
+        glossary: this.#deepLGlossaryId,
+        modelType: 'quality_optimized',
         preserveFormatting: true,
         splitSentences: 'off',
-        formality: 'prefer_less',
-        modelType: 'quality_optimized',
-        glossary: this.#deepLGlossaryId,
       })
     )
 
@@ -77,11 +76,11 @@ export class DeepLManager {
 
     await withRetry(() =>
       this.#deepl.updateMultilingualGlossaryDictionary(this.#deepLGlossaryId, {
-        sourceLangCode: 'en',
-        targetLangCode,
         entries: new deepl.GlossaryEntries({
           entries: Object.fromEntries(pairs),
         }),
+        sourceLangCode: 'en',
+        targetLangCode,
       })
     )
   }

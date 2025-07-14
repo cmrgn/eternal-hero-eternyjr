@@ -1,9 +1,8 @@
-import type { Client } from 'discord.js'
 import { type LanguageIdentifier, loadModule } from 'cld3-asm'
-
-import { type CrowdinCode, CROWDIN_CODES, type LanguageObject } from '../constants/i18n'
-import type { ResolvedThread } from './FAQManager'
+import type { Client } from 'discord.js'
+import { CROWDIN_CODES, type CrowdinCode, type LanguageObject } from '../constants/i18n'
 import { logger } from '../utils/logger'
+import type { ResolvedThread } from './FAQManager'
 
 export type LocalizationItem = {
   key: string
@@ -101,8 +100,8 @@ export class LocalizationManager {
     const targetLangCode = languageObject.deepLCode
 
     this.#log('info', 'Translating thread with DeepL', {
-      threadId: thread.id,
       targetLang: targetLangCode,
+      threadId: thread.id,
     })
 
     // If the thread has a single message, we can translate the thread name and the thread content
@@ -113,7 +112,7 @@ export class LocalizationManager {
       const translation = await DeepL.translate(input, targetLangCode)
       const [name, ...content] = translation.split('\n')
 
-      return { name, messages: [{ ...message, content: content.join('\n') }] }
+      return { messages: [{ ...message, content: content.join('\n') }], name }
     }
 
     const [name, ...messages] = await Promise.all([
@@ -122,11 +121,11 @@ export class LocalizationManager {
     ])
 
     return {
-      name,
       messages: thread.messages.map((message, index) => ({
         ...message,
         content: messages[index],
       })),
+      name,
     }
   }
 }

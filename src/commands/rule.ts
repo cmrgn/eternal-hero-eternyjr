@@ -5,7 +5,6 @@ import {
   SlashCommandBuilder,
   userMention,
 } from 'discord.js'
-
 import { logger } from '../utils/logger'
 
 export const scope = 'OFFICIAL'

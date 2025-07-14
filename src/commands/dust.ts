@@ -1,7 +1,6 @@
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
-
-import { logger } from '../utils/logger'
 import { DiscordManager } from '../managers/DiscordManager'
+import { logger } from '../utils/logger'
 
 export const scope = 'PUBLIC'
 
@@ -77,12 +76,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .setTitle('Dust calculator')
     .addFields(
       { name: 'Approximated total dust', value: format(total) },
-      { name: 'Via rare keys', value: format(viaRareKeys), inline: true },
-      { name: 'Via epic keys', value: format(viaEpicKeys), inline: true },
-      { name: 'Via leg. keys', value: format(viaLegKeys), inline: true },
-      { name: 'Via clan bonds', value: format(viaClanBonds), inline: true },
-      { name: 'Via raw dust', value: format(rawDust), inline: true },
-      { name: 'Via divine essences', value: format(viaEssences), inline: true }
+      { inline: true, name: 'Via rare keys', value: format(viaRareKeys) },
+      { inline: true, name: 'Via epic keys', value: format(viaEpicKeys) },
+      { inline: true, name: 'Via leg. keys', value: format(viaLegKeys) },
+      { inline: true, name: 'Via clan bonds', value: format(viaClanBonds) },
+      { inline: true, name: 'Via raw dust', value: format(rawDust) },
+      { inline: true, name: 'Via divine essences', value: format(viaEssences) }
     )
 
   return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral })

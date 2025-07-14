@@ -1,11 +1,9 @@
-import type { Client } from 'discord.js'
 import type { SearchRecordsResponse } from '@pinecone-database/pinecone'
-import type { AnyThreadChannel } from 'discord.js'
+import type { AnyThreadChannel, Client } from 'discord.js'
 import Fuse, { type FuseResult } from 'fuse.js'
-
 import { logger } from '../utils/logger'
-import type { PineconeMetadata, PineconeNamespace } from './IndexManager'
 import { withRetry } from '../utils/withRetry'
+import type { PineconeMetadata, PineconeNamespace } from './IndexManager'
 
 type Hit = SearchRecordsResponse['result']['hits'][number]
 type SearchResultVector = Hit & { fields: PineconeMetadata }
@@ -14,11 +12,11 @@ type SearchResult = SearchResultVector
 export type SearchType = 'VECTOR' | 'FUZZY'
 
 const FUZZY_SEARCH_OPTIONS = {
-  includeScore: true,
   ignoreDiacritics: true,
+  ignoreLocation: true,
+  includeScore: true,
   minMatchCharLength: 3,
   threshold: 0.3,
-  ignoreLocation: true,
 }
 
 export class SearchManager {
@@ -56,10 +54,10 @@ export class SearchManager {
     limit = 1
   ): Promise<{ query: string; results: SearchResult[] }> {
     this.#log('info', 'Performing search', {
+      limit,
+      namespaceName,
       query,
       type,
-      namespaceName,
-      limit,
     })
 
     if (type === 'VECTOR') {
@@ -97,11 +95,11 @@ export class SearchManager {
     // candidates to sort them by relevance. Eventually, we return the number of results we expect.
     const response = await withRetry(() =>
       Index.namespace(namespaceName).searchRecords({
-        query: { topK: Math.max(20, limit), inputs: { text: query } },
+        query: { inputs: { text: query }, topK: Math.max(20, limit) },
         rerank: {
           model: 'bge-reranker-v2-m3',
-          topN: Math.max(5, limit),
           rankFields: ['chunk_text'],
+          topN: Math.max(5, limit),
         },
       })
     )
@@ -153,10 +151,10 @@ export class SearchManager {
         _id: `entry#${result.item.id}`,
         _score: 1 - (result.score ?? 1),
         fields: {
-          entry_question: result.item.name,
           entry_answer: '',
-          entry_tags: [],
           entry_indexed_at: new Date().toISOString(),
+          entry_question: result.item.name,
+          entry_tags: [],
           entry_url: result.item.url,
         },
       }

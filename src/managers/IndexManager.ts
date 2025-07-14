@@ -1,10 +1,9 @@
+import { type Index, Pinecone, type RecordMetadata } from '@pinecone-database/pinecone'
 import type { Client } from 'discord.js'
-import { Pinecone, type Index, type RecordMetadata } from '@pinecone-database/pinecone'
-
-import type { ResolvedThread } from './FAQManager'
 import type { CrowdinCode, LanguageObject } from '../constants/i18n'
 import { logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
+import type { ResolvedThread } from './FAQManager'
 
 export type PineconeMetadata = {
   entry_question: string
@@ -41,18 +40,18 @@ export class IndexManager {
 
   static prepareForIndexing(entry: ResolvedThread): PineconeEntry[] {
     return entry.messages.map(message => ({
+      chunk_text: `${entry.name}\n\n${message.content}`,
+      entry_answer: message.content,
+      entry_indexed_at: new Date().toISOString(),
+      entry_question: entry.name,
+      entry_tags: entry.tags,
+      entry_url: message.id === entry.id ? entry.url : `${entry.url}/${message.id}`,
       // The index was originally built without considering multiple messages (and thus chunks) for
       // a given thread. To avoid ending up with multiple Pinecone entries for the same message (e.
       // g. a given FAQ thread indexed as `entry#<thread-id>` and `entry#<thread-id>#<message-id>`),
       // keep the old naming convention for the first message of every entry, and only add the
       // message ID if there is more than 1.
       id: message.id === entry.id ? `entry#${entry.id}` : `entry#${entry.id}#${message.id}`,
-      chunk_text: `${entry.name}\n\n${message.content}`,
-      entry_question: entry.name,
-      entry_answer: message.content,
-      entry_indexed_at: new Date().toISOString(),
-      entry_tags: entry.tags,
-      entry_url: message.id === entry.id ? entry.url : `${entry.url}/${message.id}`,
     }))
   }
 
@@ -122,8 +121,8 @@ export class IndexManager {
 
       if (isError && error.message.includes('404')) {
         this.#log('info', 'Thread not found in index; skipping deletion', {
-          threadId,
           namespace: this.getNamespaceName(namespaceName),
+          threadId,
         })
       }
 
@@ -151,7 +150,7 @@ export class IndexManager {
     if (crowdinCode === 'en') return this.indexThread(thread, crowdinCode)
 
     const { name, messages } = await Localization.translateThread(thread, languageObject)
-    await this.indexThread({ ...thread, name, messages }, crowdinCode)
+    await this.indexThread({ ...thread, messages, name }, crowdinCode)
   }
 
   bindEvents() {

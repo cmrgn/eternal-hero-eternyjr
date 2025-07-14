@@ -1,4 +1,3 @@
-import ms, { type StringValue } from 'ms'
 import {
   type ChatInputCommandInteraction,
   type GuildTextBasedChannel,
@@ -8,7 +7,7 @@ import {
   SlashCommandBuilder,
   type SlashCommandStringOption,
 } from 'discord.js'
-
+import ms, { type StringValue } from 'ms'
 import { logger } from '../utils/logger'
 
 export const scope = 'PUBLIC'
@@ -69,10 +68,10 @@ export const data = new SlashCommandBuilder()
   .setContexts(InteractionContextType.Guild)
 
 const MESSAGES = {
+  drawing: 'Ends {timestamp}',
   giveaway: undefined,
   giveawayEnded: undefined,
   title: ':sparkles: :tada: Eternal Giveaway: {this.prize} :tada: :sparkles:',
-  drawing: 'Ends {timestamp}',
 }
 
 function initiatorAnswer(messageId: string, action: string): InteractionReplyOptions {
@@ -125,9 +124,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         const data = await Giveaways.start(channel as GuildTextBasedChannel, {
           duration: ms(options.getString('duration', true) as StringValue),
-          winnerCount: options.getInteger('winner_count') ?? 1,
-          prize: options.getString('prize', true),
           messages: MESSAGES,
+          prize: options.getString('prize', true),
+          winnerCount: options.getInteger('winner_count') ?? 1,
         })
         await interaction.reply(initiatorAnswer(data.messageId, 'started'))
 
@@ -149,8 +148,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         await Giveaways.edit(messageId, {
           addTime: extraDuration ? ms(extraDuration as StringValue) : undefined,
-          newWinnerCount: options.getInteger('new_winner_count') ?? undefined,
           newPrize: options.getString('new_prize') ?? undefined,
+          newWinnerCount: options.getInteger('new_winner_count') ?? undefined,
         })
         await interaction.reply(initiatorAnswer(messageId, 'edited'))
 

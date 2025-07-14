@@ -1,4 +1,3 @@
-import type { LanguageIdentifier } from 'cld3-asm'
 import type { GiveawaysManager } from 'discord-giveaways'
 import type { Collection, SlashCommandOptionsOnlyBuilder } from 'discord.js'
 
@@ -17,9 +16,7 @@ import type { FlagsManager } from '../managers/FlagsManager'
 
 type Command = {
   data: SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder
-  execute: (
-    interaction: CommandInteraction
-  ) => Promise<InteractionResponse<unknown>>
+  execute: (interaction: CommandInteraction) => Promise<InteractionResponse<unknown>>
 }
 
 declare module 'discord.js' {

@@ -1,15 +1,14 @@
-import type { Client } from 'discord.js'
 import type { File } from 'decompress'
-
+import type { Client } from 'discord.js'
+import { type CrowdinCode, LANGUAGE_OBJECTS, type Locale } from '../constants/i18n'
 import { logger } from '../utils/logger'
-import { LANGUAGE_OBJECTS, type Locale, type CrowdinCode } from '../constants/i18n'
 import {
-  AppleStoreManager,
   type IapLocalizationFields as AppleStoreIapLocalizationFields,
+  AppleStoreManager,
 } from './AppleStoreManager'
 import {
-  GooglePlayManager,
   type IapLocalizationFields as GooglePlayIapLocalizationFields,
+  GooglePlayManager,
 } from './GooglePlayManager'
 
 export type IapLocalizationFields = AppleStoreIapLocalizationFields &
@@ -73,7 +72,7 @@ export class StoreManager {
 
         // Compatibility: Crowdin keys use `name`, Apple Store uses `name`, but Google Play uses
         // `title` (copied from `name`)
-        // biome-ignore lint/style/noNonNullAssertion: safe
+        // biome-ignore lint/style/noNonNullAssertion:safe
         iapMap.get(key)![locale] = { ...value, title: value.name }
       }
     }

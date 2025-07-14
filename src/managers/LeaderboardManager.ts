@@ -6,7 +6,6 @@ import {
   type PartialMessage,
 } from 'discord.js'
 import { sql } from 'kysely'
-
 import { logger } from '../utils/logger'
 
 type DiscordMessage = OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>
@@ -43,9 +42,9 @@ export class LeaderboardManager {
       await Database.db
         .insertInto('faq_leaderboard')
         .values({
+          contribution_count: sql`GREATEST(${increment}, 0)`,
           guild_id: guildId,
           user_id: userId,
-          contribution_count: sql`GREATEST(${increment}, 0)`,
         })
         .onConflict(oc =>
           oc.columns(['guild_id', 'user_id']).doUpdateSet({
@@ -55,7 +54,7 @@ export class LeaderboardManager {
         .execute()
     } catch (error) {
       await Discord.sendInteractionAlert(
-        { client: this.#client, guildId, channelId, userId },
+        { channelId, client: this.#client, guildId, userId },
         `A link to the FAQ failed to be properly recorded in the database.\`\`\`${error}\`\`\``
       )
 
@@ -106,11 +105,11 @@ export class LeaderboardManager {
 
     if (increment)
       this.register({
-        userId: member.id,
-        guildId,
         channelId,
-        messageId: message.id,
+        guildId,
         increment,
+        messageId: message.id,
+        userId: member.id,
       })
   }
 
@@ -161,11 +160,11 @@ export class LeaderboardManager {
 
     if (increment)
       this.register({
-        userId: member.id,
-        guildId,
         channelId,
-        messageId: newMessage.id,
+        guildId,
         increment,
+        messageId: newMessage.id,
+        userId: member.id,
       })
   }
 

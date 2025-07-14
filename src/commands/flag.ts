@@ -4,7 +4,6 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js'
-
 import { logger } from '../utils/logger'
 
 export const scope = 'OFFICIAL'
@@ -109,8 +108,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     )
 
     return interaction.reply({
-      content: `Are you sure you want to delete the feature flag \`${flag}\`? Any reference to it in the code will resolve to \`false\`.`,
       components: [confirmRow],
+      content: `Are you sure you want to delete the feature flag \`${flag}\`? Any reference to it in the code will resolve to \`false\`.`,
       flags: MessageFlags.Ephemeral,
     })
   }
@@ -125,8 +124,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     )
 
     return interaction.reply({
-      content: `Flag \`${flag}\` does not exist. Do you want to create it?`,
       components: [confirmRow],
+      content: `Flag \`${flag}\` does not exist. Do you want to create it?`,
       flags: MessageFlags.Ephemeral,
     })
   }

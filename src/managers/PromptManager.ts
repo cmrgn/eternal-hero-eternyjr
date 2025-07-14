@@ -1,9 +1,8 @@
 import type { Client } from 'discord.js'
 import OpenAI from 'openai'
-
-import { logger } from '../utils/logger'
 import type { LanguageObject } from '../constants/i18n'
 import { getExcerpt } from '../utils/getExcerpt'
+import { logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 
 const SYSTEM_PROMPT = `
@@ -65,11 +64,11 @@ export class PromptManager {
       })
 
       return this.#openai.chat.completions.create({
-        model,
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
+          { content: systemPrompt, role: 'system' },
+          { content: userPrompt, role: 'user' },
         ],
+        model,
       })
     })
 
@@ -85,8 +84,8 @@ export class PromptManager {
     }
   ) {
     this.#log('info', 'Summarizing with ChatGPT', {
-      userQuestion,
       threadName: context.question,
+      userQuestion,
     })
 
     const response = await this.callChatCompletion(`

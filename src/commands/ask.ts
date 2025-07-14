@@ -1,9 +1,8 @@
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
-
-import { logger } from '../utils/logger'
-import type { PineconeMetadata } from '../managers/IndexManager'
 import { ENGLISH_LANGUAGE_OBJECT, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { DiscordManager } from '../managers/DiscordManager'
+import type { PineconeMetadata } from '../managers/IndexManager'
+import { logger } from '../utils/logger'
 
 export const scope = 'OFFICIAL'
 
@@ -77,11 +76,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   } = result.fields as PineconeMetadata
 
   embed.addFields(
-    { name: 'Source', value: url, inline: true },
+    { inline: true, name: 'Source', value: url },
     {
+      inline: true,
       name: 'Indexed on',
       value: DiscordManager.toTimestamp(indexedAt),
-      inline: true,
     }
   )
 
@@ -92,11 +91,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return interaction.editReply({ embeds: [embed] })
   }
 
-  const context = { question, answer, languageObject }
+  const context = { answer, languageObject, question }
 
   logger.logCommand(interaction, 'Summarizing the answer', {
-    question,
     crowdinCode,
+    question,
   })
   const localizedAnswer = await Prompt.summarize(query, context)
 

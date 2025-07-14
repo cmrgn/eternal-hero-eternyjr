@@ -1,6 +1,5 @@
-import { type Giveaway, type GiveawayData, GiveawaysManager } from 'discord-giveaways'
 import type { Client } from 'discord.js'
-
+import { type Giveaway, type GiveawayData, GiveawaysManager } from 'discord-giveaways'
 import { logger } from '../utils/logger'
 import { DiscordManager } from './DiscordManager'
 
@@ -29,9 +28,9 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
 
   async saveGiveaway(messageId: string, giveawayData: GiveawayData) {
     log('info', 'Saving a giveaway in the database', {
-      messageId,
       channelId: giveawayData.channelId,
       guildId: giveawayData.guildId,
+      messageId,
     })
 
     const { Database, Discord } = this.client.managers
@@ -39,7 +38,7 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
 
     const result = await Database.db
       .insertInto('giveaways')
-      .values({ id: messageId, data: giveawayData, environment })
+      .values({ data: giveawayData, environment, id: messageId })
       .executeTakeFirst()
 
     return Boolean(result.insertId)
@@ -47,8 +46,8 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
 
   async editGiveaway(messageId: string, giveawayData: GiveawayData) {
     log('info', 'Editing a giveaway from the database', {
-      messageId,
       giveawayData,
+      messageId,
     })
 
     const { Database } = this.client.managers
@@ -84,13 +83,13 @@ export const initGiveawayManager = (client: Client) => {
       botsCanWin: false,
       embedColor: DiscordManager.BOT_COLOR,
       embedColorEnd: DiscordManager.BOT_COLOR,
-      reaction: '🎉',
       // Unless it’s run in the mod channels (for testing purposes), prevent moderators from winning
       // a giveaway.
       exemptMembers: (member, { channelId }) => {
         if (['1373605591766925412', '1262282620268576809'].includes(channelId)) return false
         return Boolean(member.roles.cache.find(role => role.name === 'Community Mod'))
       },
+      reaction: '🎉',
     },
   })
 

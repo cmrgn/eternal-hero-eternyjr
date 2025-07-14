@@ -10,10 +10,10 @@ const logCommand = (
 
   console.log(`[Command: ${interaction.commandName}]`, message, {
     ...extra,
-    userId: interaction.user.id,
-    guildId: interaction.guildId,
-    channelId: channel?.id,
     arguments: interaction.options.data,
+    channelId: channel?.id,
+    guildId: interaction.guildId,
+    userId: interaction.user.id,
   })
 }
 

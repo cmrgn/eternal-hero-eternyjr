@@ -1,14 +1,13 @@
 import {
-  type GuildBasedChannel,
-  PermissionFlagsBits,
   type Guild,
+  type GuildBasedChannel,
   type GuildMember,
   type Message,
   type OmitPartialGroupDMChannel,
+  PermissionFlagsBits,
 } from 'discord.js'
-
-import { languageDetection } from './messageCreate.languageDetection'
 import { discordLinking } from './messageCreate.discordLinking'
+import { languageDetection } from './messageCreate.languageDetection'
 
 export type InteractionLike = OmitPartialGroupDMChannel<Message<boolean>>
 export type EnsuredInteraction = Omit<InteractionLike, 'guild' | 'member' | 'channel'> & {

@@ -1,7 +1,6 @@
 import { type ChatInputCommandInteraction, SlashCommandBuilder, userMention } from 'discord.js'
-
-import { logger } from '../utils/logger'
 import { DiscordManager } from '../managers/DiscordManager'
+import { logger } from '../utils/logger'
 
 export const scope = 'PUBLIC'
 

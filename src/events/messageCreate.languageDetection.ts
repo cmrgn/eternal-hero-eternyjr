@@ -1,5 +1,4 @@
 import { bold, channelMention, type GuildBasedChannel } from 'discord.js'
-
 import { ENGLISH_LANGUAGE_OBJECT, LANGUAGE_OBJECTS } from '../constants/i18n'
 import type { EnsuredInteraction } from './messageCreate'
 

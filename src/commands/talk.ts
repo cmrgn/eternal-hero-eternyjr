@@ -1,5 +1,4 @@
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
-
 import { logger } from '../utils/logger'
 
 export const scope = 'PUBLIC'

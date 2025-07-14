@@ -1,30 +1,29 @@
+import Bottleneck from 'bottleneck'
+import { diffWords } from 'diff'
 import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  type Client,
+  type ColorResolvable,
+  channelMention,
   EmbedBuilder,
   type Guild,
-  type User,
-  type Client,
-  type Message,
-  type PartialMessage,
-  userMention,
-  channelMention,
   type GuildBasedChannel,
+  type Message,
   type OmitPartialGroupDMChannel,
-  Routes,
+  type PartialMessage,
   REST,
-  type ColorResolvable,
+  Routes,
+  type User,
+  userMention,
 } from 'discord.js'
-import { diffWords } from 'diff'
-import Bottleneck from 'bottleneck'
-
-import type { ResolvedThread } from './FAQManager'
-import { logger } from '../utils/logger'
 import { commands } from '../commands'
 import type { LanguageObject } from '../constants/i18n'
+import { logger } from '../utils/logger'
 import { stripIndent } from '../utils/stripIndent'
 import { withRetry } from '../utils/withRetry'
+import type { ResolvedThread } from './FAQManager'
 
 export type InteractionLike = {
   client: Client
@@ -107,8 +106,8 @@ export class DiscordManager {
     const char = message.content.length
     const numberFormatter = new Intl.NumberFormat('en-US')
     const currencyFormatter = new Intl.NumberFormat('en-US', {
-      style: 'currency',
       currency: 'EUR',
+      style: 'currency',
     })
     // The previous content may not be defined if the message is a partial. We cannot refetch it,
     // because it will fetch the latest version of the mes- sage which will yield a null diff. So
@@ -136,7 +135,7 @@ export class DiscordManager {
       { id: `skip-retranslate:${thread.id}`, label: 'No, skip' }
     )
 
-    await message.author.send({ content, components: [row] })
+    await message.author.send({ components: [row], content })
   }
 
   static createEmbed(withThumbnail = true) {
@@ -147,9 +146,7 @@ export class DiscordManager {
     return embed
   }
 
-  shouldIgnoreInteraction(interaction: {
-    guildId: string | null
-  }) {
+  shouldIgnoreInteraction(interaction: { guildId: string | null }) {
     // The bot is meant to be used in a guild, so if there is no guild ID, then the interaction
     // should be ignored.
     if (!interaction.guildId) return
@@ -212,7 +209,7 @@ export class DiscordManager {
   }
 
   deployCommand(guildId: string, commandName: string) {
-    this.#log('info', 'Deploying bot command', { guildId, commandName })
+    this.#log('info', 'Deploying bot command', { commandName, guildId })
     const endpoint = Routes.applicationGuildCommands(this.#clientId, guildId)
     const [body] = Object.values(commands)
       .filter(command => command.data.name === commandName)
@@ -228,8 +225,8 @@ export class DiscordManager {
 
   deleteCommand(guildId: string, commandId: string) {
     this.#log('info', 'Deleting bot command for guild', {
-      guildId,
       commandId,
+      guildId,
     })
     const endpoint = Routes.applicationGuildCommand(this.#clientId, guildId, commandId)
     return this.#rest.delete(endpoint)

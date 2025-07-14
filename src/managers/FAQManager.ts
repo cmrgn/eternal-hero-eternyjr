@@ -1,9 +1,9 @@
 import {
-  type Guild,
+  type AnyThreadChannel,
+  type Client,
   Events,
   ForumChannel,
-  type Client,
-  type AnyThreadChannel,
+  type Guild,
   type Message,
   type PartialMessage,
 } from 'discord.js'
@@ -41,16 +41,16 @@ export class FAQManager {
   #faqForum: ForumChannel | null = null
 
   #specialThreads = {
-    TABLE_OF_CONTENTS: '1315713544058310707',
     MULTI_POSTS_WITH_TOC: ['1324842936281595904', '1392774418651938846'],
     MULTI_POSTS_WITHOUT_TOC: ['1315710373374197850'],
+    TABLE_OF_CONTENTS: '1315713544058310707',
   }
 
   #listeners = {
-    ThreadCreated: [] as ThreadEvents['ThreadCreated'][],
-    ThreadNameUpdated: [] as ThreadEvents['ThreadNameUpdated'][],
     ThreadContentUpdated: [] as ThreadEvents['ThreadContentUpdated'][],
+    ThreadCreated: [] as ThreadEvents['ThreadCreated'][],
     ThreadDeleted: [] as ThreadEvents['ThreadDeleted'][],
+    ThreadNameUpdated: [] as ThreadEvents['ThreadNameUpdated'][],
   }
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
@@ -216,7 +216,7 @@ export class FAQManager {
     if (!guild || !thread?.isThread()) return
 
     // Make sure the parent of the thread is the FAQ forum, abort if not
-    if (!this.belongsToFAQ({ parentId: thread.parent?.id ?? null, guild })) return
+    if (!this.belongsToFAQ({ guild, parentId: thread.parent?.id ?? null })) return
 
     this.#log('info', 'Responding to thread content update', { id: thread.id })
 
@@ -302,11 +302,11 @@ export class FAQManager {
       : await this.resolveThreadMessage(thread)
 
     return {
-      isResolved: true,
-      id: thread.id,
-      name: thread.name,
-      messages: messages,
       content: messages.map(message => message.content).join('\n'),
+      id: thread.id,
+      isResolved: true,
+      messages: messages,
+      name: thread.name,
       tags: this.getThreadTags(thread),
       url: thread.url,
     }

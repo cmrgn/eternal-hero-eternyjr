@@ -1,4 +1,4 @@
-import type { Client, Guild } from 'discord.js'
+import type { Guild } from 'discord.js'
 
 export function onGuildCreate(guild: Guild) {
   const { Discord } = guild.client.managers

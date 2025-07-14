@@ -12,18 +12,18 @@ export async function handleButtons(interaction: ButtonInteraction) {
 
     const resolvedThread = await Faq.resolveThread(thread)
     await interaction.update({
-      content: `Retranslation of thread \`${id}\` started…`,
       components: [],
+      content: `Retranslation of thread \`${id}\` started…`,
     })
     await Index.translateAndIndexThreadInAllLanguages(resolvedThread)
     await interaction.update({
-      content: `Retranslation and reindexing of thread \`${id}\` successful.`,
       components: [],
+      content: `Retranslation and reindexing of thread \`${id}\` successful.`,
     })
   } else if (action === 'skip-retranslate') {
     await interaction.update({
-      content: `Retranslation of thread \`${id}\` skipped.`,
       components: [],
+      content: `Retranslation of thread \`${id}\` skipped.`,
     })
   }
 
@@ -31,13 +31,13 @@ export async function handleButtons(interaction: ButtonInteraction) {
   if (action === 'confirm-delete') {
     await Flags.deleteFeatureFlag(id)
     await interaction.update({
-      content: `Feature flag \`${id}\` deletion successful.`,
       components: [],
+      content: `Feature flag \`${id}\` deletion successful.`,
     })
   } else if (action === 'cancel-delete') {
     await interaction.update({
-      content: 'Flag deletion aborted.',
       components: [],
+      content: 'Flag deletion aborted.',
     })
   }
 
@@ -46,13 +46,13 @@ export async function handleButtons(interaction: ButtonInteraction) {
     const [flagName, newValue] = id.split(':')
     await Flags.setFeatureFlag(flagName, Boolean(newValue))
     await interaction.update({
-      content: `Feature flag \`${flagName}\` creation successful.`,
       components: [],
+      content: `Feature flag \`${flagName}\` creation successful.`,
     })
   } else if (action === 'cancel-create') {
     await interaction.update({
-      content: 'Flag creation aborted.',
       components: [],
+      content: 'Flag creation aborted.',
     })
   }
 }

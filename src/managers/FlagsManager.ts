@@ -1,6 +1,5 @@
 import type { Client } from 'discord.js'
 import { sql } from 'kysely'
-
 import { logger } from '../utils/logger'
 
 export class FlagsManager {
@@ -66,11 +65,11 @@ export class FlagsManager {
 
     await Database.db
       .insertInto('feature_flags')
-      .values({ key, value, updated_at: sql`now()` })
+      .values({ key, updated_at: sql`now()`, value })
       .onConflict(oc =>
         oc.column('key').doUpdateSet({
-          value: sql`excluded.value`,
           updated_at: new Date(),
+          value: sql`excluded.value`,
         })
       )
       .execute()

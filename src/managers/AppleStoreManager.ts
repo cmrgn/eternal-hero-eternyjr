@@ -1,9 +1,8 @@
 import jwt from 'jsonwebtoken'
-
-import { logger } from '../utils/logger'
 import type { LanguageObject, Locale } from '../constants/i18n'
-import { withRetry } from '../utils/withRetry'
 import { fetchJson } from '../utils/fetchJson'
+import { logger } from '../utils/logger'
+import { withRetry } from '../utils/withRetry'
 
 export type IapLocalizationFields = { name: string; description: string }
 
@@ -84,13 +83,13 @@ export class AppleStoreManager {
     const issuer = process.env.APPLE_STORE_ISSUER_ID
     const kid = process.env.APPLE_STORE_KEY_ID
 
-    const now = Math.round(new Date().getTime() / 1000)
+    const now = Math.round(Date.now() / 1000)
     const expireIn = now + this.#jwtTtl - 1
     const token = jwt.sign(
       {
-        iss: issuer,
-        exp: expireIn,
         aud: 'appstoreconnect-v1',
+        exp: expireIn,
+        iss: issuer,
       },
       pkey,
       {
@@ -105,12 +104,12 @@ export class AppleStoreManager {
   callApi<T>(path: string, method = 'GET', payload?: unknown): Promise<AppleApiResponse<T>> {
     return withRetry(attempt => {
       const body = JSON.stringify(payload)
-      const context = { path, method, body, attempt }
+      const context = { attempt, body, method, path }
       const headers = this.headers
 
       this.#log('info', 'Calling Apple Store API', context)
 
-      return fetchJson(path, { method, body, headers })
+      return fetchJson(path, { body, headers, method })
     })
   }
 
@@ -156,10 +155,10 @@ export class AppleStoreManager {
     const en = response.data.find(loc => loc.attributes.locale === 'en-US')
 
     return {
-      id: data.id,
-      slug: data.attributes.productId,
-      name: en?.attributes.name ?? '',
       description: en?.attributes.description ?? '',
+      id: data.id,
+      name: en?.attributes.name ?? '',
+      slug: data.attributes.productId,
     }
   }
 
@@ -188,8 +187,8 @@ export class AppleStoreManager {
     if (!translations) return
 
     this.#log('info', 'Updating in-app purchase localization', {
-      locale,
       id: iap.attributes.productId,
+      locale,
       translations,
     })
 
@@ -197,15 +196,15 @@ export class AppleStoreManager {
     const existingId = await this.getLocalizationId(locale, related)
     const payload = {
       data: {
-        type: 'inAppPurchaseLocalizations',
         attributes: {
+          description: translations.description,
           locale,
           name: translations.name,
-          description: translations.description,
         },
         relationships: {
-          inAppPurchaseV2: { data: { type: 'inAppPurchases', id: iap.id } },
+          inAppPurchaseV2: { data: { id: iap.id, type: 'inAppPurchases' } },
         },
+        type: 'inAppPurchaseLocalizations',
       },
     }
 

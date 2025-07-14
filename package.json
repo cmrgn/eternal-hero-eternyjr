@@ -15,7 +15,7 @@
     "migrate": "node-pg-migrate -d -m ./migrations --no-reject-unauthorized",
     "migrate-create": "node-pg-migrate create -m ./migrations",
     "lint": "tsc --noEmit && biome lint --diagnostic-level=error --no-errors-on-unmatched ./src/**/*.ts",
-    "lint:fix": "biome check --write ./src/**/*.ts",
+    "lint:fix": "biome check --write --unsafe ./src/**/*.ts",
     "lint:staged": "biome check --error-on-warnings --no-errors-on-unmatched --staged ./src/**/*.ts",
     "prepare": "husky"
   },

@@ -1,8 +1,7 @@
-import { MessageFlags, type Interaction } from 'discord.js'
-
+import { type Interaction, MessageFlags } from 'discord.js'
 import { logger } from '../utils/logger'
-import { handleButtons } from './interactionCreate.buttons'
 import { handleAutocomplete } from './interactionCreate.autocomplete'
+import { handleButtons } from './interactionCreate.buttons'
 
 export async function onInteractionCreate(interaction: Interaction) {
   const { user, client } = interaction

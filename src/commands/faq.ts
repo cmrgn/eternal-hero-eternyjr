@@ -4,10 +4,9 @@ import {
   SlashCommandBuilder,
   userMention,
 } from 'discord.js'
-
-import { logger } from '../utils/logger'
-import type { SearchType } from '../managers/SearchManager'
 import { DiscordManager } from '../managers/DiscordManager'
+import type { SearchType } from '../managers/SearchManager'
+import { logger } from '../utils/logger'
 
 export const scope = 'PUBLIC'
 
@@ -66,7 +65,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     if (visible && member && guildId) {
       const userId = member.user.id
       logger.logCommand(interaction, 'Recording contribution')
-      await Leaderboard.register({ userId, channelId, guildId })
+      await Leaderboard.register({ channelId, guildId, userId })
     }
   } else {
     const message = `A ${method.toLowerCase()} search for _“${keyword}”_ yielded no results.`
@@ -83,8 +82,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   return interaction.reply({
-    flags: visible || user ? undefined : MessageFlags.Ephemeral,
     content: user ? userMention(user.id) : undefined,
     embeds: [embed],
+    flags: visible || user ? undefined : MessageFlags.Ephemeral,
   })
 }

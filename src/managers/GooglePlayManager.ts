@@ -1,7 +1,6 @@
 import { type androidpublisher_v3, google } from 'googleapis'
-
-import { logger } from '../utils/logger'
 import type { Locale } from '../constants/i18n'
+import { logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 
 export type IapLocalizationFields = { title: string; description: string }
@@ -30,8 +29,8 @@ export class GooglePlayManager {
   constructor() {
     this.#log('info', 'Instantiating manager')
     this.#ap = google.androidpublisher({
-      version: 'v3',
       auth: this.generateAuth(),
+      version: 'v3',
     })
   }
 
@@ -65,17 +64,17 @@ export class GooglePlayManager {
 
     const response = await withRetry(() =>
       this.#ap.inappproducts.list({
-        packageName: this.#packageName,
-        maxResults: 1000, // optional, default is 100
+        maxResults: 1000,
+        packageName: this.#packageName, // optional, default is 100
       })
     )
 
     const iaps: InAppPurchase[] =
       response.data.inappproduct?.map(({ sku, status, defaultLanguage, listings }) => ({
-        sku,
-        status,
         defaultLanguage,
         listings,
+        sku,
+        status,
       })) ?? []
 
     if (iaps.length > 0) {
@@ -95,14 +94,14 @@ export class GooglePlayManager {
     if (!iap.sku) return
 
     return this.#ap.inappproducts.patch({
-      packageName: this.#packageName,
-      sku: iap.sku,
       autoConvertMissingPrices: true,
+      packageName: this.#packageName,
       requestBody: {
+        listings: GooglePlayManager.mergeListings(iap.listings, listings),
         packageName: this.#packageName,
         sku: iap.sku,
-        listings: GooglePlayManager.mergeListings(iap.listings, listings),
       },
+      sku: iap.sku,
     })
   }
 
@@ -115,9 +114,9 @@ export class GooglePlayManager {
     for (const [lang, values] of Object.entries(overrides)) {
       // Okay Google… 🫠
       const locale = (lang === 'vi-VN' ? 'vi' : lang) as Locale
-      merged[locale] = Object.assign({ title: '', description: '' }, base[locale], {
-        title: values.title,
+      merged[locale] = Object.assign({ description: '', title: '' }, base[locale], {
         description: values.description,
+        title: values.title,
       })
     }
 
