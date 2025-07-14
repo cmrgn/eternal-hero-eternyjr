@@ -222,20 +222,14 @@ export class FAQManager {
     if (newMessage.partial)
       newMessage = await withRetry(() => newMessage.fetch())
 
-    const { guild } = newMessage
-    if (!guild) return
-
-    // Retrieve the thread the message belongs to, abort if not found
-    const thread = await guild.channels.fetch(newMessage.id).catch(() => null)
-    if (!thread?.isThread()) return
+    const { guild, channel: thread } = newMessage
+    if (!guild || !thread?.isThread()) return
 
     // Make sure the parent of the thread is the FAQ forum, abort if not
     if (!this.belongsToFAQ({ parentId: thread.parent?.id ?? null, guild }))
       return
 
-    this.#log('info', 'Responding to thread content update', {
-      id: thread.id,
-    })
+    this.#log('info', 'Responding to thread content update', { id: thread.id })
 
     // If the old content is accessible in the Discord cache and strictly
     // equal to the new content after normalization, do nothing since the edit
