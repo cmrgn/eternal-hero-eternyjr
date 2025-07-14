@@ -2,6 +2,7 @@ import { type Giveaway, type GiveawayData, GiveawaysManager } from 'discord-give
 import type { Client } from 'discord.js'
 
 import { logger } from '../utils/logger'
+import { DiscordManager } from './DiscordManager'
 
 const severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
 const log = logger.log('GiveawayManager', severityThreshold)
@@ -81,8 +82,8 @@ export const initGiveawayManager = (client: Client) => {
   const manager = new GiveawayManagerWithOwnDatabase(client, {
     default: {
       botsCanWin: false,
-      embedColor: Discord.BOT_COLOR,
-      embedColorEnd: Discord.BOT_COLOR,
+      embedColor: DiscordManager.BOT_COLOR,
+      embedColorEnd: DiscordManager.BOT_COLOR,
       reaction: '🎉',
       // Unless it’s run in the mod channels (for testing purposes), prevent moderators from winning
       // a giveaway.

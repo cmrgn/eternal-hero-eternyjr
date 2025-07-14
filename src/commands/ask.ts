@@ -28,14 +28,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')
 
   const { options, client } = interaction
-  const { Search, Localization, Prompt, Discord } = client.managers
+  const { Search, Localization, Prompt } = client.managers
 
   const query = options.getString('question', true)
   // @TODO: bring back the visibility option after the beta phase
   const visible = true // options.getBoolean('visible') ?? false
   const raw = options.getBoolean('raw') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
-  const embed = Discord.createEmbed(false).setTitle(`Asked: “${query}”`)
+  const embed = DiscordManager.createEmbed(false).setTitle(`Asked: “${query}”`)
 
   await interaction.deferReply({ flags })
 

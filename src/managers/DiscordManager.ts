@@ -43,7 +43,7 @@ export class DiscordManager {
   BOT_TEST_CHANNEL_ID = '1373605591766925412'
   DISCORD_SERVER_ID = '1239215561649426453'
   KITTY_USER_ID = '368097495605182483'
-  BOT_COLOR = '#ac61ff' as ColorResolvable
+  static BOT_COLOR = '#ac61ff' as ColorResolvable
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('DiscordManager', this.#severityThreshold)
@@ -85,7 +85,7 @@ export class DiscordManager {
     })
   }
 
-  getDiscordEditLimiter() {
+  static getDiscordEditLimiter() {
     return new Bottleneck({
       reservoir: 5, // Allow 5 calls
       reservoirRefreshAmount: 5, // Refill to 5
@@ -139,8 +139,8 @@ export class DiscordManager {
     await message.author.send({ content, components: [row] })
   }
 
-  createEmbed(withThumbnail = true) {
-    const embed = new EmbedBuilder().setColor(this.BOT_COLOR).setTimestamp()
+  static createEmbed(withThumbnail = true) {
+    const embed = new EmbedBuilder().setColor(DiscordManager.BOT_COLOR).setTimestamp()
 
     if (withThumbnail) embed.setThumbnail('https://ehmb.netlify.app/eh_icon.png')
 

@@ -1,6 +1,7 @@
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
 
 import { logger } from '../utils/logger'
+import { DiscordManager } from '../managers/DiscordManager'
 
 export const scope = 'PUBLIC'
 
@@ -49,8 +50,7 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')
 
-  const { options, client } = interaction
-  const { Discord } = client.managers
+  const { options } = interaction
 
   const rareKeys = options.getInteger('rare_keys') ?? 0
   const epicKeys = options.getInteger('epic_keys') ?? 0
@@ -73,7 +73,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const total = rawDust + viaRareKeys + viaEpicKeys + viaLegKeys + viaClanBonds + viaEssences
 
   const { format } = new Intl.NumberFormat('en-US')
-  const embed = Discord.createEmbed()
+  const embed = DiscordManager.createEmbed()
     .setTitle('Dust calculator')
     .addFields(
       { name: 'Approximated total dust', value: format(total) },

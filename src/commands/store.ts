@@ -4,6 +4,7 @@ import pMap from 'p-map'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import type { InAppPurchase as GooglePlayInAppPurchase } from '../managers/GooglePlayManager'
 import type { InAppPurchase as AppleStoreInAppPurchase } from '../managers/AppleStoreManager'
+import { DiscordManager } from '../managers/DiscordManager'
 
 export const scope = 'OFFICIAL'
 
@@ -38,7 +39,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   const { client, options } = interaction
-  const { Store, Crowdin, Discord } = client.managers
+  const { Store, Crowdin } = client.managers
 
   const iapId = options.getString('iap')
   const platform = options.getString('platform') ?? 'BOTH'
@@ -102,7 +103,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       })
 
       const googlePlayIaps = await Store.googlePlay.fetchAllIaps()
-      const googlePlayEditLimiter = Discord.getDiscordEditLimiter()
+      const googlePlayEditLimiter = DiscordManager.getDiscordEditLimiter()
       const notifyGooglePlay = googlePlayEditLimiter.wrap(
         (iap: GooglePlayInAppPurchase, index: number) =>
           interaction.editReply({
@@ -137,7 +138,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       })
 
       const appleStoreIaps = await Store.appleStore.fetchAllIaps()
-      const appleStoreEditLimiter = Discord.getDiscordEditLimiter()
+      const appleStoreEditLimiter = DiscordManager.getDiscordEditLimiter()
       const notifyAppleStore = appleStoreEditLimiter.wrap(
         (iap: AppleStoreInAppPurchase, index: number) =>
           interaction.editReply({

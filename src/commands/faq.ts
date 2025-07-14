@@ -7,6 +7,7 @@ import {
 
 import { logger } from '../utils/logger'
 import type { SearchType } from '../managers/SearchManager'
+import { DiscordManager } from '../managers/DiscordManager'
 
 export const scope = 'PUBLIC'
 
@@ -36,7 +37,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const user = options.getUser('user')
   const keyword = options.getString('keyword', true)
   const method = (options.getString('method') ?? 'FUZZY') as SearchType
-  const embed = Discord.createEmbed().setTitle(`FAQ search: “${keyword}”`)
+  const embed = DiscordManager.createEmbed().setTitle(`FAQ search: “${keyword}”`)
 
   logger.logCommand(interaction, 'Performing search')
   const { query, results } = await Search.search(keyword, method, 'en', 5)

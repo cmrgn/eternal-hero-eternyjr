@@ -9,6 +9,7 @@ import pMap from 'p-map'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { logger } from '../utils/logger'
 import { IndexManager, type PineconeEntry } from '../managers/IndexManager'
+import { DiscordManager } from '../managers/DiscordManager'
 
 export const scope = 'OFFICIAL'
 
@@ -162,14 +163,14 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
 
 async function commandLanguage(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
-  const { Index, Discord } = client.managers
+  const { Index } = client.managers
   const crowdinCode = options.getString('language', true)
   const threadsWithContent = await fetchFAQContent(interaction)
   const total = threadsWithContent.length
   const languageObject = LANGUAGE_OBJECTS.find(
     languageObject => languageObject.crowdinCode === crowdinCode
   )
-  const discordEditLimiter = Discord.getDiscordEditLimiter()
+  const discordEditLimiter = DiscordManager.getDiscordEditLimiter()
 
   if (!languageObject) {
     throw new Error(`Could not retrieve language object for ${crowdinCode}`)

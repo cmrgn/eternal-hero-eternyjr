@@ -1,6 +1,7 @@
 import { type ChatInputCommandInteraction, SlashCommandBuilder, userMention } from 'discord.js'
 
 import { logger } from '../utils/logger'
+import { DiscordManager } from '../managers/DiscordManager'
 
 export const scope = 'PUBLIC'
 
@@ -19,7 +20,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')
 
   const { guildId, client, options } = interaction
-  const { Leaderboard, Discord } = client.managers
+  const { Leaderboard } = client.managers
   const size = options.getInteger('size') ?? 5
 
   if (!guildId) return
@@ -27,7 +28,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Retrieving leaderboard data')
   const leaderboard = await Leaderboard.getLeaderboard(guildId, size)
 
-  const embed = Discord.createEmbed().setTitle('FAQ Leaderboard')
+  const embed = DiscordManager.createEmbed().setTitle('FAQ Leaderboard')
 
   if (leaderboard.length === 0) {
     embed.setDescription('The FAQ leaderboard is currently empty.')
