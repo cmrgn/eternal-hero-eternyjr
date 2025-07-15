@@ -6,6 +6,13 @@ import { logger } from '../utils/logger'
 
 export const scope = 'OFFICIAL'
 
+const LANGUAGE_CHOICES = Object.values(LANGUAGE_OBJECTS)
+  .filter(languageObject => languageObject.isOnCrowdin)
+  .map(languageObject => ({
+    name: languageObject.languageName,
+    value: languageObject.crowdinCode,
+  }))
+
 export const data = new SlashCommandBuilder()
   .setName('crowdin')
   .addSubcommand(subcommand =>
@@ -16,14 +23,7 @@ export const data = new SlashCommandBuilder()
         option
           .setName('language')
           .setDescription('Translation language')
-          .setChoices(
-            Object.values(LANGUAGE_OBJECTS)
-              .filter(languageObject => languageObject.isOnCrowdin)
-              .map(languageObject => ({
-                name: languageObject.languageName,
-                value: languageObject.crowdinCode,
-              }))
-          )
+          .setChoices(LANGUAGE_CHOICES)
       )
       .addBooleanOption(option =>
         option.setName('visible').setDescription('Whether it should show for everyone')
@@ -40,14 +40,7 @@ export const data = new SlashCommandBuilder()
         option
           .setName('language')
           .setDescription('Translation language')
-          .setChoices(
-            Object.values(LANGUAGE_OBJECTS)
-              .filter(languageObject => languageObject.isOnCrowdin)
-              .map(languageObject => ({
-                name: languageObject.languageName,
-                value: languageObject.crowdinCode,
-              }))
-          )
+          .setChoices(LANGUAGE_CHOICES)
       )
       .addBooleanOption(option =>
         option.setName('visible').setDescription('Whether it should show for everyone')
@@ -56,20 +49,10 @@ export const data = new SlashCommandBuilder()
   .setDescription('Interact with Crowdin')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const { guildId, options } = interaction
-  if (!guildId) return
-
-  logger.logCommand(interaction, 'Starting command execution', {
-    subcommand: options.getSubcommand(),
-  })
-
-  if (options.getSubcommand() === 'progress') {
-    return commandProgress(interaction)
-  }
-
-  if (options.getSubcommand() === 'term') {
-    return commandTerm(interaction)
-  }
+  const subCommand = interaction.options.getSubcommand()
+  logger.logCommand(interaction, 'Starting command execution', { subCommand })
+  if (subCommand === 'progress') return commandProgress(interaction)
+  if (subCommand === 'term') return commandTerm(interaction)
 }
 
 async function commandProgress(interaction: ChatInputCommandInteraction) {
@@ -79,7 +62,6 @@ async function commandProgress(interaction: ChatInputCommandInteraction) {
   const visible = options.getBoolean('visible') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
 
-  logger.logCommand(interaction, 'Getting project progress')
   const projectProgress = await Crowdin.getProjectProgress()
 
   const header = '**Translation progress:**\n'
@@ -90,9 +72,8 @@ async function commandProgress(interaction: ChatInputCommandInteraction) {
     const languageData = projectProgress.find(({ data }) => data.languageId === crowdinCode)
 
     if (!languageData) {
-      logger.logCommand(interaction, 'Missing language object', {
-        locale: crowdinCode,
-      })
+      logger.logCommand(interaction, 'Missing language object', { locale: crowdinCode })
+
       return interaction.reply({
         content: `Could not find language object for \`${crowdinCode}\`.`,
         flags: MessageFlags.Ephemeral,
