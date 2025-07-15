@@ -268,7 +268,7 @@ export const LANGUAGE_OBJECTS = [
     twoLettersCode: 'tr' as const,
   },
   {
-    appleStoreLocale: null,
+    appleStoreLocale: 'vi' as const,
     channel: 'vn-tiếng-việt',
     crowdinCode: 'vi' as const,
     deepLCode: 'vi' as TargetLanguageCode,
