@@ -224,11 +224,10 @@ export class AppleStoreManager {
       })
     }
 
-    // Unfortunately, Apple Store rejects on Vietnamese characters in the IAP name, despite
-    // explicitly supporting Vietnamese as a language — even when adding localization directly
-    // within the UI. There is no other option than stripping out accents before sending the
-    // localization to the API. 🙃
-    const safeName = locale === 'vi' ? AppleStoreManager.removeAccents(name) : name
+    // Unfortunately, Apple Store rejects when the name contains _some_ Unicode characters (they’re
+    // very vague about it). CJK works fine, but Vietnamese and French for instance fail on accented
+    // characters
+    const safeName = AppleStoreManager.removeAccents(name)
 
     const { related } = iap.relationships.inAppPurchaseLocalizations.links
     const existingId = await this.getLocalizationId(locale, related)
