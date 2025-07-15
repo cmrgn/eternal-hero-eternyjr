@@ -129,7 +129,7 @@ export const LANGUAGE_OBJECTS = [
     twoLettersCode: 'ja' as const,
   },
   {
-    appleStoreLocale: null,
+    appleStoreLocale: 'ko',
     channel: 'kr-한국어',
     crowdinCode: 'ko' as const,
     deepLCode: 'ko' as TargetLanguageCode,
