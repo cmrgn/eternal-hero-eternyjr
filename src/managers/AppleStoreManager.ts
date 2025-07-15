@@ -19,6 +19,7 @@ export type InAppPurchase = RelationshipLink & {
   type: 'inAppPurchases'
   id: string
   attributes: {
+    state?: 'APPROVED' | 'ACTIVE'
     name?: string
     description?: string
     productId: string
@@ -163,8 +164,8 @@ export class AppleStoreManager {
     }
   }
 
-  async getLocalizationId(locale: string, relatedUrl: string) {
-    this.#log('info', 'Getting localization ID', {
+  async getIapLocalization(locale: string, relatedUrl: string) {
+    this.#log('info', 'Getting in-app purchase localization', {
       locale,
       relatedUrl,
     })
@@ -172,7 +173,7 @@ export class AppleStoreManager {
     try {
       const response: AppleApiResponse<InAppPurchase> = await this.callApi(relatedUrl)
       const match = response.data.find(loc => loc.attributes.locale === locale)
-      return match?.id ?? null
+      return match
     } catch {
       return null
     }
@@ -230,19 +231,29 @@ export class AppleStoreManager {
     const safeName = AppleStoreManager.removeAccents(name)
 
     const { related } = iap.relationships.inAppPurchaseLocalizations.links
-    const existingId = await this.getLocalizationId(locale, related)
+    const existingIap = await this.getIapLocalization(locale, related)
 
-    if (existingId) {
+    if (existingIap) {
+      const state = existingIap.attributes?.state
+
+      if (state === 'APPROVED' || state === 'ACTIVE') {
+        return this.#log('info', 'In-app purchase already active; aborting', {
+          id: existingIap.id,
+          locale,
+          state,
+        })
+      }
+
       const payload = {
         data: {
           attributes: { description, name: safeName },
-          id: existingId,
+          id: existingIap.id,
           type: 'inAppPurchaseLocalizations',
         },
       }
 
       await this.callApi(
-        `${this.#apiUrl}/inAppPurchaseLocalizations/${existingId}`,
+        `${this.#apiUrl}/inAppPurchaseLocalizations/${existingIap.id}`,
         'PATCH',
         payload
       )
