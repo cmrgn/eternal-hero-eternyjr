@@ -162,7 +162,7 @@ export class DiscordManager {
     const userId = interaction.user?.id ?? interaction.userId
     const channel = await withRetry(() => interaction.client.channels.fetch(this.#alertChannelId))
     if (!channel?.isSendable()) return
-    if (interaction.guildId === this.TEST_SERVER_ID) return
+    if (interaction.guildId === this.TEST_SERVER_ID) return this.#log('error', message)
 
     try {
       return await channel.send(
