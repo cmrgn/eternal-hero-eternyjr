@@ -95,20 +95,23 @@ export class DeepLManager {
   }
 
   formatPairs(translations: LocalizationItem[], targetLangCode: CrowdinCode) {
-    // These 5 Item_*_Name keys are the five torso items, which are called “<Something> Chest” in
-    // English. This causes translations to use that word when translating the word “chest” (as in
-    // treasure chest). By excluding them from the glossary, we can improve translations for all
-    // mentioning world chests.
-    const IGNORED_KEYS = 'Item_29_Name,Item_37_Name,Item_44_Name,Item_52_Name,Item_60_Name'.split(
-      ','
-    )
+    const ignoredPatterns = [
+      // These 5 Item_*_Name keys are the five torso items, which are called “<Something> Chest” in
+      // English. This causes translations to use that word when translating the word “chest” (as in
+      // treasure chest). By excluding them from the glossary, we can improve translations for all
+      // mentioning world chests.
+      /Item_(?:29|37|44|52|60)_Name/,
+      // Talents are typically long and contain replacement variables, which means they are not good
+      // candidates for glossary entries
+      /Talent_\d+_(?:Name|Desc)/,
+    ]
 
     const errors: string[] = []
 
     const pairs = translations
-      .filter(({ translations: t }) => !!t[targetLangCode])
+      .filter(({ translations: t }) => !!t.en && !!t[targetLangCode])
       .map(({ key, translations: t }): [string, string] => {
-        if (IGNORED_KEYS.includes(key)) return ['', '']
+        if (ignoredPatterns.some(re => re.test(key))) return ['', '']
         try {
           const cleanSource = cleanUpTranslation(t.en)
           const cleanTarget = cleanUpTranslation(t[targetLangCode])
