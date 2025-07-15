@@ -194,6 +194,7 @@ export class FAQManager {
     if (Discord.shouldIgnoreInteraction(next)) return
     if (!this.belongsToFAQ(prev)) return
     if (prev.name === next.name) return
+    if (next.id === this.#specialThreads.TABLE_OF_CONTENTS) return
 
     this.#log('info', 'Responding to thread name update', { id: next.id })
     // Update the cache without refetching all threads; just update this one
@@ -217,6 +218,7 @@ export class FAQManager {
 
     // Make sure the parent of the thread is the FAQ forum, abort if not
     if (!this.belongsToFAQ({ guild, parentId: thread.parent?.id ?? null })) return
+    if (thread.id === this.#specialThreads.TABLE_OF_CONTENTS) return
 
     this.#log('info', 'Responding to thread content update', { id: thread.id })
 
