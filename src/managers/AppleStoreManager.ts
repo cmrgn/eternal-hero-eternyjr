@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import type { LanguageObject, Locale } from '../constants/i18n'
+import type { LanguageObject } from '../constants/i18n'
 import { fetchJson } from '../utils/fetchJson'
 import { logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
@@ -162,7 +162,7 @@ export class AppleStoreManager {
     }
   }
 
-  async getLocalizationId(locale: Locale, relatedUrl: string) {
+  async getLocalizationId(locale: string, relatedUrl: string) {
     this.#log('info', 'Getting localization ID', {
       locale,
       relatedUrl,
@@ -182,7 +182,7 @@ export class AppleStoreManager {
     iap: InAppPurchase,
     translations: IapLocalizationFields
   ) {
-    const { locale } = languageObject
+    const locale = languageObject?.appleStoreLocale ?? languageObject.locale
 
     if (!translations) return
 

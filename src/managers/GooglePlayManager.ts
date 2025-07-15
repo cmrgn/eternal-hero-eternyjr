@@ -1,5 +1,5 @@
 import { type androidpublisher_v3, google } from 'googleapis'
-import type { Locale } from '../constants/i18n'
+import { LANGUAGE_OBJECTS, type Locale } from '../constants/i18n'
 import { logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 
@@ -112,8 +112,13 @@ export class GooglePlayManager {
     const merged = { ...base }
 
     for (const [lang, values] of Object.entries(overrides)) {
-      // Okay Google… 🫠
-      const locale = (lang === 'vi-VN' ? 'vi' : lang) as Locale
+      const languageObject = LANGUAGE_OBJECTS.find(
+        languageObject =>
+          languageObject.locale === lang ||
+          languageObject.googlePlayLocale === lang ||
+          languageObject.twoLettersCode === lang
+      )
+      const locale = (languageObject?.googlePlayLocale ?? languageObject?.locale ?? lang) as Locale
       merged[locale] = Object.assign({ description: '', title: '' }, base[locale], {
         description: values.description,
         title: values.title,
