@@ -181,7 +181,7 @@ export class AppleStoreManager {
 
   static removeAccents(string: string) {
     // See: https://github.com/tyxla/remove-accents/pull/30
-    return removeAccents(string).replace(/á/g, 'a')
+    return removeAccents(string).replace(/á/g, 'a').replace(/ạ/g, 'a')
   }
 
   async updateIapLocalization(
