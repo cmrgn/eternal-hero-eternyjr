@@ -1,7 +1,6 @@
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
-import { ENGLISH_LANGUAGE_OBJECT, LANGUAGE_OBJECTS } from '../constants/i18n'
+import { LANGUAGE_OBJECTS } from '../constants/i18n'
 import { DiscordManager } from '../managers/DiscordManager'
-import type { PineconeMetadata } from '../managers/IndexManager'
 import { logger } from '../utils/logger'
 
 export const scope = 'OFFICIAL'
@@ -38,34 +37,23 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply({ flags })
 
-  logger.logCommand(interaction, 'Guessing the input’s language')
   const guessedLanguage = await Localization.guessCrowdinLanguage(query)
-  const languageObject = LANGUAGE_OBJECTS.find(
-    languageObject => languageObject.crowdinCode === guessedLanguage
-  )
+  const languageObject = LANGUAGE_OBJECTS.find(({ crowdinCode }) => crowdinCode === guessedLanguage)
 
   if (!languageObject) {
     logger.logCommand(interaction, 'Aborting due to lack of guessed language')
-    embed.setDescription(
+    const errorMessage =
       'Unfortunately, the language could not be guessed from your query, or it is not currently supported.'
-    )
-    return interaction.editReply({ embeds: [embed] })
+    return interaction.editReply({ embeds: [embed.setDescription(errorMessage)] })
   }
 
-  const { crowdinCode } = languageObject
-
-  logger.logCommand(interaction, 'Performing the search', { crowdinCode })
+  const { crowdinCode, messages } = languageObject
   const { results } = await Search.search(query, 'VECTOR', crowdinCode, 1)
   const [result] = results
 
   if (!result) {
-    logger.logCommand(interaction, 'Returning a lack of results', {
-      crowdinCode,
-    })
-    const localizedError = languageObject?.messages.no_results
-    const error = localizedError ?? ENGLISH_LANGUAGE_OBJECT.messages.no_results
-    embed.setDescription(error)
-    return interaction.editReply({ embeds: [embed] })
+    logger.logCommand(interaction, 'Returning a lack of results', { crowdinCode })
+    return interaction.editReply({ embeds: [embed.setDescription(messages.no_results)] })
   }
 
   const {
@@ -73,36 +61,22 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     entry_answer: answer,
     entry_url: url,
     entry_indexed_at: indexedAt,
-  } = result.fields as PineconeMetadata
+  } = result.fields
 
   embed.addFields(
     { inline: true, name: 'Source', value: url },
-    {
-      inline: true,
-      name: 'Indexed on',
-      value: DiscordManager.toTimestamp(indexedAt),
-    }
+    { inline: true, name: 'Indexed on', value: DiscordManager.toTimestamp(indexedAt) }
   )
 
   if (raw) {
     logger.logCommand(interaction, 'Returning a raw answer', { crowdinCode })
-    embed.setDescription(answer)
-
-    return interaction.editReply({ embeds: [embed] })
+    return interaction.editReply({ embeds: [embed.setDescription(answer)] })
   }
 
-  const context = { answer, languageObject, question }
-
-  logger.logCommand(interaction, 'Summarizing the answer', {
-    crowdinCode,
-    question,
-  })
-  const localizedAnswer = await Prompt.summarize(query, context)
-
-  embed.setDescription(localizedAnswer ?? answer)
-
+  logger.logCommand(interaction, 'Summarizing the answer', { crowdinCode, question })
+  const localizedAnswer = await Prompt.summarize(query, { answer, languageObject, question })
   const message = await interaction.editReply({
-    embeds: [embed],
+    embeds: [embed.setDescription(localizedAnswer ?? answer)],
   })
 
   await Promise.all([message.react('👍'), message.react('👎')])
