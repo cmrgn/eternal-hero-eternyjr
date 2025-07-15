@@ -192,6 +192,24 @@ export class AppleStoreManager {
       translations,
     })
 
+    // If the name is too long for Apple Store, skip the request altogether since it won’t work
+    if (translations.name.length > 30) {
+      return this.#log('warn', 'In-app purchase name too long for Apple Store; aborting.', {
+        id: iap.attributes.productId,
+        length: translations.name.length,
+        locale,
+      })
+    }
+
+    // If the desc is too long for Apple Store, skip the request altogether since it won’t work
+    if (translations.description.length > 45) {
+      return this.#log('warn', 'In-app purchase description too long for Apple Store; aborting.', {
+        id: iap.attributes.productId,
+        length: translations.description.length,
+        locale,
+      })
+    }
+
     const { related } = iap.relationships.inAppPurchaseLocalizations.links
     const existingId = await this.getLocalizationId(locale, related)
     const payload = {
