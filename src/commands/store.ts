@@ -38,7 +38,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   const { client, options } = interaction
-  const { Store, Crowdin } = client.managers
+  const { Store, Crowdin, Discord } = client.managers
 
   const iapId = options.getString('iap')
   const platform = options.getString('platform') ?? 'BOTH'
@@ -125,9 +125,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
           const iapTranslations = iap.sku && translations.get(iap.sku)
           if (iapTranslations) {
             await notifyGooglePlay(iap, index)
-            await Store.googlePlay.updateIapLocalization(iap, {
-              [languageObject.locale]: iapTranslations[languageObject.locale],
-            })
+            try {
+              await Store.googlePlay.updateIapLocalization(iap, {
+                [languageObject.locale]: iapTranslations[languageObject.locale],
+              })
+            } catch (error) {
+              await Discord.sendInteractionAlert(
+                interaction,
+                `Failed to upload ${iap.sku} localization to Google Play:
+                \`\`\`${error}\`\`\``
+              )
+            }
           }
         },
         { concurrency: 5 }
@@ -160,11 +168,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
           const iapTranslations = translations.get(iap.attributes.productId)
           if (iapTranslations) {
             await notifyAppleStore(iap, index)
-            await Store.appleStore.updateIapLocalization(
-              languageObject,
-              iap,
-              iapTranslations[languageObject.locale]
-            )
+            try {
+              await Store.appleStore.updateIapLocalization(
+                languageObject,
+                iap,
+                iapTranslations[languageObject.locale]
+              )
+            } catch (error) {
+              await Discord.sendInteractionAlert(
+                interaction,
+                `Failed to upload ${iap.attributes.productId} localization to Apple Store:
+                \`\`\`${error}\`\`\``
+              )
+            }
           }
         },
         { concurrency: 5 }
