@@ -161,7 +161,7 @@ export class IndexManager {
       if (await Flags.getFeatureFlag('auto_indexing')) {
         await this.translateAndIndexThreadInAllLanguages(thread)
       } else {
-        this.#log('info', 'Auto-indexing is disabled; aborting.', {
+        this.#log('info', 'Auto-indexing is disabled; aborting', {
           threadId: thread.id,
         })
       }
@@ -171,7 +171,7 @@ export class IndexManager {
       if (await Flags.getFeatureFlag('auto_indexing')) {
         await this.unindexThreadInAllLanguages(threadId)
       } else {
-        this.#log('info', 'Auto-indexing is disabled; aborting.', { threadId })
+        this.#log('info', 'Auto-indexing is disabled; aborting', { threadId })
       }
     })
 
@@ -179,7 +179,7 @@ export class IndexManager {
       if (await Flags.getFeatureFlag('auto_indexing')) {
         await this.translateAndIndexThreadInAllLanguages(thread)
       } else {
-        this.#log('info', 'Auto-indexing is disabled; aborting.', {
+        this.#log('info', 'Auto-indexing is disabled; aborting', {
           threadId: thread.id,
         })
       }
@@ -198,7 +198,7 @@ export class IndexManager {
           await this.translateAndIndexThreadInAllLanguages(thread)
         }
       } else {
-        this.#log('info', 'Auto-indexing is disabled; aborting.', {
+        this.#log('info', 'Auto-indexing is disabled; aborting', {
           thread: thread.id,
         })
       }

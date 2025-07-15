@@ -182,9 +182,15 @@ export class AppleStoreManager {
     iap: InAppPurchase,
     translations: IapLocalizationFields
   ) {
-    const locale = languageObject?.appleStoreLocale ?? languageObject.locale
+    const locale = languageObject.appleStoreLocale
 
-    if (!translations) return
+    if (!translations || !languageObject.appleStoreLocale) {
+      return this.#log('warn', 'Missing context to localize in-app purchase; aborting', {
+        id: iap.attributes.productId,
+        locale,
+        translations,
+      })
+    }
 
     this.#log('info', 'Updating in-app purchase localization', {
       id: iap.attributes.productId,
@@ -194,7 +200,7 @@ export class AppleStoreManager {
 
     // If the name is too long for Apple Store, skip the request altogether since it won’t work
     if (translations.name.length > 30) {
-      return this.#log('warn', 'In-app purchase name too long for Apple Store; aborting.', {
+      return this.#log('warn', 'In-app purchase name too long for Apple Store; aborting', {
         id: iap.attributes.productId,
         length: translations.name.length,
         locale,
@@ -203,7 +209,7 @@ export class AppleStoreManager {
 
     // If the desc is too long for Apple Store, skip the request altogether since it won’t work
     if (translations.description.length > 45) {
-      return this.#log('warn', 'In-app purchase description too long for Apple Store; aborting.', {
+      return this.#log('warn', 'In-app purchase description too long for Apple Store; aborting', {
         id: iap.attributes.productId,
         length: translations.description.length,
         locale,

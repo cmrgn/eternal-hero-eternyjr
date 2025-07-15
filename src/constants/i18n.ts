@@ -6,7 +6,7 @@ export type CrowdinCode = LanguageObject['crowdinCode']
 export type Locale = LanguageObject['locale']
 
 export const ENGLISH_LANGUAGE_OBJECT = {
-  appleStoreLocale: null,
+  appleStoreLocale: 'en-US' as const,
   channel: 'en-english',
   crowdinCode: 'en' as const,
   deepLCode: 'en' as TargetLanguageCode,
@@ -28,7 +28,7 @@ export const ENGLISH_LANGUAGE_OBJECT = {
 
 export const LANGUAGE_OBJECTS = [
   {
-    appleStoreLocale: null,
+    appleStoreLocale: 'de-DE' as const,
     channel: 'de-deutsch',
     crowdinCode: 'de' as const,
     deepLCode: 'de' as TargetLanguageCode,
@@ -49,7 +49,7 @@ export const LANGUAGE_OBJECTS = [
   },
   ENGLISH_LANGUAGE_OBJECT,
   {
-    appleStoreLocale: null,
+    appleStoreLocale: 'es-ES' as const,
     channel: 'es-español',
     crowdinCode: 'es' as const,
     deepLCode: 'es' as TargetLanguageCode,
@@ -69,7 +69,7 @@ export const LANGUAGE_OBJECTS = [
     twoLettersCode: 'es' as const,
   },
   {
-    appleStoreLocale: null,
+    appleStoreLocale: 'fr-FR' as const,
     channel: 'fr-français',
     crowdinCode: 'fr' as const,
     deepLCode: 'fr' as TargetLanguageCode,
@@ -109,7 +109,7 @@ export const LANGUAGE_OBJECTS = [
     twoLettersCode: 'it' as const,
   },
   {
-    appleStoreLocale: null,
+    appleStoreLocale: 'ja' as const,
     channel: 'jp-日本語',
     crowdinCode: 'ja' as const,
     deepLCode: 'ja' as TargetLanguageCode,
@@ -129,7 +129,7 @@ export const LANGUAGE_OBJECTS = [
     twoLettersCode: 'ja' as const,
   },
   {
-    appleStoreLocale: 'ko',
+    appleStoreLocale: 'ko' as const,
     channel: 'kr-한국어',
     crowdinCode: 'ko' as const,
     deepLCode: 'ko' as TargetLanguageCode,
@@ -169,7 +169,7 @@ export const LANGUAGE_OBJECTS = [
     twoLettersCode: 'tl' as const,
   },
   {
-    appleStoreLocale: null,
+    appleStoreLocale: 'pl' as const,
     channel: 'pl-polski',
     crowdinCode: 'pl' as const,
     deepLCode: 'pl' as TargetLanguageCode,
@@ -189,7 +189,7 @@ export const LANGUAGE_OBJECTS = [
     twoLettersCode: 'pl' as const,
   },
   {
-    appleStoreLocale: null,
+    appleStoreLocale: 'pt-BR' as const,
     channel: 'pt-br-português',
     crowdinCode: 'pt-BR' as const,
     deepLCode: 'pt-BR' as TargetLanguageCode,
@@ -209,7 +209,7 @@ export const LANGUAGE_OBJECTS = [
     twoLettersCode: 'pt' as const,
   },
   {
-    appleStoreLocale: null,
+    appleStoreLocale: 'ru' as const,
     channel: 'ru-русский',
     crowdinCode: 'ru' as const,
     deepLCode: 'ru' as TargetLanguageCode,
@@ -229,7 +229,7 @@ export const LANGUAGE_OBJECTS = [
     twoLettersCode: 'ru' as const,
   },
   {
-    appleStoreLocale: null,
+    appleStoreLocale: 'th' as const,
     channel: 'th-ภาษาไทย',
     crowdinCode: 'th' as const,
     deepLCode: 'th' as TargetLanguageCode,
@@ -248,7 +248,7 @@ export const LANGUAGE_OBJECTS = [
     twoLettersCode: 'th' as const,
   },
   {
-    appleStoreLocale: null,
+    appleStoreLocale: 'tr' as const,
     channel: 'tr-türkçe',
     crowdinCode: 'tr' as const,
     deepLCode: 'tr' as TargetLanguageCode,
@@ -288,7 +288,7 @@ export const LANGUAGE_OBJECTS = [
     twoLettersCode: 'vi' as const,
   },
   {
-    appleStoreLocale: null,
+    appleStoreLocale: 'zh-Hans' as const,
     channel: 'zh-汉语',
     crowdinCode: 'zh-CN' as const,
     deepLCode: 'zh' as TargetLanguageCode,
