@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken'
+import removeAccents from 'remove-accents'
 import type { LanguageObject } from '../constants/i18n'
 import { fetchJson } from '../utils/fetchJson'
 import { logger } from '../utils/logger'
@@ -177,6 +178,11 @@ export class AppleStoreManager {
     }
   }
 
+  static removeAccents(string: string) {
+    // See: https://github.com/tyxla/remove-accents/pull/30
+    return removeAccents(string).replace(/á/g, 'a')
+  }
+
   async updateIapLocalization(
     languageObject: LanguageObject,
     iap: InAppPurchase,
@@ -192,6 +198,8 @@ export class AppleStoreManager {
       })
     }
 
+    const { name, description } = translations
+
     this.#log('info', 'Updating in-app purchase localization', {
       id: iap.attributes.productId,
       locale,
@@ -199,46 +207,56 @@ export class AppleStoreManager {
     })
 
     // If the name is too long for Apple Store, skip the request altogether since it won’t work
-    if (translations.name.length > 30) {
+    if (name.length > 30) {
       return this.#log('warn', 'In-app purchase name too long for Apple Store; aborting', {
         id: iap.attributes.productId,
-        length: translations.name.length,
+        length: name.length,
         locale,
       })
     }
 
     // If the desc is too long for Apple Store, skip the request altogether since it won’t work
-    if (translations.description.length > 45) {
+    if (description.length > 45) {
       return this.#log('warn', 'In-app purchase description too long for Apple Store; aborting', {
         id: iap.attributes.productId,
-        length: translations.description.length,
+        length: description.length,
         locale,
       })
     }
 
+    // Unfortunately, Apple Store rejects on Vietnamese characters in the IAP name, despite
+    // explicitly supporting Vietnamese as a language — even when adding localization directly
+    // within the UI. There is no other option than stripping out accents before sending the
+    // localization to the API. 🙃
+    const safeName = locale === 'vi' ? AppleStoreManager.removeAccents(name) : name
+
     const { related } = iap.relationships.inAppPurchaseLocalizations.links
     const existingId = await this.getLocalizationId(locale, related)
-    const payload = {
-      data: {
-        attributes: {
-          description: translations.description,
-          locale,
-          name: translations.name,
-        },
-        relationships: {
-          inAppPurchaseV2: { data: { id: iap.id, type: 'inAppPurchases' } },
-        },
-        type: 'inAppPurchaseLocalizations',
-      },
-    }
 
     if (existingId) {
+      const payload = {
+        data: {
+          attributes: { description, name: safeName },
+          id: existingId,
+          type: 'inAppPurchaseLocalizations',
+        },
+      }
+
       await this.callApi(
         `${this.#apiUrl}/inAppPurchaseLocalizations/${existingId}`,
         'PATCH',
         payload
       )
     } else {
+      const payload = {
+        data: {
+          attributes: { description, locale, name: safeName },
+          relationships: {
+            inAppPurchaseV2: { data: { id: iap.id, type: 'inAppPurchases' } },
+          },
+          type: 'inAppPurchaseLocalizations',
+        },
+      }
       await this.callApi(`${this.#apiUrl}/inAppPurchaseLocalizations`, 'POST', payload)
     }
   }

@@ -1,24 +1,4 @@
 {
-  "name": "eternal-bot",
-  "private": true,
-  "version": "1.0.0",
-  "type": "module",
-  "engines": {
-    "node": ">=22.x"
-  },
-  "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.cjs",
-    "build": "tsup src/index.ts --minify",
-    "deploy-commands": "tsx src/scripts/deploy-commands.ts",
-    "delete-commands": "tsx src/scripts/delete-commands.ts",
-    "migrate": "node-pg-migrate -d -m ./migrations --no-reject-unauthorized",
-    "migrate-create": "node-pg-migrate create -m ./migrations",
-    "lint": "tsc --noEmit && biome lint --diagnostic-level=error --no-errors-on-unmatched ./src/**/*.ts",
-    "lint:fix": "biome check --write --unsafe ./src/**/*.ts",
-    "lint:staged": "biome check --error-on-warnings --no-errors-on-unmatched --staged ./src/**/*.ts",
-    "prepare": "husky"
-  },
   "dependencies": {
     "@crowdin/crowdin-api-client": "^1.45.0",
     "@pinecone-database/pinecone": "^6.1.1",
@@ -41,7 +21,8 @@
     "node-fetch": "^2.7.0",
     "openai": "^5.6.0",
     "p-map": "^4.0.0",
-    "pg": "^8.16.0"
+    "pg": "^8.16.0",
+    "remove-accents": "^0.5.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.0.6",
@@ -56,5 +37,25 @@
     "tsup": "^8.5.0",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
-  }
+  },
+  "engines": {
+    "node": ">=22.x"
+  },
+  "name": "eternal-bot",
+  "private": true,
+  "scripts": {
+    "build": "tsup src/index.ts --minify",
+    "delete-commands": "tsx src/scripts/delete-commands.ts",
+    "deploy-commands": "tsx src/scripts/deploy-commands.ts",
+    "dev": "tsx watch src/index.ts",
+    "lint": "tsc --noEmit && biome lint --diagnostic-level=error --no-errors-on-unmatched ./src/**/*.ts",
+    "lint:fix": "biome check --write --unsafe ./src/**/*.ts",
+    "lint:staged": "biome check --error-on-warnings --no-errors-on-unmatched --staged ./src/**/*.ts",
+    "migrate": "node-pg-migrate -d -m ./migrations --no-reject-unauthorized",
+    "migrate-create": "node-pg-migrate create -m ./migrations",
+    "prepare": "husky",
+    "start": "node dist/index.cjs"
+  },
+  "type": "module",
+  "version": "1.0.0"
 }
