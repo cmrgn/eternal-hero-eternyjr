@@ -106,6 +106,7 @@ export class DeepLManager {
     const errors: string[] = []
 
     const pairs = translations
+      .filter(({ translations: t }) => !!t[targetLangCode])
       .map(({ key, translations: t }): [string, string] => {
         if (IGNORED_KEYS.includes(key)) return ['', '']
         try {
@@ -124,7 +125,7 @@ export class DeepLManager {
       .filter(([src, tgt]) => src && tgt)
 
     if (errors.length) {
-      this.#log('warn', 'Some glossary pairs were skipped', { errors })
+      this.#log('warn', 'Some glossary pairs were skipped', { errors, targetLangCode })
     }
 
     return pairs
