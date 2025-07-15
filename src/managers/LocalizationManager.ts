@@ -1,6 +1,7 @@
 import { type LanguageIdentifier, loadModule } from 'cld3-asm'
 import type { Client } from 'discord.js'
 import { CROWDIN_CODES, type CrowdinCode, type LanguageObject } from '../constants/i18n'
+import { getExcerpt } from '../utils/getExcerpt'
 import { logger } from '../utils/logger'
 import type { ResolvedThread } from './FAQManager'
 
@@ -86,6 +87,8 @@ export class LocalizationManager {
   }
 
   async guessCrowdinLanguage(userInput: string): Promise<CrowdinCode | null> {
+    this.#log('info', 'Guessing Crowdin language', { userInput: getExcerpt(userInput) })
+
     const cldGuess = this.guessLanguageWithCld3(userInput)
     if (cldGuess) return cldGuess
 
