@@ -184,7 +184,7 @@ export class AppleStoreManager {
   ) {
     const locale = languageObject.appleStoreLocale
 
-    if (!translations || !languageObject.appleStoreLocale) {
+    if (!translations || !locale) {
       return this.#log('warn', 'Missing context to localize in-app purchase; aborting', {
         id: iap.attributes.productId,
         locale,
