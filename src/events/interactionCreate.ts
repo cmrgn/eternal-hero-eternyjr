@@ -22,12 +22,12 @@ export async function onInteractionCreate(interaction: Interaction) {
     if (command) await command.execute(interaction)
   } catch (error) {
     const message = 'There was an error while executing this command.'
-    const { Ephemeral } = MessageFlags
 
     logger.logCommand(interaction, 'There was an error while executing this command.', { error })
+    await Discord.sendInteractionAlert(interaction, `${message}\n\`\`\`${error}\`\`\``)
 
     if (interaction.replied || interaction.deferred)
-      await interaction.followUp({ content: message, flags: Ephemeral })
-    else await interaction.reply({ content: message, flags: Ephemeral })
+      await interaction.followUp({ content: message, flags: MessageFlags.Ephemeral })
+    else await interaction.reply({ content: message, flags: MessageFlags.Ephemeral })
   }
 }

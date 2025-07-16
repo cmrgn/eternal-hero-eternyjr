@@ -1,6 +1,6 @@
-import { bold, channelMention, type GuildBasedChannel } from 'discord.js'
+import { bold, channelMention, type PublicThreadChannel, type TextChannel } from 'discord.js'
 import { ENGLISH_LANGUAGE_OBJECT, LANGUAGE_OBJECTS } from '../constants/i18n'
-import type { EnsuredInteraction } from './messageCreate'
+import type { TextMessageInChannel } from './messageCreate'
 
 const INCLUDED_CATEGORY_IDS = [
   /* General */ '1239259552357158942',
@@ -16,10 +16,10 @@ const DEV_INCLUDED_CATEGORY_IDS = [
 ]
 
 export async function languageDetection(
-  interaction: EnsuredInteraction,
-  channel: GuildBasedChannel
+  interaction: TextMessageInChannel,
+  channel: TextChannel | PublicThreadChannel
 ) {
-  const { guild, client } = interaction
+  const { client, guild } = interaction
   const { Localization, Discord } = client.managers
 
   // Remove URLs from the message before performing language detection as to not consider URL
@@ -29,6 +29,7 @@ export async function languageDetection(
   // If the current channel does not belong to a listed category (by being top-level or by belonging
   // to a category that’s not listed), return early. An exception is made to the bot testing channel.
   if (!channel.parentId) return
+
   const isTestChannel = channel.id === Discord.BOT_TEST_CHANNEL_ID
   const isInRelevantCategory =
     INCLUDED_CATEGORY_IDS.includes(channel.parentId) ||
@@ -50,7 +51,7 @@ export async function languageDetection(
   const inEnglish = ENGLISH_LANGUAGE_OBJECT.messages.internationalization
   if (!languageObject) return interaction.reply(inEnglish)
 
-  const i18nChannel = guild.channels.cache.find(({ name }) => name === languageObject.channel)
+  const i18nChannel = Discord.getChannelByName(guild, languageObject.channel)
   const link = i18nChannel ? channelMention(i18nChannel.id) : languageObject.channel
   const inLanguage = languageObject.messages.internationalization
   const message = [

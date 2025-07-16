@@ -1,4 +1,9 @@
-import { type ChatInputCommandInteraction, SlashCommandBuilder, userMention } from 'discord.js'
+import {
+  type ChatInputCommandInteraction,
+  InteractionContextType,
+  SlashCommandBuilder,
+  userMention,
+} from 'discord.js'
 import { DiscordManager } from '../managers/DiscordManager'
 import { logger } from '../utils/logger'
 
@@ -14,6 +19,7 @@ export const data = new SlashCommandBuilder()
       .setMaxValue(20)
   )
   .setDescription('Display the FAQ leaderboard')
+  .setContexts(InteractionContextType.Guild)
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')

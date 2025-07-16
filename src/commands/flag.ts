@@ -1,5 +1,6 @@
 import {
   type ChatInputCommandInteraction,
+  InteractionContextType,
   MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
@@ -55,8 +56,8 @@ export const data = new SlashCommandBuilder()
         opt.setName('name').setDescription('The feature flag to check').setAutocomplete(true)
       )
   )
-
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+  .setContexts(InteractionContextType.Guild)
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Starting command execution')
@@ -86,10 +87,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       .map(({ key, value }) => `- \`${key}\`: ${value ? 'ENABLED' : 'DISABLED'}`)
       .join('\n')}`
 
-    return interaction.reply({
-      content,
-      flags: MessageFlags.Ephemeral,
-    })
+    return interaction.reply({ content, flags: MessageFlags.Ephemeral })
   }
 
   if (subCommand === 'delete') {

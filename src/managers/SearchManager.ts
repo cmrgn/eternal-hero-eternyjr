@@ -1,13 +1,14 @@
 import type { SearchRecordsResponse } from '@pinecone-database/pinecone'
-import type { AnyThreadChannel, Client } from 'discord.js'
+import type { Client } from 'discord.js'
 import Fuse, { type FuseResult } from 'fuse.js'
 import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
+import type { FAQForumThreadChannel } from './FAQManager'
 import type { PineconeMetadata, PineconeNamespace } from './IndexManager'
 
 type Hit = SearchRecordsResponse['result']['hits'][number]
 type SearchResultVector = Hit & { fields: PineconeMetadata }
-type SearchResultFuse = FuseResult<AnyThreadChannel>
+type SearchResultFuse = FuseResult<FAQForumThreadChannel>
 type SearchResult = SearchResultVector
 export type SearchType = 'VECTOR' | 'FUZZY'
 

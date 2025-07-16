@@ -39,8 +39,8 @@ export class LeaderboardManager {
   }) {
     this.#log('info', 'Registering contribution', options)
 
-    const { Discord, Database } = this.#client.managers
-    const { userId, guildId, channelId, increment = 1 } = options
+    const { Database } = this.#client.managers
+    const { userId, guildId, increment = 1 } = options
 
     try {
       await Database.db
@@ -57,11 +57,6 @@ export class LeaderboardManager {
         )
         .execute()
     } catch (error) {
-      await Discord.sendInteractionAlert(
-        { channelId, client: this.#client, guildId, userId },
-        `A link to the FAQ failed to be properly recorded in the database.\`\`\`${error}\`\`\``
-      )
-
       this.#log('error', 'Failed to record contribution', {
         ...options,
         error,

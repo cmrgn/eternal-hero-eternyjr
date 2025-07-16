@@ -77,16 +77,17 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
 
 export const initGiveawayManager = (client: Client) => {
   const { Discord } = client.managers
+  // Unless it’s run in the mod channels (for testing purposes), prevent moderators from winning
+  // a giveaway.
+  const BOT_TESTING_CHANNELS = ['1373605591766925412', '1262282620268576809']
 
   const manager = new GiveawayManagerWithOwnDatabase(client, {
     default: {
       botsCanWin: false,
       embedColor: DiscordManager.BOT_COLOR,
       embedColorEnd: DiscordManager.BOT_COLOR,
-      // Unless it’s run in the mod channels (for testing purposes), prevent moderators from winning
-      // a giveaway.
       exemptMembers: (member, { channelId }) => {
-        if (['1373605591766925412', '1262282620268576809'].includes(channelId)) return false
+        if (BOT_TESTING_CHANNELS.includes(channelId)) return false
         return Boolean(member.roles.cache.find(role => role.name === 'Community Mod'))
       },
       reaction: '🎉',

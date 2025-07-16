@@ -1,16 +1,14 @@
 import type { ButtonInteraction } from 'discord.js'
 
 export async function handleButtons(interaction: ButtonInteraction) {
-  const [action, id] = interaction.customId.split(':')
-  const { channels, managers } = interaction.client
+  const { customId, client } = interaction
+  const [action, id] = customId.split(':')
+  const { managers } = client
   const { Faq, Index, Flags } = managers
 
   // Translation
   if (action === 'confirm-retranslate') {
-    const thread = await channels.fetch(id)
-    if (!thread?.isThread()) return
-
-    const resolvedThread = await Faq.resolveThread(thread)
+    const resolvedThread = await Faq.resolveThreadFromChannel(interaction, id)
     await interaction.update({
       components: [],
       content: `Retranslation of thread \`${id}\` started…`,

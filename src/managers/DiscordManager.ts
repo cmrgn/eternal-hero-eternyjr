@@ -4,18 +4,16 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  type ChatInputCommandInteraction,
   type Client,
   type ColorResolvable,
   channelMention,
   EmbedBuilder,
   type Guild,
-  type GuildBasedChannel,
   type Message,
-  type OmitPartialGroupDMChannel,
   type PartialMessage,
   REST,
   Routes,
-  type User,
   userMention,
 } from 'discord.js'
 import { commands } from '../commands'
@@ -24,15 +22,6 @@ import { type LoggerSeverity, logger } from '../utils/logger'
 import { stripIndent } from '../utils/stripIndent'
 import { withRetry } from '../utils/withRetry'
 import type { ResolvedThread } from './FAQManager'
-
-export type InteractionLike = {
-  client: Client
-  guild?: Guild | null
-  guildId: string | null
-  channelId?: string
-  user?: User | null
-  userId?: string | null
-}
 
 export class DiscordManager {
   #clientId: string
@@ -95,6 +84,20 @@ export class DiscordManager {
     })
   }
 
+  async getGuild(client: Client, guildId: string) {
+    this.#log('info', 'Getting guild object', { guildId })
+
+    const cachedGuild = client.guilds.cache.get(guildId)
+    if (cachedGuild) return cachedGuild
+
+    const fetchedGuild = await withRetry(attempt => {
+      this.#log('debug', 'Fetching guild', { attempt, guildId })
+      return client.guilds.fetch(guildId)
+    })
+
+    return fetchedGuild
+  }
+
   async confirmThreadRetranslation(
     languageObjects: LanguageObject[],
     thread: ResolvedThread,
@@ -125,8 +128,8 @@ export class DiscordManager {
           .join('')
       : ''
     const content = [
-      'You have edited a FAQ entry. Do you want to automatically translate it in all supported languages and reindex it?',
-      `- Entry: _“${thread.name}”_`,
+      'You have edited a FAQ thread. Do you want to automatically translate it in all supported languages and reindex it?',
+      `- Thread: _“${thread.name}”_`,
       `- Language count: ${numberFormatter.format(languageCount)} (w/o English)`,
       `- Character count: ${numberFormatter.format(char)}`,
       `- **Total cost:** ${currencyFormatter.format((20 / 1_000_000) * char * languageCount)}`,
@@ -161,9 +164,30 @@ export class DiscordManager {
     return false
   }
 
-  async sendInteractionAlert(interaction: InteractionLike, message: string) {
-    const userId = interaction.user?.id ?? interaction.userId
-    const channel = await withRetry(() => interaction.client.channels.fetch(this.#alertChannelId))
+  getChannelByName(guild: Guild | null, channelName: string) {
+    return guild?.channels.cache.find(({ name }) => name === channelName) ?? null
+  }
+
+  async getChannelById(client: Client, guild: Guild | null | undefined, channelId: string) {
+    if (guild) {
+      const cachedChannelFromGuild = guild.channels.cache.find(({ id }) => id === channelId)
+      if (cachedChannelFromGuild) return cachedChannelFromGuild
+    }
+
+    const cachedChannelFromClient = client.channels.cache.find(({ id }) => id === channelId)
+    if (cachedChannelFromClient) return cachedChannelFromClient
+
+    const fetchedChannel = await withRetry(() => client.channels.fetch(this.#alertChannelId))
+    return fetchedChannel
+  }
+
+  async sendInteractionAlert(interaction: ChatInputCommandInteraction, message: string) {
+    const userId = interaction.user?.id
+    const channel = await this.getChannelById(
+      interaction.client,
+      interaction.guild,
+      this.#alertChannelId
+    )
     if (!channel?.isSendable()) return
     if (interaction.guildId === this.TEST_SERVER_ID) return this.#log('error', message)
 
@@ -181,19 +205,6 @@ export class DiscordManager {
     } catch (error) {
       console.error(error)
     }
-  }
-
-  async getChannelFromInteraction(interaction: OmitPartialGroupDMChannel<Message<boolean>>) {
-    const { guild, channel, client } = interaction
-    const cachedChannel = guild?.channels.cache.find(({ id }) => id === channel.id)
-    if (cachedChannel) return cachedChannel
-    const fetchedChannel = await withRetry(() => client.channels.fetch(channel.id))
-
-    if (!fetchedChannel?.isTextBased()) {
-      throw new Error('Retrieved channel is not a text-based channel.')
-    }
-
-    return fetchedChannel as GuildBasedChannel
   }
 
   deployCommands(guildId: string) {

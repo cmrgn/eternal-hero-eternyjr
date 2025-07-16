@@ -1,13 +1,8 @@
-import {
-  type AnyThreadChannel,
-  type ChatInputCommandInteraction,
-  MessageFlags,
-  SlashCommandBuilder,
-} from 'discord.js'
+import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
 import pMap from 'p-map'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { DiscordManager } from '../managers/DiscordManager'
-import { IndexManager, type PineconeEntry } from '../managers/IndexManager'
+import { IndexManager } from '../managers/IndexManager'
 import { logger } from '../utils/logger'
 
 export const scope = 'OFFICIAL'
@@ -69,13 +64,12 @@ async function fetchFAQContent(interaction: ChatInputCommandInteraction) {
 
   if (threadId) {
     await interaction.editReply(`Fetching thread with ID \`${threadId}\`…`)
-    const thread = (await client.channels.fetch(threadId)) as AnyThreadChannel
-
-    return [await Faq.resolveThread(thread)]
+    const thread = await Faq.resolveThreadFromChannel(interaction, threadId)
+    return [thread]
   }
 
   await interaction.editReply('Loading all FAQ threads…')
-  return Promise.all(Faq.threads.map(thread => Faq.resolveThread(thread)))
+  return Faq.getResolvedThreads()
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -103,13 +97,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
 async function commandThread(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
-  const { Faq, Crowdin, Index, Discord } = client.managers
+  const { Crowdin, Index, Discord } = client.managers
   const threadId = options.getString('thread_id', true)
   const crowdinCode = options.getString('language') as CrowdinCode | undefined
-  const thread = (await client.channels.fetch(threadId)) as AnyThreadChannel
+  const [resolvedThread] = await fetchFAQContent(interaction)
 
   await interaction.editReply(`Loading thread with ID \`${threadId}\`…`)
-  const resolvedThread = await Faq.resolveThread(thread)
 
   function onIndexFailure(error: unknown) {
     return Discord.sendInteractionAlert(
@@ -163,30 +156,31 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
 async function commandLanguage(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
   const { Index } = client.managers
+
   const crowdinCode = options.getString('language', true)
-  const threadsWithContent = await fetchFAQContent(interaction)
-  const total = threadsWithContent.length
   const languageObject = LANGUAGE_OBJECTS.find(
     languageObject => languageObject.crowdinCode === crowdinCode
   )
-  const discordEditLimiter = DiscordManager.getDiscordEditLimiter()
 
   if (!languageObject) {
     throw new Error(`Could not retrieve language object for \`${crowdinCode}\`.`)
   }
 
+  const threads = await fetchFAQContent(interaction)
+  const total = threads.length
+  const discordEditLimiter = DiscordManager.getDiscordEditLimiter()
+
   // This function is responsible for reporting the current progress by editing the original message
   // while respecting Discord’s rate limits
-  const notify = discordEditLimiter.wrap(
-    (thread: (typeof threadsWithContent)[number], index: number) =>
-      interaction.editReply({
-        content: [
-          'Indexing in progress…',
-          `- Namespace: \`${crowdinCode}\``,
-          `- Progress: ${Math.round(((index + 1) / total) * 100)}%`,
-          `- Current: _“${thread.name}”_`,
-        ].join('\n'),
-      })
+  const notify = discordEditLimiter.wrap((thread: (typeof threads)[number], index: number) =>
+    interaction.editReply({
+      content: [
+        'Indexing in progress…',
+        `- Namespace: \`${crowdinCode}\``,
+        `- Progress: ${Math.round(((index + 1) / total) * 100)}%`,
+        `- Current: _“${thread.name}”_`,
+      ].join('\n'),
+    })
   )
 
   // When indexing the English FAQ, there is no need for translation which is why the whole
@@ -195,7 +189,7 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
   if (crowdinCode === 'en') {
     await interaction.editReply('Indexing all FAQ threads…')
     await Index.indexRecords(
-      threadsWithContent.reduce<PineconeEntry[]>(
+      threads.reduce<ReturnType<typeof IndexManager.prepareForIndexing>>(
         (records, thread) => records.concat(IndexManager.prepareForIndexing(thread)),
         []
       ),
@@ -210,7 +204,7 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
 
     await interaction.editReply('Indexing all FAQ threads…')
     await pMap(
-      threadsWithContent.entries(),
+      threads.entries(),
       async ([i, thread]) => {
         await notify(thread, i)
         await Index.translateAndIndexThread(thread, languageObject)
@@ -269,24 +263,24 @@ async function commandStats(interaction: ChatInputCommandInteraction) {
   const cf = currencyFormatter.format
 
   const costPerChar = DeepL.COST_PER_CHAR
-  const entryCount = Faq.threads.length
+  const threadCount = Faq.threads.length
   const languageCount = languageObjects.length
-  const avgCharPerEntry = charCount / entryCount
+  const avgCharPerThread = charCount / threadCount
   const totalChar = charCount * languageCount
 
   const content = `
 ### Original version:
-- Entry count: ${entryCount}
+- Entry count: ${threadCount}
 - Word count: ${nf(wordCount)}
 - Character count: ${nf(charCount)}
-- Average character count per entry: ${nf(Math.round(avgCharPerEntry))}
+- Average character count per entry: ${nf(Math.round(avgCharPerThread))}
 ### Localized versions:
 - Language count: ${languageCount} (w/o English)
 - Total word count: ${nf(wordCount * languageCount)}
 - Total character count: ${nf(totalChar)}
 ### DeepL:
 - DeepL rate: ${cf(20)} per ${nf(1_000_000)} characters
-- Cost to index 1 entry: ${cf(costPerChar * avgCharPerEntry * languageCount)}
+- Cost to index 1 entry: ${cf(costPerChar * avgCharPerThread * languageCount)}
 - Cost to index 1 localized version: ${cf(costPerChar * charCount)}
 - Cost to index all localized versions: ${cf(costPerChar * totalChar)}
 - Current usage: ${nf(charUsed)} characters (${cf(costPerChar * charUsed)})

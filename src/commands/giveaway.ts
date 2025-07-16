@@ -1,6 +1,6 @@
 import {
+  ChannelType,
   type ChatInputCommandInteraction,
-  type GuildTextBasedChannel,
   InteractionContextType,
   type InteractionReplyOptions,
   MessageFlags,
@@ -122,7 +122,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       case 'start': {
         logger.logCommand(interaction, 'Starting giveaway')
 
-        const data = await Giveaways.start(channel as GuildTextBasedChannel, {
+        if (channel?.type !== ChannelType.GuildText) {
+          return interaction.reply({ content: 'Cannot start giveaway in this channel.' })
+        }
+
+        const data = await Giveaways.start(channel, {
           duration: ms(options.getString('duration', true) as StringValue),
           messages: MESSAGES,
           prize: options.getString('prize', true),
