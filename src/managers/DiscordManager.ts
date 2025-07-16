@@ -81,7 +81,7 @@ export class DiscordManager {
     return process.env.NODE_ENV === 'production'
   }
 
-  logBotReady(client: Client<true>) {
+  onBotReady(client: Client<true>) {
     this.#log('info', 'Discord bot is ready and logged in', {
       tag: client.user.tag,
     })

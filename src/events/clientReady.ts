@@ -3,7 +3,7 @@ import type { Client } from 'discord.js'
 export function onClientReady(client: Client<true>) {
   const { Discord } = client.managers
 
-  Discord.logBotReady(client)
+  Discord.onBotReady(client)
 
   // This makes it convenient to work on the bot locally, by automatically redeploying the commands
   // to the test server (given as an environment variable) every time the server gets started (such
