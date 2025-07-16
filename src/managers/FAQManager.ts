@@ -1,8 +1,12 @@
 import {
   type AnyThreadChannel,
+  type ButtonInteraction,
+  ChannelType,
+  type ChatInputCommandInteraction,
   type Client,
   Events,
-  ForumChannel,
+  type ForumChannel,
+  type ForumThreadChannel,
   type Guild,
   type Message,
   type PartialMessage,
@@ -32,10 +36,17 @@ export type ThreadEvents = {
   ThreadDeleted: (threadId: string) => void
 }
 
+const FAQ_FORUM_ID_DEV = '1373344771552317532'
+const FAQ_FORUM_ID_PROD = '1315703328264425543'
+
+export type FAQForumThreadChannel =
+  | (ForumThreadChannel & { parentId: typeof FAQ_FORUM_ID_DEV })
+  | (ForumThreadChannel & { parentId: typeof FAQ_FORUM_ID_PROD })
+
 export class FAQManager {
   #client: Client
 
-  #threads: AnyThreadChannel[]
+  #threads: FAQForumThreadChannel[]
   #links: string[]
   #faqForum: ForumChannel | null = null
 
@@ -45,11 +56,16 @@ export class FAQManager {
     TABLE_OF_CONTENTS: '1315713544058310707',
   }
 
-  #listeners = {
-    ThreadContentUpdated: [] as ThreadEvents['ThreadContentUpdated'][],
-    ThreadCreated: [] as ThreadEvents['ThreadCreated'][],
-    ThreadDeleted: [] as ThreadEvents['ThreadDeleted'][],
-    ThreadNameUpdated: [] as ThreadEvents['ThreadNameUpdated'][],
+  #listeners: {
+    ThreadContentUpdated: ThreadEvents['ThreadContentUpdated'][]
+    ThreadCreated: ThreadEvents['ThreadCreated'][]
+    ThreadDeleted: ThreadEvents['ThreadDeleted'][]
+    ThreadNameUpdated: ThreadEvents['ThreadNameUpdated'][]
+  } = {
+    ThreadContentUpdated: [],
+    ThreadCreated: [],
+    ThreadDeleted: [],
+    ThreadNameUpdated: [],
   }
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
@@ -72,6 +88,12 @@ export class FAQManager {
     const { Discord } = this.#client.managers
     if (Discord.IS_DEV && Discord.TEST_SERVER_ID) return Discord.TEST_SERVER_ID
     return Discord.DISCORD_SERVER_ID
+  }
+
+  get faqForumId() {
+    const { Discord } = this.#client.managers
+    if (Discord.IS_DEV && Discord.TEST_SERVER_ID) return FAQ_FORUM_ID_DEV
+    return FAQ_FORUM_ID_PROD
   }
 
   get threads() {
@@ -115,25 +137,13 @@ export class FAQManager {
     ]
   }
 
-  async getGuild() {
-    this.#log('info', 'Getting guild object', { guildId: this.guildId })
-    const { guilds } = this.#client
-
-    const cachedGuild = guilds.cache.get(this.guildId)
-    if (cachedGuild) return cachedGuild
-
-    const fetchedGuild = await withRetry(attempt => {
-      this.#log('debug', 'Fetching guild', { attempt, guildId: this.guildId })
-      return guilds.fetch(this.guildId)
-    })
-    return fetchedGuild
-  }
-
   async fetchThreads() {
     this.#log('debug', 'Fetching all FAQ threads', { guildId: this.guildId })
 
-    const guild = await this.getGuild()
-    const faq = this.getFAQForum(guild)
+    const { Discord } = this.#client.managers
+    const guild = await Discord.getGuild(this.#client, this.guildId)
+    const faq = this.getFaqForum(guild)
+
     const [activeThreadRes, archivedThreadRes] = await Promise.all([
       withRetry(attempt => {
         this.#log('debug', 'Fetching active threads', { attempt, forumId: faq.id })
@@ -159,39 +169,50 @@ export class FAQManager {
       total: threads.length,
     })
 
-    return threads
+    return threads as FAQForumThreadChannel[]
   }
 
-  getFAQForum(guild: Guild) {
+  getResolvedThreads() {
+    return Promise.all(this.#threads.map(thread => this.#resolveThread(thread)))
+  }
+
+  getFaqForum(guild: Guild) {
     if (this.#faqForum) {
-      this.#log('debug', 'Returning FAQ forum from cache', { guildId: guild.id })
+      this.#log('debug', 'Returning FAQ forum from cache', {
+        channelId: this.#faqForum.id,
+        guildId: guild.id,
+      })
+
       return this.#faqForum
     }
 
-    this.#log('info', 'Retrieving FAQ forum', { guildId: guild.id })
+    this.#log('info', 'Retrieving FAQ forum', { channelId: this.faqForumId, guildId: guild.id })
 
-    const faq = guild.channels.cache.find(({ name }) => name === '❓│faq-guide')
-    if (!faq) throw new Error('Could not find the FAQ forum.')
+    const faq = guild.channels.cache.find(({ id }) => id === this.faqForumId)
 
-    this.#faqForum = faq as ForumChannel
+    if (faq?.type !== ChannelType.GuildForum) {
+      throw new Error(`Could not find a valid FAQ forum.`)
+    }
+
+    this.#faqForum = faq
 
     return this.#faqForum
   }
 
-  belongsToFAQ({ parentId, guild }: { parentId: string | null; guild: Guild }) {
-    return parentId === this.getFAQForum(guild)?.id
+  isWithinFAQ(thread: AnyThreadChannel): thread is FAQForumThreadChannel {
+    return thread.parentId === this.faqForumId
   }
 
   async onThreadCreate(thread: AnyThreadChannel) {
     const { Discord } = this.#client.managers
 
     if (Discord.shouldIgnoreInteraction(thread)) return
-    if (!this.belongsToFAQ(thread)) return
+    if (!this.isWithinFAQ(thread)) return
 
     this.#log('info', 'Responding to thread creation', { id: thread.id })
-    this.cacheThreads()
+    this.cacheThreads() // Note: this could be optimized
 
-    const resolvedThread = await this.resolveThread(thread)
+    const resolvedThread = await this.#resolveThread(thread)
     for (const listener of this.#listeners.ThreadCreated) listener(resolvedThread)
   }
 
@@ -199,10 +220,10 @@ export class FAQManager {
     const { Discord } = this.#client.managers
 
     if (Discord.shouldIgnoreInteraction(thread)) return
-    if (!this.belongsToFAQ(thread)) return
+    if (!this.isWithinFAQ(thread)) return
 
     this.#log('info', 'Responding to thread deletion', { id: thread.id })
-    this.cacheThreads()
+    this.cacheThreads() // Note: this could be optimized
 
     for (const listener of this.#listeners.ThreadDeleted) listener(thread.id)
   }
@@ -211,7 +232,7 @@ export class FAQManager {
     const { Discord } = this.#client.managers
 
     if (Discord.shouldIgnoreInteraction(next)) return
-    if (!this.belongsToFAQ(prev)) return
+    if (!this.isWithinFAQ(next)) return
     if (prev.name === next.name) return
     if (next.id === this.#specialThreads.TABLE_OF_CONTENTS) return
 
@@ -219,7 +240,7 @@ export class FAQManager {
     // Update the cache without refetching all threads; just update this one
     this.#threads = this.#threads.map(t => (t.id === next.id ? next : t))
 
-    const resolvedThread = await this.resolveThread(next)
+    const resolvedThread = await this.#resolveThread(next)
     for (const listener of this.#listeners.ThreadNameUpdated) listener(resolvedThread)
   }
 
@@ -232,14 +253,15 @@ export class FAQManager {
     if (Discord.shouldIgnoreInteraction(newMessage)) return
     if (newMessage.partial) newMessage = await withRetry(() => newMessage.fetch())
 
-    const { guild, channel: thread } = newMessage
-    if (!guild || !thread?.isThread()) return
+    const { channel } = newMessage
 
     // Make sure the parent of the thread is the FAQ forum, abort if not
-    if (!this.belongsToFAQ({ guild, parentId: thread.parent?.id ?? null })) return
-    if (thread.id === this.#specialThreads.TABLE_OF_CONTENTS) return
+    if (channel.type !== ChannelType.PublicThread || !this.isWithinFAQ(channel)) return
 
-    this.#log('info', 'Responding to thread content update', { id: thread.id })
+    // If the thread is the FAQ, do nothing
+    if (channel.id === this.#specialThreads.TABLE_OF_CONTENTS) return
+
+    this.#log('info', 'Responding to thread content update', { id: channel.id })
 
     // If the old content is accessible in the Discord cache and strictly equal to the new content
     // after normalization, do nothing since the edit is essentially moot
@@ -247,54 +269,24 @@ export class FAQManager {
       FAQManager.cleanUpThreadContent(oldMessage.content) ===
       FAQManager.cleanUpThreadContent(newMessage.content)
     ) {
-      return this.#log('info', 'Content unchanged; ignoring thread update', {
-        id: thread.id,
-      })
+      return this.#log('info', 'Content unchanged; ignoring thread update', { id: channel.id })
     }
 
-    const resolvedThread = await this.resolveThread(thread)
+    const resolvedThread = await this.#resolveThread(channel)
     for (const listener of this.#listeners.ThreadContentUpdated)
       listener(resolvedThread, newMessage, oldMessage)
   }
 
-  getThreadTags(thread: AnyThreadChannel) {
-    const { parent, appliedTags } = thread
-
-    if (!(parent instanceof ForumChannel)) return []
-
-    return appliedTags
-      .map(id => (parent as ForumChannel).availableTags.find(t => t.id === id)?.name ?? '')
-      .filter(Boolean)
-  }
-
-  static cleanUpThreadContent(content?: string | null) {
-    return (
-      (content ?? '')
-        // Removed the related entries footer from the message
-        .split(/> Related entr(?:y|ies):/)[0]
-        // Remove emojis
-        .replace(/<a?:\w+:\d+>/g, '')
-        .replace(/:[a-zA-Z0-9_]+:/g, '')
-        // Remove bold markers
-        .replace(/\*\*/g, '')
-        // Collapse successive double spaces into a single one
-        .replace(/ +/g, ' ')
-        .trim()
-    )
-  }
-
-  async resolveThreadMessage(thread: AnyThreadChannel) {
+  async #resolveThreadMessage(thread: ForumThreadChannel) {
     const firstMessage = await withRetry(() => thread.fetchStarterMessage())
 
-    return [
-      {
-        content: FAQManager.cleanUpThreadContent(firstMessage?.content),
-        id: thread.id,
-      },
-    ]
+    return {
+      content: FAQManager.cleanUpThreadContent(firstMessage?.content),
+      id: thread.id,
+    }
   }
 
-  async resolveThreadMessages(thread: AnyThreadChannel, { skipFirst }: { skipFirst: boolean }) {
+  async #resolveThreadMessages(thread: ForumThreadChannel, { skipFirst }: { skipFirst: boolean }) {
     const messages = await withRetry(() => thread.messages.fetch())
 
     return (
@@ -311,7 +303,7 @@ export class FAQManager {
     )
   }
 
-  async resolveThread(thread: AnyThreadChannel): Promise<ResolvedThread> {
+  async #resolveThread(thread: FAQForumThreadChannel): Promise<ResolvedThread> {
     this.#log('info', 'Resolving thread', { id: thread.id })
 
     const { MULTI_POSTS_WITHOUT_TOC, MULTI_POSTS_WITH_TOC } = this.#specialThreads
@@ -319,8 +311,11 @@ export class FAQManager {
       MULTI_POSTS_WITHOUT_TOC.includes(thread.id) || MULTI_POSTS_WITH_TOC.includes(thread.id)
     const hasToC = MULTI_POSTS_WITH_TOC.includes(thread.id)
     const messages = hasMultiplePosts
-      ? await this.resolveThreadMessages(thread, { skipFirst: hasToC })
-      : await this.resolveThreadMessage(thread)
+      ? await this.#resolveThreadMessages(thread, { skipFirst: hasToC })
+      : [await this.#resolveThreadMessage(thread)]
+    const tags = thread.appliedTags
+      .map(id => thread.parent?.availableTags.find(t => t.id === id)?.name ?? '')
+      .filter(Boolean)
 
     return {
       content: messages.map(message => message.content).join('\n'),
@@ -328,9 +323,43 @@ export class FAQManager {
       isResolved: true,
       messages: messages,
       name: thread.name,
-      tags: this.getThreadTags(thread),
+      tags,
       url: thread.url,
     }
+  }
+
+  async resolveThreadFromChannel(
+    interaction: ChatInputCommandInteraction | ButtonInteraction,
+    id: string
+  ) {
+    const { Discord } = this.#client.managers
+    const channel = await Discord.getChannelById(interaction.client, interaction.guild, id)
+
+    if (channel?.type !== ChannelType.PublicThread) {
+      throw new Error(`Could not retrieve a valid FAQ thread for \`${id}\`.`)
+    }
+
+    if (channel.parentId !== this.faqForumId) {
+      throw new Error(`Thread with \`${id}\` does not belong to the FAQ.`)
+    }
+
+    return this.#resolveThread(channel as FAQForumThreadChannel)
+  }
+
+  static cleanUpThreadContent(content?: string | null) {
+    return (
+      (content ?? '')
+        // Removed the related entries footer from the message
+        .split(/> Related entr(?:y|ies):/)[0]
+        // Remove emojis
+        .replace(/<a?:\w+:\d+>/g, '')
+        .replace(/:[a-zA-Z0-9_]+:/g, '')
+        // Remove bold markers
+        .replace(/\*\*/g, '')
+        // Collapse successive double spaces into a single one
+        .replace(/ +/g, ' ')
+        .trim()
+    )
   }
 
   bindEvents() {

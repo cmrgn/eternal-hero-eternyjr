@@ -16,8 +16,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const { options, channel } = interaction
   const message = options.getString('message', true)
 
-  if (!channel) throw new Error('Could not retrieve channel.')
-  if (!channel.isSendable()) throw new Error('Could not send in channel.')
+  if (!channel?.isSendable()) throw new Error('Cannot send a message in channel.')
 
   // Send the message in the channel
   await channel.send(message)

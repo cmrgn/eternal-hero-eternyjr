@@ -1,6 +1,6 @@
 import { bold, channelMention, type GuildMember } from 'discord.js'
 import { ENGLISH_LANGUAGE_OBJECT, LANGUAGE_OBJECTS } from '../constants/i18n'
-import type { EnsuredInteraction } from './messageCreate'
+import type { TextMessageInChannel } from './messageCreate'
 
 const LANGUAGE_ROLES = LANGUAGE_OBJECTS.map(languageObject => languageObject.role)
 
@@ -22,19 +22,18 @@ function getMemberLanguageObject(member: GuildMember | null) {
   if (i18nRoles.size !== 1) return ENGLISH_LANGUAGE_OBJECT
 
   const [i18nRole] = Array.from(i18nRoles.values())
-  const languageObject = LANGUAGE_OBJECTS.find(
-    languageObject => languageObject.role === i18nRole.name
-  )
+  const languageObject = LANGUAGE_OBJECTS.find(({ role }) => role === i18nRole.name)
   return languageObject ?? ENGLISH_LANGUAGE_OBJECT
 }
 
-export async function discordLinking(interaction: EnsuredInteraction) {
-  const { content, guild, member } = interaction
+export async function discordLinking(interaction: TextMessageInChannel) {
+  const { content, client, member, guild } = interaction
+  const { Discord } = client.managers
 
   if (!looksLikePlayerId(content)) return
 
   const channelName = '🔗│discord-linking'
-  const infoChannel = guild.channels.cache.find(({ name }) => name === channelName)
+  const infoChannel = Discord.getChannelByName(guild, channelName)
   const link = infoChannel ? channelMention(infoChannel.id) : channelName
   const languageObject = getMemberLanguageObject(member)
   const response = languageObject.messages.discord_linking

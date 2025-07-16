@@ -37,14 +37,16 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const rule = interaction.options.getString('violation', true)
-  const member = interaction.options.getMember('user') as GuildMember
-  const duration = interaction.options.getString('duration', true)
+  const { options, guild, client } = interaction
+  const { Discord } = client.managers
+
+  const rule = options.getString('violation', true)
+  const member = options.getMember('user') as GuildMember
+  const duration = options.getString('duration', true)
   const durationMs = ms(duration as StringValue)
 
   logger.logCommand(interaction, 'Starting command execution')
 
-  if (!interaction.guild) throw new Error('Cannot retrieve guild.')
   if (!member) throw new Error('Cannot retrieve member.')
   if (durationMs === 0) throw new Error('Cannot time out a user for 0ms.')
 
@@ -52,16 +54,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   logger.logCommand(interaction, 'Timing out member')
   await member.timeout(durationMs, `Violating rule ${rule}`)
 
-  // Retrieve the moderation channel
-  const moderation = interaction.guild.channels.cache.find(
-    channel => channel.name === '🔨│moderation'
-  )
-
   // Prepare the moderation message
   const [number, label] = rule.split(': ')
   const message = `${userMention(member.id)} was timed out for ${ms(durationMs)} for violating ${bold(number.toLocaleLowerCase())} (${label}).`
 
   // Announce the timeout in the moderation channel
+  const moderation = Discord.getChannelByName(guild, '🔨│moderation')
   if (moderation?.isSendable()) {
     logger.logCommand(interaction, 'Announcing timeout')
     await moderation.send(message)

@@ -1,9 +1,7 @@
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
 import pMap from 'p-map'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
-import type { InAppPurchase as AppleStoreInAppPurchase } from '../managers/AppleStoreManager'
 import { DiscordManager } from '../managers/DiscordManager'
-import type { InAppPurchase as GooglePlayInAppPurchase } from '../managers/GooglePlayManager'
 
 export const scope = 'OFFICIAL'
 
@@ -107,7 +105,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       const googlePlayIaps = await Store.googlePlay.getAllIaps()
       const googlePlayEditLimiter = DiscordManager.getDiscordEditLimiter()
       const notifyGooglePlay = googlePlayEditLimiter.wrap(
-        (iap: GooglePlayInAppPurchase, index: number) =>
+        (iap: (typeof googlePlayIaps)[number], index: number) =>
           interaction.editReply({
             content: [
               'Updating localization in progress…',
@@ -150,7 +148,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       const appleStoreIaps = await Store.appleStore.getAllIaps()
       const appleStoreEditLimiter = DiscordManager.getDiscordEditLimiter()
       const notifyAppleStore = appleStoreEditLimiter.wrap(
-        (iap: AppleStoreInAppPurchase, index: number) =>
+        (iap: (typeof appleStoreIaps)[number], index: number) =>
           interaction.editReply({
             content: [
               'Updating localization in progress…',

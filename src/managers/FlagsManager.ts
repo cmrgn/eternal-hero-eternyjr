@@ -75,4 +75,12 @@ export class FlagsManager {
       )
       .execute()
   }
+
+  async autocomplete(value: string) {
+    const flags = await this.getFeatureFlags()
+    return flags
+      .filter(({ key }) => key.toLowerCase().includes(value.toLowerCase()))
+      .slice(0, 25)
+      .map(({ key }) => ({ name: key, value: key }))
+  }
 }

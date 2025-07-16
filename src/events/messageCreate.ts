@@ -1,7 +1,5 @@
 import {
-  type Guild,
-  type GuildBasedChannel,
-  type GuildMember,
+  ChannelType,
   type Message,
   type OmitPartialGroupDMChannel,
   PermissionFlagsBits,
@@ -9,14 +7,9 @@ import {
 import { discordLinking } from './messageCreate.discordLinking'
 import { languageDetection } from './messageCreate.languageDetection'
 
-export type InteractionLike = OmitPartialGroupDMChannel<Message<boolean>>
-export type EnsuredInteraction = Omit<InteractionLike, 'guild' | 'member' | 'channel'> & {
-  guild: Guild
-  member: GuildMember
-  channel: GuildBasedChannel
-}
+export type TextMessageInChannel = OmitPartialGroupDMChannel<Message<boolean>>
 
-export async function onMessageCreate(interaction: InteractionLike) {
+export async function onMessageCreate(interaction: TextMessageInChannel) {
   const { guild, member, channel, client } = interaction
   const { Discord } = client.managers
 
@@ -33,15 +26,12 @@ export async function onMessageCreate(interaction: InteractionLike) {
   // If the channel is not text-based or not sendable, do nothing.
   if (!channel.isTextBased() || !channel.isSendable()) return
 
-  // If the channel cannot be found (this should never happen since the channel ID comes from the
-  // interaction itself), do nothing.
-  const fullChannel = await Discord.getChannelFromInteraction(interaction)
-  if (!fullChannel) return
+  // If the channel is not a public guild channel or thread, do nothing.
+  if (channel.type !== ChannelType.GuildText && channel.type !== ChannelType.PublicThread) return
 
   // If the bot is missing the permissions to post in the channel, do nothing.
-  const permission = PermissionFlagsBits.SendMessages
-  if (!fullChannel.permissionsFor(guild.members.me).has(permission)) return
+  if (!channel.permissionsFor(guild.members.me).has(PermissionFlagsBits.SendMessages)) return
 
-  discordLinking(interaction as EnsuredInteraction)
-  languageDetection(interaction as EnsuredInteraction, fullChannel)
+  discordLinking(interaction)
+  languageDetection(interaction, channel)
 }
