@@ -4,7 +4,7 @@ The database, Postgres on Heroku (where the bot is hosted), is used for a few th
 
 - The `/giveaway` command uses the [discord-giveaways](https://github.com/Androz2091/discord-giveaways) package, which requires a database to work properly.
 - The `/faqleaderboard` command stores the contribution data in the database (see [documentation](./FAQ_LEADERBOARD.md)).
-- The `/crowdin term` command stores a mapping of Crowdin translation keys to Crowdin string ID, since its API doesn’t allow for getting the ID for a specific term.
+- The `/flag` command managers feature flags for the bot, which are stored in the database.
 
 We use the [essential-0 plan](https://devcenter.heroku.com/articles/heroku-postgres-plans), which is the cheapest and least permissive plan, but should be good enough for our needs.
 
