@@ -42,7 +42,7 @@ export class CrowdinManager {
 
   constructor(client: Client, severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+    this.#log('debug', 'Instantiating manager')
 
     if (!process.env.CROWDIN_TOKEN) {
       throw new Error('Missing environment variable CROWDIN_TOKEN; aborting.')

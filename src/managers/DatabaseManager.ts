@@ -11,7 +11,7 @@ export class DatabaseManager {
 
   constructor(severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+    this.#log('debug', 'Instantiating manager')
 
     if (!process.env.DATABASE_URL) {
       throw new Error('Missing environment variable DATABASE_URL; aborting.')

@@ -51,7 +51,7 @@ export class DiscordManager {
   // runtime of the bot, such as for scripts
   constructor(severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+    this.#log('debug', 'Instantiating manager')
 
     if (!process.env.DISCORD_CLIENT_ID) {
       throw new Error('Missing environment variable DISCORD_CLIENT_ID; aborting.')

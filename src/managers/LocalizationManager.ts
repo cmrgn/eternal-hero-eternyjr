@@ -20,7 +20,7 @@ export class LocalizationManager {
 
   constructor(client: Client, severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+    this.#log('debug', 'Instantiating manager')
 
     this.#client = client
     this.loadLanguageIdentifier()

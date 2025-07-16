@@ -27,7 +27,7 @@ export class IndexManager {
 
   constructor(client: Client, severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+    this.#log('debug', 'Instantiating manager')
 
     if (!process.env.PINECONE_API_KEY) {
       throw new Error('Missing environment variable PINECONE_API_KEY; aborting.')
@@ -164,7 +164,7 @@ export class IndexManager {
   }
 
   bindEvents() {
-    this.#log('info', 'Binding events onto the manager instance')
+    this.#log('debug', 'Binding events onto the manager instance')
     const { Flags, Faq, Discord, Crowdin } = this.#client.managers
 
     Faq.on('ThreadCreated', async (thread: ResolvedThread) => {

@@ -34,7 +34,7 @@ export class GooglePlayManager {
 
   constructor(severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+    this.#log('debug', 'Instantiating manager')
     this.#ap = google.androidpublisher({
       auth: this.generateAuth(),
       version: 'v3',

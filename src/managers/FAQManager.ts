@@ -57,7 +57,7 @@ export class FAQManager {
 
   constructor(client: Client, severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+    this.#log('debug', 'Instantiating manager')
 
     this.#client = client
     this.#threads = []
@@ -334,7 +334,7 @@ export class FAQManager {
   }
 
   bindEvents() {
-    this.#log('info', 'Binding events onto the manager instance')
+    this.#log('debug', 'Binding events onto the manager instance')
 
     this.#client.once(Events.ClientReady, this.cacheThreads.bind(this))
     this.#client.on(Events.ThreadCreate, this.onThreadCreate.bind(this))

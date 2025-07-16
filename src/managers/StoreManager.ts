@@ -28,7 +28,7 @@ export class StoreManager {
     this.googlePlay = new GooglePlayManager()
 
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+    this.#log('debug', 'Instantiating manager')
   }
 
   async getStoreTranslations(crowdinCode: CrowdinCode) {

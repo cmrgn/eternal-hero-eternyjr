@@ -19,7 +19,7 @@ export class LeaderboardManager {
 
   constructor(client: Client, severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+    this.#log('debug', 'Instantiating manager')
     this.#client = client
   }
 
@@ -175,7 +175,7 @@ export class LeaderboardManager {
   }
 
   bindEvents() {
-    this.#log('info', 'Binding events onto the manager instance')
+    this.#log('debug', 'Binding events onto the manager instance')
 
     // Look for FAQ links in any message in order to maintain the FAQ leaderboard.
     this.#client.on(Events.MessageCreate, this.faqLinksOnCreate.bind(this))
