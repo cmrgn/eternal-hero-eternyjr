@@ -1,6 +1,6 @@
 import type { Client } from 'discord.js'
 import { sql } from 'kysely'
-import { logger } from '../utils/logger'
+import { type LoggerSeverity, logger } from '../utils/logger'
 
 export class FlagsManager {
   #client: Client
@@ -8,14 +8,15 @@ export class FlagsManager {
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('FlagsManager', this.#severityThreshold)
 
-  constructor(client: Client) {
+  constructor(client: Client, severity: LoggerSeverity = 'info') {
+    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
     this.#log('info', 'Instantiating manager')
 
     this.#client = client
   }
 
-  async hasFeatureFlag(key: string, options?: { silent: boolean }) {
-    if (!options?.silent) this.#log('info', 'Checking if feature flag exists', { key })
+  async hasFeatureFlag(key: string) {
+    this.#log('info', 'Checking if feature flag exists', { key })
 
     const { Database } = this.#client.managers
     const exists = await Database.db
@@ -27,8 +28,8 @@ export class FlagsManager {
     return !!exists
   }
 
-  async getFeatureFlag(key: string, options?: { silent: boolean }) {
-    if (!options?.silent) this.#log('info', 'Reading feature flag', { key })
+  async getFeatureFlag(key: string, options?: { severity: LoggerSeverity }) {
+    this.#log(options?.severity ?? 'info', 'Reading feature flag', { key })
 
     const { Database } = this.#client.managers
     const response = await Database.db

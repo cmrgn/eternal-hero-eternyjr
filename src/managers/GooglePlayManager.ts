@@ -1,6 +1,6 @@
 import { type androidpublisher_v3, google } from 'googleapis'
 import { LANGUAGE_OBJECTS, type Locale } from '../constants/i18n'
-import { logger } from '../utils/logger'
+import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 
 export type IapLocalizationFields = { title: string; description: string }
@@ -19,14 +19,21 @@ export class GooglePlayManager {
 
   #packageName = 'games.rivvy.eternalherorpg'
 
-  #cachedIaps: InAppPurchase[] | null = null
-  #lastFetchedAtIaps = 0
-  #cacheTTL = 15 * 60 * 1000 // 15 minutes
+  #cache: {
+    data: InAppPurchase[] | null
+    lastFetchedAt: number
+    ttl: number
+  } = {
+    data: null,
+    lastFetchedAt: 0,
+    ttl: 15 * 60 * 1000, // 15 minutes
+  }
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('GooglePlayManager', this.#severityThreshold)
 
-  constructor() {
+  constructor(severity: LoggerSeverity = 'info') {
+    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
     this.#log('info', 'Instantiating manager')
     this.#ap = google.androidpublisher({
       auth: this.generateAuth(),
@@ -53,21 +60,25 @@ export class GooglePlayManager {
     })
   }
 
-  async fetchAllIaps() {
-    this.#log('info', 'Fetching all in-app purchases')
+  async getAllIaps() {
+    this.#log('info', 'Getting all in-app purchases')
 
     const now = Date.now()
 
-    if (this.#cachedIaps && now - this.#lastFetchedAtIaps < this.#cacheTTL) {
-      return this.#cachedIaps
+    if (this.#cache.data && now - this.#cache.lastFetchedAt < this.#cache.ttl) {
+      this.#log('debug', 'Returning all in-app purchases from the cache')
+
+      return this.#cache.data
     }
 
-    const response = await withRetry(() =>
-      this.#ap.inappproducts.list({
-        maxResults: 1000,
-        packageName: this.#packageName, // optional, default is 100
+    const response = await withRetry(attempt => {
+      this.#log('debug', 'Fetching all in-app purchases', { attempt })
+
+      return this.#ap.inappproducts.list({
+        maxResults: 1000, // optional, default is 100
+        packageName: this.#packageName,
       })
-    )
+    })
 
     const iaps: InAppPurchase[] =
       response.data.inappproduct?.map(({ sku, status, defaultLanguage, listings }) => ({
@@ -78,8 +89,10 @@ export class GooglePlayManager {
       })) ?? []
 
     if (iaps.length > 0) {
-      this.#cachedIaps = iaps
-      this.#lastFetchedAtIaps = now
+      this.#log('debug', 'Caching all in-app purchases', { count: iaps.length })
+
+      this.#cache.data = iaps
+      this.#cache.lastFetchedAt = now
     }
 
     return iaps
@@ -91,7 +104,12 @@ export class GooglePlayManager {
       listings,
     })
 
-    if (!iap.sku) return
+    if (!iap.sku) {
+      return this.#log('warn', 'Missing in-app purchase SKU for update; aborting', {
+        id: iap.sku,
+        listings,
+      })
+    }
 
     return this.#ap.inappproducts.patch({
       autoConvertMissingPrices: true,

@@ -1,7 +1,7 @@
 import type { GiveawayData } from 'discord-giveaways'
 import { Kysely, PostgresDialect } from 'kysely'
 import { Pool } from 'pg'
-import { logger } from '../utils/logger'
+import { type LoggerSeverity, logger } from '../utils/logger'
 
 export class DatabaseManager {
   db: Kysely<DB>
@@ -9,7 +9,8 @@ export class DatabaseManager {
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('DatabaseManager', this.#severityThreshold)
 
-  constructor() {
+  constructor(severity: LoggerSeverity = 'info') {
+    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
     this.#log('info', 'Instantiating manager')
 
     if (!process.env.DATABASE_URL) {

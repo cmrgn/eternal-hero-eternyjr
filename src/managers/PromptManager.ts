@@ -2,7 +2,7 @@ import type { Client } from 'discord.js'
 import OpenAI from 'openai'
 import type { LanguageObject } from '../constants/i18n'
 import { getExcerpt } from '../utils/getExcerpt'
-import { logger } from '../utils/logger'
+import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 
 const SYSTEM_PROMPT = `
@@ -35,7 +35,8 @@ export class PromptManager {
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('PromptManager', this.#severityThreshold)
 
-  constructor(client: Client) {
+  constructor(client: Client, severity: LoggerSeverity = 'info') {
+    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
     this.#log('info', 'Instantiating manager')
 
     if (!process.env.OPENAI_API_KEY) {
@@ -47,8 +48,10 @@ export class PromptManager {
   }
 
   async ensureChatGPTIsEnabled() {
+    this.#log('debug', 'Ensuring ChatGPT is enabled')
+
     const { Flags } = this.#client.managers
-    const isEnabled = await Flags.getFeatureFlag('chatgpt')
+    const isEnabled = await Flags.getFeatureFlag('chatgpt', { severity: 'debug' })
 
     if (!isEnabled) throw new Error('ChatGPT usage is disabled; aborting.')
   }

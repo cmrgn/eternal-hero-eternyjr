@@ -65,7 +65,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
 
     if (platform === 'BOTH' || platform === 'GOOGLE_PLAY') {
-      const googlePlayIaps = await Store.googlePlay.fetchAllIaps()
+      const googlePlayIaps = await Store.googlePlay.getAllIaps()
       const googlePlayIap = googlePlayIaps.find(iap => iap.sku === iapId)
       if (!googlePlayIap) {
         return interaction.editReply({
@@ -82,7 +82,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
 
     if (platform === 'BOTH' || platform === 'APPLE_STORE') {
-      const appleStoreIaps = await Store.appleStore.fetchAllIaps()
+      const appleStoreIaps = await Store.appleStore.getAllIaps()
       const appleStoreIap = appleStoreIaps.find(iap => iap.attributes.productId === iapId)
       if (!appleStoreIap) {
         return interaction.editReply({
@@ -104,7 +104,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         content: `Updating localization in \`${crowdinCode}\` on Google Play…`,
       })
 
-      const googlePlayIaps = await Store.googlePlay.fetchAllIaps()
+      const googlePlayIaps = await Store.googlePlay.getAllIaps()
       const googlePlayEditLimiter = DiscordManager.getDiscordEditLimiter()
       const notifyGooglePlay = googlePlayEditLimiter.wrap(
         (iap: GooglePlayInAppPurchase, index: number) =>
@@ -147,7 +147,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         content: `Updating localization in \`${crowdinCode}\` on Apple Store…`,
       })
 
-      const appleStoreIaps = await Store.appleStore.fetchAllIaps()
+      const appleStoreIaps = await Store.appleStore.getAllIaps()
       const appleStoreEditLimiter = DiscordManager.getDiscordEditLimiter()
       const notifyAppleStore = appleStoreEditLimiter.wrap(
         (iap: AppleStoreInAppPurchase, index: number) =>

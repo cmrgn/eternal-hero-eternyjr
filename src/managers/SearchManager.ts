@@ -1,7 +1,7 @@
 import type { SearchRecordsResponse } from '@pinecone-database/pinecone'
 import type { AnyThreadChannel, Client } from 'discord.js'
 import Fuse, { type FuseResult } from 'fuse.js'
-import { logger } from '../utils/logger'
+import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 import type { PineconeMetadata, PineconeNamespace } from './IndexManager'
 
@@ -26,7 +26,8 @@ export class SearchManager {
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('SearchManager', this.#severityThreshold)
 
-  constructor(client: Client) {
+  constructor(client: Client, severity: LoggerSeverity = 'info') {
+    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
     this.#log('info', 'Instantiating manager')
 
     this.#client = client
@@ -88,6 +89,8 @@ export class SearchManager {
 
   // Perform a vector search with Pinecone, with immediate reranking for better results.
   async searchVector(query: string, namespaceName: PineconeNamespace, limit = 1) {
+    this.#log('debug', 'Performing vector search', { limit, namespaceName, query })
+
     const { Index } = this.#client.managers
     // We query and rerank more entries than the amount of results we want in order to improve
     // accuracy. For starters, querying is very cheap, so we can easily query a lot of content
@@ -111,6 +114,8 @@ export class SearchManager {
   // the alt fuse to find a manually indexed keyword. If it finds one, it will redo the original
   // search with the new keyword. This helps padding some obvious gaps in search results.
   searchFuzzy(keyword: string) {
+    this.#log('debug', 'Performing fuzzy search', { keyword })
+
     const { Faq } = this.#client.managers
     const primaryFuse = new Fuse(Faq.threads, {
       ...FUZZY_SEARCH_OPTIONS,

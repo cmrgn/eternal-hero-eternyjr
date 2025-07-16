@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken'
 import removeAccents from 'remove-accents'
 import type { LanguageObject } from '../constants/i18n'
 import { fetchJson } from '../utils/fetchJson'
-import { logger } from '../utils/logger'
+import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 
 export type IapLocalizationFields = { name: string; description: string }
@@ -41,14 +41,21 @@ export class AppleStoreManager {
   #apiUrl = 'https://api.appstoreconnect.apple.com/v1'
   #appId = '6503089848'
 
-  #cachedIaps: InAppPurchase[] | null = null
-  #lastFetchedAtIaps = 0
-  #cacheTTL = 15 * 60 * 1000 // 15 minutes
+  #cache: {
+    data: InAppPurchase[] | null
+    lastFetchedAt: number
+    ttl: number
+  } = {
+    data: null,
+    lastFetchedAt: 0,
+    ttl: 15 * 60 * 1000, // 15 minutes
+  }
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('AppleStoreManager', this.#severityThreshold)
 
-  constructor() {
+  constructor(severity: LoggerSeverity = 'info') {
+    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
     this.#log('info', 'Instantiating manager')
     this.#jwt = this.generateJwt()
   }
@@ -115,7 +122,7 @@ export class AppleStoreManager {
     })
   }
 
-  async fetchAllIaps() {
+  async getAllIaps() {
     this.#log('info', 'Fetching all in-app purchases')
 
     const getAllPages = async (initialUrl: string) => {
@@ -132,15 +139,15 @@ export class AppleStoreManager {
     }
 
     const now = Date.now()
-    if (this.#cachedIaps && now - this.#lastFetchedAtIaps < this.#cacheTTL) {
-      return this.#cachedIaps
+    if (this.#cache.data && now - this.#cache.lastFetchedAt < this.#cache.ttl) {
+      return this.#cache.data
     }
 
     const data = await getAllPages(`${this.#apiUrl}/apps/${this.#appId}/inAppPurchasesV2`)
 
     if (data.length > 0) {
-      this.#cachedIaps = data
-      this.#lastFetchedAtIaps = now
+      this.#cache.data = data
+      this.#cache.lastFetchedAt = now
     }
 
     return data

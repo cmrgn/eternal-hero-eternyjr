@@ -20,7 +20,7 @@ import {
 } from 'discord.js'
 import { commands } from '../commands'
 import type { LanguageObject } from '../constants/i18n'
-import { logger } from '../utils/logger'
+import { type LoggerSeverity, logger } from '../utils/logger'
 import { stripIndent } from '../utils/stripIndent'
 import { withRetry } from '../utils/withRetry'
 import type { ResolvedThread } from './FAQManager'
@@ -49,7 +49,10 @@ export class DiscordManager {
 
   // This is the only manager that doesn’t expect a client because it is also used outside of the
   // runtime of the bot, such as for scripts
-  constructor() {
+  constructor(severity: LoggerSeverity = 'info') {
+    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
+    this.#log('info', 'Instantiating manager')
+
     if (!process.env.DISCORD_CLIENT_ID) {
       throw new Error('Missing environment variable DISCORD_CLIENT_ID; aborting.')
     }

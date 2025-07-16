@@ -1,7 +1,7 @@
 import { type Index, Pinecone, type RecordMetadata } from '@pinecone-database/pinecone'
 import type { Client } from 'discord.js'
 import type { CrowdinCode, LanguageObject } from '../constants/i18n'
-import { logger } from '../utils/logger'
+import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 import type { ResolvedThread } from './FAQManager'
 
@@ -25,7 +25,8 @@ export class IndexManager {
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('IndexManager', this.#severityThreshold)
 
-  constructor(client: Client) {
+  constructor(client: Client, severity: LoggerSeverity = 'info') {
+    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
     this.#log('info', 'Instantiating manager')
 
     if (!process.env.PINECONE_API_KEY) {
@@ -56,6 +57,8 @@ export class IndexManager {
   }
 
   getNamespaceName(namespaceName: PineconeNamespace) {
+    this.#log('debug', 'Resolving namespace name', { namespaceName })
+
     const { Discord } = this.#client.managers
     // This is intended to avoid polluting the production indexes during development; this will
     // create the same indexes as production, but prefixed with this prefix
@@ -64,6 +67,8 @@ export class IndexManager {
   }
 
   namespace(namespaceName: PineconeNamespace) {
+    this.#log('debug', 'Getting namespace', { namespaceName })
+
     return this.index.namespace(this.getNamespaceName(namespaceName))
   }
 
@@ -78,7 +83,15 @@ export class IndexManager {
 
     while (entries.length) {
       const batch = entries.splice(0, 90)
-      await withRetry(() => namespace.upsertRecords(batch))
+      await withRetry(attempt => {
+        this.#log('debug', 'Indexing batch of entries', {
+          attempt,
+          count: batch.length,
+          namespace: this.getNamespaceName(namespaceName),
+        })
+
+        return namespace.upsertRecords(batch)
+      })
     }
 
     return count
@@ -133,10 +146,7 @@ export class IndexManager {
   unindexThreadInAllLanguages(threadId: string) {
     const { Crowdin } = this.#client.managers
 
-    this.#log('info', 'Indexing thread in all languages', {
-      action: 'DELETE',
-      id: threadId,
-    })
+    this.#log('info', 'Unindexing thread in all languages', { id: threadId })
 
     return Crowdin.onCrowdinLanguages(({ crowdinCode }) =>
       this.unindexThread(threadId, crowdinCode)
@@ -161,9 +171,7 @@ export class IndexManager {
       if (await Flags.getFeatureFlag('auto_indexing')) {
         await this.translateAndIndexThreadInAllLanguages(thread)
       } else {
-        this.#log('info', 'Auto-indexing is disabled; aborting', {
-          threadId: thread.id,
-        })
+        this.#log('info', 'Auto-indexing is disabled; aborting', { threadId: thread.id })
       }
     })
 
@@ -179,9 +187,7 @@ export class IndexManager {
       if (await Flags.getFeatureFlag('auto_indexing')) {
         await this.translateAndIndexThreadInAllLanguages(thread)
       } else {
-        this.#log('info', 'Auto-indexing is disabled; aborting', {
-          threadId: thread.id,
-        })
+        this.#log('info', 'Auto-indexing is disabled; aborting', { threadId: thread.id })
       }
     })
 
@@ -198,9 +204,7 @@ export class IndexManager {
           await this.translateAndIndexThreadInAllLanguages(thread)
         }
       } else {
-        this.#log('info', 'Auto-indexing is disabled; aborting', {
-          thread: thread.id,
-        })
+        this.#log('info', 'Auto-indexing is disabled; aborting', { thread: thread.id })
       }
     })
 

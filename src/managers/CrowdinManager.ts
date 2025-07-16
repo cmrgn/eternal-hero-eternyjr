@@ -4,7 +4,7 @@ import decompress, { type File } from 'decompress'
 import type { Client } from 'discord.js'
 import fetch from 'node-fetch'
 import { type CrowdinCode, LANGUAGE_OBJECTS, type LanguageObject } from '../constants/i18n'
-import { logger } from '../utils/logger'
+import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 import type { LocalizationItem } from './LocalizationManager'
 
@@ -27,14 +27,21 @@ export class CrowdinManager {
   #gameProjectId = 797774
   #storeProjectId = 808178
 
-  #cachedFilesMap: Map<number, File[]> = new Map()
-  #lastFetchedAtMap: Map<number, number> = new Map()
-  #cacheTTL = 15 * 60 * 1000 // 15 minutes
+  #cache: {
+    data: Map<number, File[]>
+    lastFetchedAt: Map<number, number>
+    ttl: number
+  } = {
+    data: new Map<number, File[]>(),
+    lastFetchedAt: new Map<number, number>(),
+    ttl: 15 * 60 * 1000, // 15 minutes
+  }
 
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('CrowdinManager', this.#severityThreshold)
 
-  constructor(client: Client) {
+  constructor(client: Client, severity: LoggerSeverity = 'info') {
+    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
     this.#log('info', 'Instantiating manager')
 
     if (!process.env.CROWDIN_TOKEN) {
@@ -167,14 +174,14 @@ export class CrowdinManager {
     })
 
     const now = Date.now()
-    const cachedFiles = this.#cachedFilesMap.get(projectId)
-    const lastFetchedAt = this.#lastFetchedAtMap.get(projectId) ?? 0
+    const cachedFiles = this.#cache.data.get(projectId)
+    const lastFetchedAt = this.#cache.lastFetchedAt.get(projectId) ?? 0
 
-    if (!forceRefresh && cachedFiles && now - lastFetchedAt < this.#cacheTTL) {
+    if (!forceRefresh && cachedFiles && now - lastFetchedAt < this.#cache.ttl) {
       this.#log('info', 'Reading all project files from cache', {
         age: now - lastFetchedAt,
         projectId,
-        ttl: this.#cacheTTL,
+        ttl: this.#cache.ttl,
       })
       return cachedFiles
     }
@@ -183,8 +190,8 @@ export class CrowdinManager {
     await this.waitForBuild(buildId, projectId)
     const files = await this.downloadBuildArtefact(buildId, projectId)
 
-    this.#cachedFilesMap.set(projectId, files)
-    this.#lastFetchedAtMap.set(projectId, now)
+    this.#cache.data.set(projectId, files)
+    this.#cache.lastFetchedAt.set(projectId, now)
 
     return files
   }

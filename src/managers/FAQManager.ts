@@ -8,7 +8,7 @@ import {
   type PartialMessage,
 } from 'discord.js'
 
-import { logger } from '../utils/logger'
+import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 
 export type ResolvedThread = {
@@ -34,7 +34,6 @@ export type ThreadEvents = {
 
 export class FAQManager {
   #client: Client
-  guildId: string
 
   #threads: AnyThreadChannel[]
   #links: string[]
@@ -56,18 +55,23 @@ export class FAQManager {
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('FAQManager', this.#severityThreshold)
 
-  constructor(client: Client) {
-    const { Discord } = client.managers
-
+  constructor(client: Client, severity: LoggerSeverity = 'info') {
+    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
     this.#log('info', 'Instantiating manager')
+
     this.#client = client
-    // Force `guildId` to `DISCORD_SERVER_ID` to test with the real FAQ, even
-    // of the test server
-    this.guildId = Discord.IS_DEV
-      ? (Discord.TEST_SERVER_ID ?? Discord.DISCORD_SERVER_ID)
-      : Discord.DISCORD_SERVER_ID
     this.#threads = []
     this.#links = []
+  }
+
+  static containsLinkLike(content: string) {
+    return content.includes('<#') || content.includes('https://discord.com/channels/')
+  }
+
+  get guildId() {
+    const { Discord } = this.#client.managers
+    if (Discord.IS_DEV && Discord.TEST_SERVER_ID) return Discord.TEST_SERVER_ID
+    return Discord.DISCORD_SERVER_ID
   }
 
   get threads() {
@@ -111,22 +115,34 @@ export class FAQManager {
     ]
   }
 
-  containsLinkLike(content: string) {
-    return content.includes('<#') || content.includes('https://discord.com/channels/')
-  }
-
   async getGuild() {
-    this.#log('info', 'Getting guild object')
+    this.#log('info', 'Getting guild object', { guildId: this.guildId })
     const { guilds } = this.#client
-    return guilds.cache.get(this.guildId) ?? (await withRetry(() => guilds.fetch(this.guildId)))
+
+    const cachedGuild = guilds.cache.get(this.guildId)
+    if (cachedGuild) return cachedGuild
+
+    const fetchedGuild = await withRetry(attempt => {
+      this.#log('debug', 'Fetching guild', { attempt, guildId: this.guildId })
+      return guilds.fetch(this.guildId)
+    })
+    return fetchedGuild
   }
 
   async fetchThreads() {
+    this.#log('debug', 'Fetching all FAQ threads', { guildId: this.guildId })
+
     const guild = await this.getGuild()
     const faq = this.getFAQForum(guild)
     const [activeThreadRes, archivedThreadRes] = await Promise.all([
-      withRetry(() => faq.threads.fetchActive()),
-      withRetry(() => faq.threads.fetchArchived()),
+      withRetry(attempt => {
+        this.#log('debug', 'Fetching active threads', { attempt, forumId: faq.id })
+        return faq.threads.fetchActive()
+      }),
+      withRetry(attempt => {
+        this.#log('debug', 'Fetching inactive threads', { attempt, forumId: faq.id })
+        return faq.threads.fetchArchived()
+      }),
     ])
 
     // Ignore the pinned thread used as a table of contents since there is no point in translating
@@ -137,7 +153,7 @@ export class FAQManager {
     const archivedThreads = Array.from(archivedThreadRes.threads.values())
     const threads = [...activeThreads, ...archivedThreads]
 
-    this.#log('info', 'Fetching all FAQ threads', {
+    this.#log('info', 'Fetched all FAQ threads', {
       active: activeThreads.length,
       archived: archivedThreads.length,
       total: threads.length,
@@ -147,7 +163,10 @@ export class FAQManager {
   }
 
   getFAQForum(guild: Guild) {
-    if (this.#faqForum) return this.#faqForum
+    if (this.#faqForum) {
+      this.#log('debug', 'Returning FAQ forum from cache', { guildId: guild.id })
+      return this.#faqForum
+    }
 
     this.#log('info', 'Retrieving FAQ forum', { guildId: guild.id })
 

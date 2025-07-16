@@ -2,7 +2,7 @@ import { type LanguageIdentifier, loadModule } from 'cld3-asm'
 import type { Client } from 'discord.js'
 import { CROWDIN_CODES, type CrowdinCode, type LanguageObject } from '../constants/i18n'
 import { getExcerpt } from '../utils/getExcerpt'
-import { logger } from '../utils/logger'
+import { type LoggerSeverity, logger } from '../utils/logger'
 import type { ResolvedThread } from './FAQManager'
 
 export type LocalizationItem = {
@@ -18,8 +18,10 @@ export class LocalizationManager {
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('LocalizationManager', this.#severityThreshold)
 
-  constructor(client: Client) {
+  constructor(client: Client, severity: LoggerSeverity = 'info') {
+    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
     this.#log('info', 'Instantiating manager')
+
     this.#client = client
     this.loadLanguageIdentifier()
   }
@@ -34,9 +36,7 @@ export class LocalizationManager {
   }
 
   guessLanguageWithCld3(userInput: string) {
-    // Commenting out this log since this function is called on *every* *single* message posted on
-    // Discord. This is too verbose and pollutes the logs.
-    // this.#log('info', 'Guessing language with cld3', { userInput })
+    this.#log('debug', 'Guessing language with cld3', { userInput: getExcerpt(userInput) })
 
     if (!this.#languageIdentifier) return null
     const guess = this.#languageIdentifier.findLanguage(userInput)

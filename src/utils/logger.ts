@@ -17,7 +17,8 @@ const logCommand = (
   })
 }
 
-export const LOG_SEVERITIES = ['info', 'warn', 'error'] as const
+export const LOG_SEVERITIES = ['debug', 'info', 'warn', 'error'] as const
+export type LoggerSeverity = (typeof LOG_SEVERITIES)[number]
 
 const log =
   (scope: string, severityThreshold: number) =>

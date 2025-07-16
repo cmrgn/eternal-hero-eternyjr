@@ -1,7 +1,7 @@
 import type { File } from 'decompress'
 import type { Client } from 'discord.js'
 import { type CrowdinCode, LANGUAGE_OBJECTS, type Locale } from '../constants/i18n'
-import { logger } from '../utils/logger'
+import { type LoggerSeverity, logger } from '../utils/logger'
 import {
   type IapLocalizationFields as AppleStoreIapLocalizationFields,
   AppleStoreManager,
@@ -22,10 +22,13 @@ export class StoreManager {
   #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
   #log = logger.log('StoreManager', this.#severityThreshold)
 
-  constructor(client: Client) {
+  constructor(client: Client, severity: LoggerSeverity = 'info') {
     this.#client = client
     this.appleStore = new AppleStoreManager()
     this.googlePlay = new GooglePlayManager()
+
+    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
+    this.#log('info', 'Instantiating manager')
   }
 
   async getStoreTranslations(crowdinCode: CrowdinCode) {
@@ -39,6 +42,8 @@ export class StoreManager {
   }
 
   parseFileData(file: File) {
+    this.#log('debug', 'Parsing file data', { file })
+
     const json = file.data.toString('utf-8')
     const data: Record<string, { name: string; description: string }> = JSON.parse(json)
 

@@ -3,7 +3,7 @@ import { GlossaryEntries } from 'deepl-node'
 import type { Client } from 'discord.js'
 import type { CrowdinCode } from '../constants/i18n'
 import { getExcerpt } from '../utils/getExcerpt'
-import { logger } from '../utils/logger'
+import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 import type { LocalizationItem } from './LocalizationManager'
 
@@ -17,7 +17,8 @@ export class DeepLManager {
 
   COST_PER_CHAR = 20 / 1_000_000
 
-  constructor(client: Client) {
+  constructor(client: Client, severity: LoggerSeverity = 'info') {
+    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
     this.#log('info', 'Instantiating manager')
 
     if (!process.env.DEEPL_API_KEY) {
@@ -29,8 +30,10 @@ export class DeepLManager {
   }
 
   async ensureDeepLIsEnabled() {
+    this.#log('debug', 'Ensuring DeepL is enabled')
+
     const { Flags } = this.#client.managers
-    const isEnabled = await Flags.getFeatureFlag('deepl')
+    const isEnabled = await Flags.getFeatureFlag('deepl', { severity: 'debug' })
 
     if (!isEnabled) throw new Error('DeepL usage is disabled; aborting.')
   }
