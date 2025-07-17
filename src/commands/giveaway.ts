@@ -177,7 +177,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }
     }
   } catch (error) {
-    console.error(error)
+    logger.logCommand(interaction, 'Command execution', { error })
     await interaction.reply(initiatorError())
   }
 }

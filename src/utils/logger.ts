@@ -51,4 +51,5 @@ export const logger = {
   LOG_SEVERITIES,
   log,
   logCommand,
+  logtail,
 }

@@ -203,7 +203,7 @@ export class DiscordManager {
     `)
       )
     } catch (error) {
-      console.error(error)
+      logger.logtail.error('Sending alert failed', { error })
     }
   }
 
