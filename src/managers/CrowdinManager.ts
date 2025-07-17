@@ -2,9 +2,9 @@ import { default as Crowdin } from '@crowdin/crowdin-api-client'
 import csvtojson from 'csvtojson'
 import decompress, { type File } from 'decompress'
 import type { Client } from 'discord.js'
-import fetch from 'node-fetch'
 import { type CrowdinCode, LANGUAGE_OBJECTS, type LanguageObject } from '../constants/i18n'
 import { type LoggerSeverity, logger } from '../utils/logger'
+import { request } from '../utils/request'
 import { withRetry } from '../utils/withRetry'
 import type { LocalizationItem } from './LocalizationManager'
 
@@ -62,10 +62,13 @@ export class CrowdinManager {
   }
 
   async getProjectProgress(projectId = this.#gameProjectId) {
-    const { data: projectProgress } = await withRetry(attempt => {
-      this.#log('info', 'Getting project progress', { attempt })
-      return this.#crowdin.translationStatusApi.getProjectProgress(projectId)
-    })
+    const { data: projectProgress } = await withRetry(
+      attempt => {
+        this.#log('info', 'Getting project progress', { attempt })
+        return this.#crowdin.translationStatusApi.getProjectProgress(projectId)
+      },
+      { logFn: this.#log }
+    )
 
     return projectProgress
   }
@@ -76,21 +79,27 @@ export class CrowdinManager {
     try {
       const {
         data: { id: buildId },
-      } = await withRetry(attempt => {
-        this.#log('info', 'Building project', { attempt, projectId })
-        return this.#crowdin.translationsApi.buildProject(projectId)
-      })
+      } = await withRetry(
+        attempt => {
+          this.#log('info', 'Building project', { attempt, projectId })
+          return this.#crowdin.translationsApi.buildProject(projectId)
+        },
+        { logFn: this.#log }
+      )
       return buildId
     } catch {
-      const builds = await withRetry(attempt => {
-        this.#log('warn', 'Building project failed, falling back to latest build', {
-          attempt,
-          projectId,
-        })
-        return this.#crowdin.translationsApi.listProjectBuilds(projectId, {
-          limit: 1,
-        })
-      })
+      const builds = await withRetry(
+        attempt => {
+          this.#log('warn', 'Building project failed, falling back to latest build', {
+            attempt,
+            projectId,
+          })
+          return this.#crowdin.translationsApi.listProjectBuilds(projectId, {
+            limit: 1,
+          })
+        },
+        { logFn: this.#log }
+      )
 
       return builds.data[0].data.id
     }
@@ -101,14 +110,17 @@ export class CrowdinManager {
 
     let status = 'inProgress'
     while (status === 'inProgress') {
-      const { data } = await withRetry(attempt => {
-        this.#log('info', 'Waiting for build to finish', {
-          attempt,
-          buildId,
-          projectId,
-        })
-        return this.#crowdin.translationsApi.checkBuildStatus(projectId, buildId)
-      })
+      const { data } = await withRetry(
+        attempt => {
+          this.#log('info', 'Waiting for build to finish', {
+            attempt,
+            buildId,
+            projectId,
+          })
+          return this.#crowdin.translationsApi.checkBuildStatus(projectId, buildId)
+        },
+        { logFn: this.#log }
+      )
       status = data.status
       if (status === 'failed') throw new Error('Crowdin build failed')
       if (status !== 'finished') await new Promise(res => setTimeout(res, 2000))
@@ -116,24 +128,22 @@ export class CrowdinManager {
   }
 
   async downloadBuildArtefact(buildId: number, projectId: number) {
-    return withRetry(async attempt => {
-      this.#log('info', 'Downloading build artefact', {
-        attempt,
-        buildId,
-        projectId,
-      })
-
-      // Retrieve the URL to download the zip file with all CSV translation files
-      const { data } = await this.#crowdin.translationsApi.downloadTranslations(projectId, buildId)
-
-      // Download the archive
-      const response = await withRetry(() => fetch(data.url))
-      if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`)
-      const zipBuffer = await response.buffer()
-
-      // Unzip the archive
-      return decompress(zipBuffer)
+    this.#log('info', 'Downloading build artefact', {
+      buildId,
+      projectId,
     })
+
+    // Retrieve the URL to download the zip file with all CSV translation files
+    const { data } = await withRetry(
+      () => this.#crowdin.translationsApi.downloadTranslations(projectId, buildId),
+      { logFn: this.#log }
+    )
+
+    // Download the archive
+    const zipBuffer = await request(this.#log, data.url, undefined, 'buffer')
+
+    // Unzip the archive
+    return decompress(zipBuffer)
   }
 
   async parseTranslationFiles(files: File[]) {

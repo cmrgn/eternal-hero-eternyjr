@@ -145,14 +145,20 @@ export class FAQManager {
     const faq = this.getFaqForum(guild)
 
     const [activeThreadRes, archivedThreadRes] = await Promise.all([
-      withRetry(attempt => {
-        this.#log('info', 'Fetching active threads', { attempt, forumId: faq.id })
-        return faq.threads.fetchActive()
-      }),
-      withRetry(attempt => {
-        this.#log('info', 'Fetching inactive threads', { attempt, forumId: faq.id })
-        return faq.threads.fetchArchived()
-      }),
+      withRetry(
+        attempt => {
+          this.#log('info', 'Fetching active threads', { attempt, forumId: faq.id })
+          return faq.threads.fetchActive()
+        },
+        { logFn: this.#log }
+      ),
+      withRetry(
+        attempt => {
+          this.#log('info', 'Fetching inactive threads', { attempt, forumId: faq.id })
+          return faq.threads.fetchArchived()
+        },
+        { logFn: this.#log }
+      ),
     ])
 
     // Ignore the pinned thread used as a table of contents since there is no point in translating
@@ -251,7 +257,8 @@ export class FAQManager {
     const { Discord } = this.#client.managers
 
     if (Discord.shouldIgnoreInteraction(newMessage)) return
-    if (newMessage.partial) newMessage = await withRetry(() => newMessage.fetch())
+    if (newMessage.partial)
+      newMessage = await withRetry(() => newMessage.fetch(), { logFn: this.#log })
 
     const { channel } = newMessage
 
@@ -278,7 +285,9 @@ export class FAQManager {
   }
 
   async #resolveThreadMessage(thread: ForumThreadChannel) {
-    const firstMessage = await withRetry(() => thread.fetchStarterMessage())
+    const firstMessage = await withRetry(() => thread.fetchStarterMessage(), {
+      logFn: this.#log,
+    })
 
     return {
       content: FAQManager.cleanUpThreadContent(firstMessage?.content),
@@ -287,7 +296,7 @@ export class FAQManager {
   }
 
   async #resolveThreadMessages(thread: ForumThreadChannel, { skipFirst }: { skipFirst: boolean }) {
-    const messages = await withRetry(() => thread.messages.fetch())
+    const messages = await withRetry(() => thread.messages.fetch(), { logFn: this.#log })
 
     return (
       Array.from(messages.values())

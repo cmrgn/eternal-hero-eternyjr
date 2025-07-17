@@ -59,21 +59,24 @@ export class PromptManager {
   async callChatCompletion(userPrompt: string, systemPrompt = SYSTEM_PROMPT, model = 'gpt-4o') {
     await this.ensureChatGPTIsEnabled()
 
-    const response = await withRetry(attempt => {
-      this.#log('info', 'Prompting ChatGPT', {
-        attempt,
-        model,
-        prompt: getExcerpt(userPrompt),
-      })
+    const response = await withRetry(
+      attempt => {
+        this.#log('info', 'Prompting ChatGPT', {
+          attempt,
+          model,
+          prompt: getExcerpt(userPrompt),
+        })
 
-      return this.#openai.chat.completions.create({
-        messages: [
-          { content: systemPrompt, role: 'system' },
-          { content: userPrompt, role: 'user' },
-        ],
-        model,
-      })
-    })
+        return this.#openai.chat.completions.create({
+          messages: [
+            { content: systemPrompt, role: 'system' },
+            { content: userPrompt, role: 'user' },
+          ],
+          model,
+        })
+      },
+      { logFn: this.#log }
+    )
 
     return response.choices[0].message?.content?.trim()
   }

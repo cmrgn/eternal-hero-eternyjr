@@ -90,10 +90,13 @@ export class DiscordManager {
     const cachedGuild = client.guilds.cache.get(guildId)
     if (cachedGuild) return cachedGuild
 
-    const fetchedGuild = await withRetry(attempt => {
-      this.#log('info', 'Fetching guild', { attempt, guildId })
-      return client.guilds.fetch(guildId)
-    })
+    const fetchedGuild = await withRetry(
+      attempt => {
+        this.#log('info', 'Fetching guild', { attempt, guildId })
+        return client.guilds.fetch(guildId)
+      },
+      { logFn: this.#log }
+    )
 
     return fetchedGuild
   }
@@ -177,7 +180,9 @@ export class DiscordManager {
     const cachedChannelFromClient = client.channels.cache.find(({ id }) => id === channelId)
     if (cachedChannelFromClient) return cachedChannelFromClient
 
-    const fetchedChannel = await withRetry(() => client.channels.fetch(this.#alertChannelId))
+    const fetchedChannel = await withRetry(() => client.channels.fetch(this.#alertChannelId), {
+      logFn: this.#log,
+    })
     return fetchedChannel
   }
 
@@ -189,7 +194,8 @@ export class DiscordManager {
       this.#alertChannelId
     )
     if (!channel?.isSendable()) return
-    if (interaction.guildId === this.TEST_SERVER_ID) return this.#log('error', message)
+    if (interaction.guildId === this.TEST_SERVER_ID)
+      return this.#log('error', message.replace(/```/g, ''))
 
     try {
       return await channel.send(

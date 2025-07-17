@@ -1,9 +1,8 @@
 import jwt from 'jsonwebtoken'
 import removeAccents from 'remove-accents'
 import type { LanguageObject } from '../constants/i18n'
-import { fetchJson } from '../utils/fetchJson'
 import { type LoggerSeverity, logger } from '../utils/logger'
-import { withRetry } from '../utils/withRetry'
+import { request } from '../utils/request'
 
 export type IapLocalizationFields = { name: string; description: string }
 
@@ -111,15 +110,12 @@ export class AppleStoreManager {
   }
 
   callApi<T>(path: string, method = 'GET', payload?: unknown): Promise<AppleApiResponse<T>> {
-    return withRetry(attempt => {
-      const body = JSON.stringify(payload)
-      const context = { attempt, body, method, path }
-      const headers = this.headers
+    const body = JSON.stringify(payload)
+    const context = { body, method, path }
+    const headers = this.headers
 
-      this.#log('info', 'Calling Apple Store API', context)
-
-      return fetchJson(path, { body, headers, method })
-    })
+    this.#log('info', 'Calling Apple Store API', context)
+    return request(this.#log, path, { body, headers, method })
   }
 
   async getAllIaps() {

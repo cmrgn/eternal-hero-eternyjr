@@ -97,15 +97,17 @@ export class SearchManager {
     // accuracy. For starters, querying is very cheap, so we can easily query a lot of content
     // without a problem. Reranking is a bit more expensive, so we rerank the most promising
     // candidates to sort them by relevance. Eventually, we return the number of results we expect.
-    const response = await withRetry(() =>
-      Index.namespace(namespaceName).searchRecords({
-        query: { inputs: { text: query }, topK: Math.max(20, limit) },
-        rerank: {
-          model: 'bge-reranker-v2-m3',
-          rankFields: ['chunk_text'],
-          topN: Math.max(5, limit),
-        },
-      })
+    const response = await withRetry(
+      () =>
+        Index.namespace(namespaceName).searchRecords({
+          query: { inputs: { text: query }, topK: Math.max(20, limit) },
+          rerank: {
+            model: 'bge-reranker-v2-m3',
+            rankFields: ['chunk_text'],
+            topN: Math.max(5, limit),
+          },
+        }),
+      { logFn: this.#log }
     )
 
     return response.result.hits.slice(0, limit) as SearchResultVector[]

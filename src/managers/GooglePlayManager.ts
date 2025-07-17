@@ -71,14 +71,17 @@ export class GooglePlayManager {
       return this.#cache.data
     }
 
-    const response = await withRetry(attempt => {
-      this.#log('info', 'Fetching all in-app purchases', { attempt })
+    const response = await withRetry(
+      attempt => {
+        this.#log('info', 'Fetching all in-app purchases', { attempt })
 
-      return this.#ap.inappproducts.list({
-        maxResults: 1000, // optional, default is 100
-        packageName: this.#packageName,
-      })
-    })
+        return this.#ap.inappproducts.list({
+          maxResults: 1000, // optional, default is 100
+          packageName: this.#packageName,
+        })
+      },
+      { logFn: this.#log }
+    )
 
     const iaps: InAppPurchase[] =
       response.data.inappproduct?.map(({ sku, status, defaultLanguage, listings }) => ({

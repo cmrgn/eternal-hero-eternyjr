@@ -53,14 +53,16 @@ export class DeepLManager {
     // back with a line break.
     const chunks = input.split('\n').filter(Boolean)
 
-    const response = await withRetry(() =>
-      this.#deepl.translateText(chunks, 'en', targetLangCode, {
-        formality: 'prefer_less',
-        glossary: this.#deepLGlossaryId,
-        modelType: 'quality_optimized',
-        preserveFormatting: true,
-        splitSentences: 'off',
-      })
+    const response = await withRetry(
+      () =>
+        this.#deepl.translateText(chunks, 'en', targetLangCode, {
+          formality: 'prefer_less',
+          glossary: this.#deepLGlossaryId,
+          modelType: 'quality_optimized',
+          preserveFormatting: true,
+          splitSentences: 'off',
+        }),
+      { logFn: this.#log }
     )
 
     return response.map(chunk => chunk.text).join('\n')
@@ -77,22 +79,27 @@ export class DeepLManager {
     const pairs = this.formatPairs(translations, targetLangCode as CrowdinCode)
     if (pairs.length === 0) return
 
-    await withRetry(() =>
-      this.#deepl.updateMultilingualGlossaryDictionary(this.#deepLGlossaryId, {
-        entries: new deepl.GlossaryEntries({
-          entries: Object.fromEntries(pairs),
+    await withRetry(
+      () =>
+        this.#deepl.updateMultilingualGlossaryDictionary(this.#deepLGlossaryId, {
+          entries: new deepl.GlossaryEntries({
+            entries: Object.fromEntries(pairs),
+          }),
+          sourceLangCode: 'en',
+          targetLangCode,
         }),
-        sourceLangCode: 'en',
-        targetLangCode,
-      })
+      { logFn: this.#log }
     )
   }
 
   async getUsage() {
-    const usage = await withRetry(attempt => {
-      this.#log('info', 'Getting DeepL usage data', { attempt })
-      return this.#deepl.getUsage()
-    })
+    const usage = await withRetry(
+      attempt => {
+        this.#log('info', 'Getting DeepL usage data', { attempt })
+        return this.#deepl.getUsage()
+      },
+      { logFn: this.#log }
+    )
 
     return { character: usage?.character?.count ?? 0 }
   }

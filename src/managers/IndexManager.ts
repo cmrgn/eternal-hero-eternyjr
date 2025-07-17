@@ -87,15 +87,18 @@ export class IndexManager {
 
     while (entries.length) {
       const batch = entries.splice(0, 90)
-      await withRetry(attempt => {
-        this.#log('info', 'Indexing batch of entries', {
-          attempt,
-          count: batch.length,
-          namespace: this.getNamespaceName(namespaceName),
-        })
+      await withRetry(
+        attempt => {
+          this.#log('info', 'Indexing batch of entries', {
+            attempt,
+            count: batch.length,
+            namespace: this.getNamespaceName(namespaceName),
+          })
 
-        return namespace.upsertRecords(batch)
-      })
+          return namespace.upsertRecords(batch)
+        },
+        { logFn: this.#log }
+      )
     }
 
     return count
@@ -121,17 +124,20 @@ export class IndexManager {
 
   async unindexThread(threadId: string, namespaceName: PineconeNamespace) {
     try {
-      await withRetry(attempt => {
-        this.#log('info', 'Unindexing thread', {
-          attempt,
-          id: threadId,
-          namespace: this.getNamespaceName(namespaceName),
-        })
+      await withRetry(
+        attempt => {
+          this.#log('info', 'Unindexing thread', {
+            attempt,
+            id: threadId,
+            namespace: this.getNamespaceName(namespaceName),
+          })
 
-        return this.namespace(namespaceName).deleteMany({
-          id: { $regex: `^entry#${threadId}` },
-        })
-      })
+          return this.namespace(namespaceName).deleteMany({
+            id: { $regex: `^entry#${threadId}` },
+          })
+        },
+        { logFn: this.#log }
+      )
     } catch (error) {
       // Unindexing may fail with a 404 if the resource didn’t exist in the index to begin with
       const isError = error instanceof Error
