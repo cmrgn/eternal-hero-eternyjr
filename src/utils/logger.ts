@@ -4,6 +4,7 @@ import type { ChatInputCommandInteraction } from 'discord.js'
 
 const logtail = new Logtail(process.env.LOGTAIL_TOKEN ?? '', {
   endpoint: 'https://s1389943.eu-nbg-2.betterstackdata.com',
+  sendLogsToConsoleOutput: true,
 })
 
 const logCommand = (
@@ -21,12 +22,13 @@ const logCommand = (
     userId: interaction.user.id,
   }
 
-  console.log(`[Command: ${interaction.commandName}]`, message, context)
   if (process.env.NODE_ENV === 'production') {
     logtail.log(`[Command: ${interaction.commandName}]`, message, {
       ...context,
       command: interaction.commandName,
     })
+  } else {
+    console.log(`[Command: ${interaction.commandName}]`, message, context)
   }
 }
 
@@ -37,9 +39,10 @@ const log =
   (scope: string, severityThreshold: number) =>
   (type: (typeof LOG_SEVERITIES)[number], message: string, context?: Context) => {
     if (LOG_SEVERITIES.indexOf(type) >= severityThreshold) {
-      console[type](`[${scope}] ${message}`, context)
       if (process.env.NODE_ENV === 'production') {
         logtail[type](`[${scope}] ${message}`, { ...context, scope })
+      } else {
+        console[type](`[${scope}] ${message}`, context)
       }
     }
   }
