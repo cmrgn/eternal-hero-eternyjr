@@ -2,7 +2,9 @@ import { Logtail } from '@logtail/node'
 import type { Context } from '@logtail/types'
 import type { ChatInputCommandInteraction } from 'discord.js'
 
-const logtail = new Logtail(process.env.LOGTAIL_TOKEN ?? '')
+const logtail = new Logtail(process.env.LOGTAIL_TOKEN ?? '', {
+  endpoint: 'https://s1389943.eu-nbg-2.betterstackdata.com',
+})
 
 const logCommand = (
   interaction: ChatInputCommandInteraction,
@@ -11,14 +13,18 @@ const logCommand = (
 ) => {
   const guild = interaction.guild
   const channel = guild?.channels.cache.find(channel => channel.id === interaction.channelId)
-
-  logtail.log(`[Command: ${interaction.commandName}]`, message, {
+  const context = {
     ...extra,
     arguments: interaction.options.data,
     channelId: channel?.id,
     guildId: interaction.guildId,
     userId: interaction.user.id,
-  })
+  }
+
+  console.log(`[Command: ${interaction.commandName}]`, message, context)
+  if (process.env.NODE_ENV === 'production') {
+    logtail.log(`[Command: ${interaction.commandName}]`, message, context)
+  }
 }
 
 export const LOG_SEVERITIES = ['debug', 'info', 'warn', 'error'] as const
@@ -27,8 +33,12 @@ export type LoggerSeverity = (typeof LOG_SEVERITIES)[number]
 const log =
   (scope: string, severityThreshold: number) =>
   (type: (typeof LOG_SEVERITIES)[number], message: string, context?: Context) => {
-    if (LOG_SEVERITIES.indexOf(type) >= severityThreshold)
-      logtail[type].apply(logtail, [`[${scope}] ${message}`, context])
+    if (LOG_SEVERITIES.indexOf(type) >= severityThreshold) {
+      console[type](`[${scope}] ${message}`, context)
+      if (process.env.NODE_ENV === 'production') {
+        logtail[type](`[${scope}] ${message}`, context)
+      }
+    }
   }
 
 export const logger = {
