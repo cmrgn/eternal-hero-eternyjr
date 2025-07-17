@@ -27,9 +27,7 @@ export class FlagsManager {
     return !!exists
   }
 
-  async getFeatureFlag(key: string, options?: { severity: Severity }) {
-    this.#logger.log(options?.severity ?? 'info', 'Reading feature flag', { key })
-
+  async getFeatureFlag(key: string) {
     const { Database } = this.#client.managers
     const response = await Database.db
       .selectFrom('feature_flags')

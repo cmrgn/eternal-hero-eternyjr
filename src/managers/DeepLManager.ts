@@ -32,7 +32,7 @@ export class DeepLManager {
     this.#logger.log('info', 'Ensuring DeepL is enabled')
 
     const { Flags } = this.#client.managers
-    const isEnabled = await Flags.getFeatureFlag('deepl', { severity: 'debug' })
+    const isEnabled = await Flags.getFeatureFlag('deepl')
 
     if (!isEnabled) throw new Error('DeepL usage is disabled; aborting.')
   }

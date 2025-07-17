@@ -50,7 +50,7 @@ export class PromptManager {
     this.#logger.log('info', 'Ensuring ChatGPT is enabled')
 
     const { Flags } = this.#client.managers
-    const isEnabled = await Flags.getFeatureFlag('chatgpt', { severity: 'debug' })
+    const isEnabled = await Flags.getFeatureFlag('chatgpt')
 
     if (!isEnabled) throw new Error('ChatGPT usage is disabled; aborting.')
   }

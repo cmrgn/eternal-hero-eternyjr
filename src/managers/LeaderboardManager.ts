@@ -26,7 +26,7 @@ export class LeaderboardManager {
     this.#logger.log('debug', 'Ensuring the FAQ leaderboard is enabled')
 
     const { Flags } = this.#client.managers
-    return Flags.getFeatureFlag('faq_leaderboard', { severity: 'debug' })
+    return Flags.getFeatureFlag('faq_leaderboard')
   }
 
   async register(options: {

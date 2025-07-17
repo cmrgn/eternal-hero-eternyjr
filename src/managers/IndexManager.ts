@@ -71,18 +71,9 @@ export class IndexManager {
     return this.index.namespace(this.getNamespaceName(namespaceName))
   }
 
-  async indexRecords(
-    entries: PineconeEntry[],
-    namespaceName: PineconeNamespace,
-    options?: { severity: Severity }
-  ) {
+  async indexRecords(entries: PineconeEntry[], namespaceName: PineconeNamespace) {
     const count = entries.length
     const namespace = this.namespace(namespaceName)
-
-    this.#logger.log(options?.severity ?? 'info', 'Indexing entries', {
-      count,
-      namespace: this.getNamespaceName(namespaceName),
-    })
 
     while (entries.length) {
       const batch = entries.splice(0, 90)
@@ -107,7 +98,7 @@ export class IndexManager {
     this.#logger.log('info', 'Indexing thread', { action: 'UPSERT', id: thread.id })
 
     const records = IndexManager.prepareForIndexing(thread)
-    await this.indexRecords(records, namespaceName, { severity: 'debug' })
+    await this.indexRecords(records, namespaceName)
   }
 
   async translateAndIndexThreadInAllLanguages(thread: ResolvedThread) {
