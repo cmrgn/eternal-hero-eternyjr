@@ -69,7 +69,7 @@ export class SearchManager {
 
         return { query, results }
       } catch (error) {
-        this.#log('warn', 'Vector search failed; falling back to fuzzy search.', error)
+        this.#log('warn', 'Vector search failed; falling back to fuzzy search.', { error })
 
         return this.search(query, 'FUZZY', namespaceName, limit)
       }

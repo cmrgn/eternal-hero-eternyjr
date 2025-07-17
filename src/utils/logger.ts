@@ -1,4 +1,8 @@
+import { Logtail } from '@logtail/node'
+import type { Context } from '@logtail/types'
 import type { ChatInputCommandInteraction } from 'discord.js'
+
+const logtail = new Logtail(process.env.LOGTAIL_TOKEN ?? '')
 
 const logCommand = (
   interaction: ChatInputCommandInteraction,
@@ -8,7 +12,7 @@ const logCommand = (
   const guild = interaction.guild
   const channel = guild?.channels.cache.find(channel => channel.id === interaction.channelId)
 
-  console.log(`[Command: ${interaction.commandName}]`, message, {
+  logtail.log(`[Command: ${interaction.commandName}]`, message, {
     ...extra,
     arguments: interaction.options.data,
     channelId: channel?.id,
@@ -22,10 +26,9 @@ export type LoggerSeverity = (typeof LOG_SEVERITIES)[number]
 
 const log =
   (scope: string, severityThreshold: number) =>
-  // biome-ignore lint/suspicious/noExplicitAny: safe
-  (type: (typeof LOG_SEVERITIES)[number], message: string, ...args: any[]) => {
+  (type: (typeof LOG_SEVERITIES)[number], message: string, context?: Context) => {
     if (LOG_SEVERITIES.indexOf(type) >= severityThreshold)
-      console[type](`[${scope}]`, message, ...args)
+      logtail[type].apply(logtail, [`[${scope}] ${message}`, context])
   }
 
 export const logger = {
