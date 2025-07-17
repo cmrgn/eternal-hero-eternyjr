@@ -27,7 +27,7 @@ export class IndexManager {
 
   constructor(client: Client, severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('debug', 'Instantiating manager')
+    this.#log('info', 'Instantiating manager')
 
     if (!process.env.PINECONE_API_KEY) {
       throw new Error('Missing environment variable PINECONE_API_KEY; aborting.')
@@ -57,7 +57,7 @@ export class IndexManager {
   }
 
   getNamespaceName(namespaceName: PineconeNamespace) {
-    this.#log('debug', 'Resolving namespace name', { namespaceName })
+    this.#log('info', 'Resolving namespace name', { namespaceName })
 
     const { Discord } = this.#client.managers
     // This is intended to avoid polluting the production indexes during development; this will
@@ -67,7 +67,7 @@ export class IndexManager {
   }
 
   namespace(namespaceName: PineconeNamespace) {
-    this.#log('debug', 'Getting namespace', { namespaceName })
+    this.#log('info', 'Getting namespace', { namespaceName })
 
     return this.index.namespace(this.getNamespaceName(namespaceName))
   }
@@ -88,7 +88,7 @@ export class IndexManager {
     while (entries.length) {
       const batch = entries.splice(0, 90)
       await withRetry(attempt => {
-        this.#log('debug', 'Indexing batch of entries', {
+        this.#log('info', 'Indexing batch of entries', {
           attempt,
           count: batch.length,
           namespace: this.getNamespaceName(namespaceName),
@@ -168,7 +168,7 @@ export class IndexManager {
   }
 
   bindEvents() {
-    this.#log('debug', 'Binding events onto the manager instance')
+    this.#log('info', 'Binding events onto the manager instance')
     const { Flags, Faq, Discord, Crowdin } = this.#client.managers
 
     Faq.on('ThreadCreated', async (thread: ResolvedThread) => {

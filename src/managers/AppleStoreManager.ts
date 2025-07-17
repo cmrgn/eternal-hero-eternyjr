@@ -56,7 +56,7 @@ export class AppleStoreManager {
 
   constructor(severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('debug', 'Instantiating manager')
+    this.#log('info', 'Instantiating manager')
     this.#jwt = this.generateJwt()
   }
 

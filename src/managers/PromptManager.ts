@@ -37,7 +37,7 @@ export class PromptManager {
 
   constructor(client: Client, severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('debug', 'Instantiating manager')
+    this.#log('info', 'Instantiating manager')
 
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('Missing environment variable OPENAI_API_KEY; aborting.')
@@ -48,7 +48,7 @@ export class PromptManager {
   }
 
   async ensureChatGPTIsEnabled() {
-    this.#log('debug', 'Ensuring ChatGPT is enabled')
+    this.#log('info', 'Ensuring ChatGPT is enabled')
 
     const { Flags } = this.#client.managers
     const isEnabled = await Flags.getFeatureFlag('chatgpt', { severity: 'debug' })

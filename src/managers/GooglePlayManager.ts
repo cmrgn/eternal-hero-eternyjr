@@ -34,7 +34,7 @@ export class GooglePlayManager {
 
   constructor(severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('debug', 'Instantiating manager')
+    this.#log('info', 'Instantiating manager')
     this.#ap = google.androidpublisher({
       auth: this.generateAuth(),
       version: 'v3',
@@ -66,13 +66,13 @@ export class GooglePlayManager {
     const now = Date.now()
 
     if (this.#cache.data && now - this.#cache.lastFetchedAt < this.#cache.ttl) {
-      this.#log('debug', 'Returning all in-app purchases from the cache')
+      this.#log('info', 'Returning all in-app purchases from the cache')
 
       return this.#cache.data
     }
 
     const response = await withRetry(attempt => {
-      this.#log('debug', 'Fetching all in-app purchases', { attempt })
+      this.#log('info', 'Fetching all in-app purchases', { attempt })
 
       return this.#ap.inappproducts.list({
         maxResults: 1000, // optional, default is 100
@@ -89,7 +89,7 @@ export class GooglePlayManager {
       })) ?? []
 
     if (iaps.length > 0) {
-      this.#log('debug', 'Caching all in-app purchases', { count: iaps.length })
+      this.#log('info', 'Caching all in-app purchases', { count: iaps.length })
 
       this.#cache.data = iaps
       this.#cache.lastFetchedAt = now

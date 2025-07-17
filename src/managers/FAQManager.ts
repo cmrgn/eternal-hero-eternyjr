@@ -73,7 +73,7 @@ export class FAQManager {
 
   constructor(client: Client, severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('debug', 'Instantiating manager')
+    this.#log('info', 'Instantiating manager')
 
     this.#client = client
     this.#threads = []
@@ -138,7 +138,7 @@ export class FAQManager {
   }
 
   async fetchThreads() {
-    this.#log('debug', 'Fetching all FAQ threads', { guildId: this.guildId })
+    this.#log('info', 'Fetching all FAQ threads', { guildId: this.guildId })
 
     const { Discord } = this.#client.managers
     const guild = await Discord.getGuild(this.#client, this.guildId)
@@ -146,11 +146,11 @@ export class FAQManager {
 
     const [activeThreadRes, archivedThreadRes] = await Promise.all([
       withRetry(attempt => {
-        this.#log('debug', 'Fetching active threads', { attempt, forumId: faq.id })
+        this.#log('info', 'Fetching active threads', { attempt, forumId: faq.id })
         return faq.threads.fetchActive()
       }),
       withRetry(attempt => {
-        this.#log('debug', 'Fetching inactive threads', { attempt, forumId: faq.id })
+        this.#log('info', 'Fetching inactive threads', { attempt, forumId: faq.id })
         return faq.threads.fetchArchived()
       }),
     ])
@@ -178,7 +178,7 @@ export class FAQManager {
 
   getFaqForum(guild: Guild) {
     if (this.#faqForum) {
-      this.#log('debug', 'Returning FAQ forum from cache', {
+      this.#log('info', 'Returning FAQ forum from cache', {
         channelId: this.#faqForum.id,
         guildId: guild.id,
       })
@@ -363,7 +363,7 @@ export class FAQManager {
   }
 
   bindEvents() {
-    this.#log('debug', 'Binding events onto the manager instance')
+    this.#log('info', 'Binding events onto the manager instance')
 
     this.#client.once(Events.ClientReady, this.cacheThreads.bind(this))
     this.#client.on(Events.ThreadCreate, this.onThreadCreate.bind(this))

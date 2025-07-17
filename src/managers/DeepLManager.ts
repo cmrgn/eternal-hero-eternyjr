@@ -19,7 +19,7 @@ export class DeepLManager {
 
   constructor(client: Client, severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('debug', 'Instantiating manager')
+    this.#log('info', 'Instantiating manager')
 
     if (!process.env.DEEPL_API_KEY) {
       throw new Error('Missing environment variable DEEPL_API_KEY; aborting.')
@@ -30,7 +30,7 @@ export class DeepLManager {
   }
 
   async ensureDeepLIsEnabled() {
-    this.#log('debug', 'Ensuring DeepL is enabled')
+    this.#log('info', 'Ensuring DeepL is enabled')
 
     const { Flags } = this.#client.managers
     const isEnabled = await Flags.getFeatureFlag('deepl', { severity: 'debug' })

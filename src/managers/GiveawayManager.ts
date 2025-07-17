@@ -97,7 +97,7 @@ export const initGiveawayManager = (client: Client) => {
   manager.on('giveawayReactionAdded', (giveaway, member) => {
     if (Discord.shouldIgnoreInteraction(giveaway)) return
 
-    log('debug', 'User entered giveaway', {
+    log('info', 'User entered giveaway', {
       messageId: giveaway.messageId,
       userId: member.user.id,
     })
@@ -106,7 +106,7 @@ export const initGiveawayManager = (client: Client) => {
   manager.on('giveawayReactionRemoved', (giveaway, member) => {
     if (Discord.shouldIgnoreInteraction(giveaway)) return
 
-    log('debug', 'User left giveaway', {
+    log('info', 'User left giveaway', {
       messageId: giveaway.messageId,
       userId: member.user.id,
     })

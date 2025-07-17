@@ -29,7 +29,7 @@ export class SearchManager {
 
   constructor(client: Client, severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('debug', 'Instantiating manager')
+    this.#log('info', 'Instantiating manager')
 
     this.#client = client
     this.#altFuse = new Fuse(
@@ -90,7 +90,7 @@ export class SearchManager {
 
   // Perform a vector search with Pinecone, with immediate reranking for better results.
   async searchVector(query: string, namespaceName: PineconeNamespace, limit = 1) {
-    this.#log('debug', 'Performing vector search', { limit, namespaceName, query })
+    this.#log('info', 'Performing vector search', { limit, namespaceName, query })
 
     const { Index } = this.#client.managers
     // We query and rerank more entries than the amount of results we want in order to improve
@@ -115,7 +115,7 @@ export class SearchManager {
   // the alt fuse to find a manually indexed keyword. If it finds one, it will redo the original
   // search with the new keyword. This helps padding some obvious gaps in search results.
   searchFuzzy(keyword: string) {
-    this.#log('debug', 'Performing fuzzy search', { keyword })
+    this.#log('info', 'Performing fuzzy search', { keyword })
 
     const { Faq } = this.#client.managers
     const primaryFuse = new Fuse(Faq.threads, {

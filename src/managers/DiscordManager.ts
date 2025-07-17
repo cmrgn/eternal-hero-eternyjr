@@ -40,7 +40,7 @@ export class DiscordManager {
   // runtime of the bot, such as for scripts
   constructor(severity: LoggerSeverity = 'info') {
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('debug', 'Instantiating manager')
+    this.#log('info', 'Instantiating manager')
 
     if (!process.env.DISCORD_CLIENT_ID) {
       throw new Error('Missing environment variable DISCORD_CLIENT_ID; aborting.')
@@ -91,7 +91,7 @@ export class DiscordManager {
     if (cachedGuild) return cachedGuild
 
     const fetchedGuild = await withRetry(attempt => {
-      this.#log('debug', 'Fetching guild', { attempt, guildId })
+      this.#log('info', 'Fetching guild', { attempt, guildId })
       return client.guilds.fetch(guildId)
     })
 

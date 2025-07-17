@@ -28,7 +28,7 @@ export class StoreManager {
     this.googlePlay = new GooglePlayManager()
 
     this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('debug', 'Instantiating manager')
+    this.#log('info', 'Instantiating manager')
   }
 
   async getStoreTranslations(crowdinCode: CrowdinCode) {
@@ -42,7 +42,7 @@ export class StoreManager {
   }
 
   parseFileData(file: File) {
-    this.#log('debug', 'Parsing file data', { file })
+    this.#log('info', 'Parsing file data', { file })
 
     const json = file.data.toString('utf-8')
     const data: Record<string, { name: string; description: string }> = JSON.parse(json)
