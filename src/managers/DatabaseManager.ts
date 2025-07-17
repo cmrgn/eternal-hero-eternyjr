@@ -1,5 +1,5 @@
 import type { GiveawayData } from 'discord-giveaways'
-import { Kysely, PostgresDialect } from 'kysely'
+import { Kysely, type LogEvent, PostgresDialect } from 'kysely'
 import { Pool } from 'pg'
 import { type LoggerSeverity, logger } from '../utils/logger'
 
@@ -23,7 +23,24 @@ export class DatabaseManager {
       ssl: { rejectUnauthorized: false },
     })
     const dialect = new PostgresDialect({ pool })
-    this.db = new Kysely<DB>({ dialect })
+    this.db = new Kysely<DB>({ dialect, log: this.logEvent.bind(this) })
+  }
+
+  logEvent(event: LogEvent) {
+    if (event.level === 'error') {
+      this.#log('error', 'Query failed', {
+        durationMs: event.queryDurationMillis,
+        error: event.error,
+        params: event.query.parameters,
+        sql: event.query.sql,
+      })
+    } else {
+      this.#log('info', 'Query executed', {
+        durationMs: event.queryDurationMillis,
+        params: event.query.parameters,
+        sql: event.query.sql,
+      })
+    }
   }
 
   destroy() {

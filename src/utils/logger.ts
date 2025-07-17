@@ -7,6 +7,12 @@ const logtail = new Logtail(process.env.LOGTAIL_TOKEN ?? '', {
   sendLogsToConsoleOutput: true,
 })
 
+export type LogFunction = (
+  type: (typeof LOG_SEVERITIES)[number],
+  message: string,
+  context?: Context
+) => void
+
 const logCommand = (
   interaction: ChatInputCommandInteraction,
   message: string,
@@ -33,8 +39,8 @@ export const LOG_SEVERITIES = ['debug', 'info', 'warn', 'error'] as const
 export type LoggerSeverity = (typeof LOG_SEVERITIES)[number]
 
 const log =
-  (scope: string, severityThreshold: number) =>
-  (type: (typeof LOG_SEVERITIES)[number], message: string, context?: Context) => {
+  (scope: string, severityThreshold: number): LogFunction =>
+  (type, message, context) => {
     if (LOG_SEVERITIES.indexOf(type) >= severityThreshold) {
       if (process.env.NODE_ENV === 'production') {
         logtail[type](message, { ...context, scope })
