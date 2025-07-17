@@ -23,10 +23,7 @@ const logCommand = (
   }
 
   if (process.env.NODE_ENV === 'production') {
-    logtail.log(`[Command: ${interaction.commandName}]`, message, {
-      ...context,
-      command: interaction.commandName,
-    })
+    logtail.log(message, 'info', { ...context, scope: `/${interaction.commandName}` })
   } else {
     console.log(`[Command: ${interaction.commandName}]`, message, context)
   }
@@ -40,9 +37,11 @@ const log =
   (type: (typeof LOG_SEVERITIES)[number], message: string, context?: Context) => {
     if (LOG_SEVERITIES.indexOf(type) >= severityThreshold) {
       if (process.env.NODE_ENV === 'production') {
-        logtail[type](`[${scope}] ${message}`, { ...context, scope })
+        logtail[type](message, { ...context, scope })
       } else {
-        console[type](`[${scope}] ${message}`, context)
+        context
+          ? console[type](`[${scope}]`, message, context)
+          : console[type](`[${scope}]`, message)
       }
     }
   }
