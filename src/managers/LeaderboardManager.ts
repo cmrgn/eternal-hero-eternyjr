@@ -24,7 +24,7 @@ export class LeaderboardManager {
   }
 
   isLeaderboardEnabled() {
-    this.#log('info', 'Ensuring the FAQ leaderboard is enabled')
+    this.#log('debug', 'Ensuring the FAQ leaderboard is enabled')
 
     const { Flags } = this.#client.managers
     return Flags.getFeatureFlag('faq_leaderboard', { severity: 'debug' })
@@ -84,8 +84,6 @@ export class LeaderboardManager {
     event: Events.MessageCreate | Events.MessageDelete,
     message: DiscordMessage
   ) {
-    this.#log('info', 'FAQ link created or deleted', { event, messageId: message.id })
-
     const { client, guildId, channelId, member, content } = message
     const { Faq, Discord } = client.managers
 
@@ -99,6 +97,8 @@ export class LeaderboardManager {
     // whatsoever, otherwise return early.
     if (!FAQManager.containsLinkLike(content)) return
     if (!Faq.links.some(link => content.includes(link))) return
+
+    this.#log('info', 'FAQ link created or deleted', { event, messageId: message.id })
 
     const hasAddedMessage = event === Events.MessageCreate
     const hasDeletedMessage = event === Events.MessageDelete
