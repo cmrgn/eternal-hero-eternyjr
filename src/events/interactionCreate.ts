@@ -1,11 +1,10 @@
 import { type Interaction, MessageFlags } from 'discord.js'
-import { logger } from '../utils/logger'
 import { handleAutocomplete } from './interactionCreate.autocomplete'
 import { handleButtons } from './interactionCreate.buttons'
 
 export async function onInteractionCreate(interaction: Interaction) {
   const { user, client } = interaction
-  const { Discord } = client.managers
+  const { Discord, CommandLogger } = client.managers
 
   // Abort if this interaction is coming from a bot, as this shouldn’t happen.
   if (user.bot) return
@@ -23,7 +22,9 @@ export async function onInteractionCreate(interaction: Interaction) {
   } catch (error) {
     const message = 'There was an error while executing this command.'
 
-    logger.logCommand(interaction, 'There was an error while executing this command.', { error })
+    CommandLogger.logCommand(interaction, 'There was an error while executing this command.', {
+      error,
+    })
     await Discord.sendInteractionAlert(interaction, `${message}\n\`\`\`${error}\`\`\``)
 
     if (interaction.replied || interaction.deferred)

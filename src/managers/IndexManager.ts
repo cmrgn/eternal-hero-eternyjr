@@ -1,9 +1,9 @@
 import { type Index, Pinecone, type RecordMetadata } from '@pinecone-database/pinecone'
 import type { Client } from 'discord.js'
 import type { CrowdinCode, LanguageObject } from '../constants/i18n'
-import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 import type { ResolvedThread } from './FAQManager'
+import { LogManager, type Severity } from './LogManager'
 
 export type PineconeMetadata = {
   entry_question: string
@@ -22,12 +22,11 @@ export class IndexManager {
   #client: Client
   index: Index<RecordMetadata>
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('IndexManager', this.#severityThreshold)
+  #logger: LogManager
 
-  constructor(client: Client, severity: LoggerSeverity = 'info') {
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+  constructor(client: Client, severity: Severity = 'info') {
+    this.#logger = new LogManager('IndexManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
 
     if (!process.env.PINECONE_API_KEY) {
       throw new Error('Missing environment variable PINECONE_API_KEY; aborting.')
@@ -57,7 +56,7 @@ export class IndexManager {
   }
 
   getNamespaceName(namespaceName: PineconeNamespace) {
-    this.#log('info', 'Resolving namespace name', { namespaceName })
+    this.#logger.log('info', 'Resolving namespace name', { namespaceName })
 
     const { Discord } = this.#client.managers
     // This is intended to avoid polluting the production indexes during development; this will
@@ -67,7 +66,7 @@ export class IndexManager {
   }
 
   namespace(namespaceName: PineconeNamespace) {
-    this.#log('info', 'Getting namespace', { namespaceName })
+    this.#logger.log('info', 'Getting namespace', { namespaceName })
 
     return this.index.namespace(this.getNamespaceName(namespaceName))
   }
@@ -75,12 +74,12 @@ export class IndexManager {
   async indexRecords(
     entries: PineconeEntry[],
     namespaceName: PineconeNamespace,
-    options?: { severity: LoggerSeverity }
+    options?: { severity: Severity }
   ) {
     const count = entries.length
     const namespace = this.namespace(namespaceName)
 
-    this.#log(options?.severity ?? 'info', 'Indexing entries', {
+    this.#logger.log(options?.severity ?? 'info', 'Indexing entries', {
       count,
       namespace: this.getNamespaceName(namespaceName),
     })
@@ -89,7 +88,7 @@ export class IndexManager {
       const batch = entries.splice(0, 90)
       await withRetry(
         attempt => {
-          this.#log('info', 'Indexing batch of entries', {
+          this.#logger.log('info', 'Indexing batch of entries', {
             attempt,
             count: batch.length,
             namespace: this.getNamespaceName(namespaceName),
@@ -97,7 +96,7 @@ export class IndexManager {
 
           return namespace.upsertRecords(batch)
         },
-        { logFn: this.#log }
+        { logger: this.#logger }
       )
     }
 
@@ -105,7 +104,7 @@ export class IndexManager {
   }
 
   async indexThread(thread: ResolvedThread, namespaceName: PineconeNamespace) {
-    this.#log('info', 'Indexing thread', { action: 'UPSERT', id: thread.id })
+    this.#logger.log('info', 'Indexing thread', { action: 'UPSERT', id: thread.id })
 
     const records = IndexManager.prepareForIndexing(thread)
     await this.indexRecords(records, namespaceName, { severity: 'debug' })
@@ -114,7 +113,7 @@ export class IndexManager {
   async translateAndIndexThreadInAllLanguages(thread: ResolvedThread) {
     const { Crowdin } = this.#client.managers
 
-    this.#log('info', 'Indexing thread in all languages', {
+    this.#logger.log('info', 'Indexing thread in all languages', {
       action: 'UPSERT',
       id: thread.id,
     })
@@ -126,7 +125,7 @@ export class IndexManager {
     try {
       await withRetry(
         attempt => {
-          this.#log('info', 'Unindexing thread', {
+          this.#logger.log('info', 'Unindexing thread', {
             attempt,
             id: threadId,
             namespace: this.getNamespaceName(namespaceName),
@@ -136,14 +135,14 @@ export class IndexManager {
             id: { $regex: `^entry#${threadId}` },
           })
         },
-        { logFn: this.#log }
+        { logger: this.#logger }
       )
     } catch (error) {
       // Unindexing may fail with a 404 if the resource didn’t exist in the index to begin with
       const isError = error instanceof Error
 
       if (isError && error.message.includes('404')) {
-        this.#log('info', 'Thread not found in index; skipping deletion', {
+        this.#logger.log('info', 'Thread not found in index; skipping deletion', {
           namespace: this.getNamespaceName(namespaceName),
           threadId,
         })
@@ -156,7 +155,7 @@ export class IndexManager {
   unindexThreadInAllLanguages(threadId: string) {
     const { Crowdin } = this.#client.managers
 
-    this.#log('info', 'Unindexing thread in all languages', { id: threadId })
+    this.#logger.log('info', 'Unindexing thread in all languages', { id: threadId })
 
     return Crowdin.onCrowdinLanguages(({ crowdinCode }) =>
       this.unindexThread(threadId, crowdinCode)
@@ -174,14 +173,14 @@ export class IndexManager {
   }
 
   bindEvents() {
-    this.#log('info', 'Binding events onto the manager instance')
+    this.#logger.log('info', 'Binding events onto the manager instance')
     const { Flags, Faq, Discord, Crowdin } = this.#client.managers
 
     Faq.on('ThreadCreated', async (thread: ResolvedThread) => {
       if (await Flags.getFeatureFlag('auto_indexing')) {
         await this.translateAndIndexThreadInAllLanguages(thread)
       } else {
-        this.#log('info', 'Auto-indexing is disabled; aborting', { threadId: thread.id })
+        this.#logger.log('info', 'Auto-indexing is disabled; aborting', { threadId: thread.id })
       }
     })
 
@@ -189,7 +188,7 @@ export class IndexManager {
       if (await Flags.getFeatureFlag('auto_indexing')) {
         await this.unindexThreadInAllLanguages(threadId)
       } else {
-        this.#log('info', 'Auto-indexing is disabled; aborting', { threadId })
+        this.#logger.log('info', 'Auto-indexing is disabled; aborting', { threadId })
       }
     })
 
@@ -197,7 +196,7 @@ export class IndexManager {
       if (await Flags.getFeatureFlag('auto_indexing')) {
         await this.translateAndIndexThreadInAllLanguages(thread)
       } else {
-        this.#log('info', 'Auto-indexing is disabled; aborting', { threadId: thread.id })
+        this.#logger.log('info', 'Auto-indexing is disabled; aborting', { threadId: thread.id })
       }
     })
 
@@ -214,7 +213,7 @@ export class IndexManager {
           await this.translateAndIndexThreadInAllLanguages(thread)
         }
       } else {
-        this.#log('info', 'Auto-indexing is disabled; aborting', { thread: thread.id })
+        this.#logger.log('info', 'Auto-indexing is disabled; aborting', { thread: thread.id })
       }
     })
 

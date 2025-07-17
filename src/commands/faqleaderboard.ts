@@ -5,7 +5,6 @@ import {
   userMention,
 } from 'discord.js'
 import { DiscordManager } from '../managers/DiscordManager'
-import { logger } from '../utils/logger'
 
 export const scope = 'PUBLIC'
 
@@ -22,15 +21,13 @@ export const data = new SlashCommandBuilder()
   .setContexts(InteractionContextType.Guild)
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.logCommand(interaction, 'Starting command execution')
-
   const { guildId, client, options } = interaction
-  const { Leaderboard } = client.managers
+  const { Leaderboard, CommandLogger } = client.managers
   const size = options.getInteger('size') ?? 5
 
   if (!guildId) return
 
-  logger.logCommand(interaction, 'Retrieving leaderboard data')
+  CommandLogger.logCommand(interaction, 'Starting command execution')
   const leaderboard = await Leaderboard.getLeaderboard(guildId, size)
 
   const embed = DiscordManager.createEmbed().setTitle('FAQ Leaderboard')

@@ -6,25 +6,24 @@ import {
   type PartialMessage,
 } from 'discord.js'
 import { sql } from 'kysely'
-import { type LoggerSeverity, logger } from '../utils/logger'
 import { FAQManager } from './FAQManager'
+import { LogManager, type Severity } from './LogManager'
 
 type DiscordMessage = OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>
 
 export class LeaderboardManager {
   #client: Client
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('LeaderboardManager', this.#severityThreshold)
+  #logger: LogManager
 
-  constructor(client: Client, severity: LoggerSeverity = 'info') {
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+  constructor(client: Client, severity: Severity = 'info') {
+    this.#logger = new LogManager('LeaderboardManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
     this.#client = client
   }
 
   isLeaderboardEnabled() {
-    this.#log('debug', 'Ensuring the FAQ leaderboard is enabled')
+    this.#logger.log('debug', 'Ensuring the FAQ leaderboard is enabled')
 
     const { Flags } = this.#client.managers
     return Flags.getFeatureFlag('faq_leaderboard', { severity: 'debug' })
@@ -37,7 +36,7 @@ export class LeaderboardManager {
     messageId?: string
     increment?: number
   }) {
-    this.#log('info', 'Registering contribution', options)
+    this.#logger.log('info', 'Registering contribution', options)
 
     const { Database } = this.#client.managers
     const { userId, guildId, increment = 1 } = options
@@ -57,7 +56,7 @@ export class LeaderboardManager {
         )
         .execute()
     } catch (error) {
-      this.#log('error', 'Failed to record contribution', {
+      this.#logger.log('error', 'Failed to record contribution', {
         ...options,
         error,
       })
@@ -65,7 +64,7 @@ export class LeaderboardManager {
   }
 
   async getLeaderboard(guildId: string, limit: number) {
-    this.#log('info', 'Retrieving leaderboard', { guildId, limit })
+    this.#logger.log('info', 'Retrieving leaderboard', { guildId, limit })
 
     const { Database } = this.#client.managers
 
@@ -90,7 +89,7 @@ export class LeaderboardManager {
     if (!member || !guildId || !content) return
     if (Discord.shouldIgnoreInteraction(message)) return
     if (!(await this.isLeaderboardEnabled())) {
-      return this.#log('info', 'FAQ leaderboard is disabled; aborting.')
+      return this.#logger.log('info', 'FAQ leaderboard is disabled; aborting.')
     }
 
     // Perform a quick and cheap check to figure out whether the message contains any link
@@ -98,7 +97,7 @@ export class LeaderboardManager {
     if (!FAQManager.containsLinkLike(content)) return
     if (!Faq.links.some(link => content.includes(link))) return
 
-    this.#log('info', 'FAQ link created or deleted', { event, messageId: message.id })
+    this.#logger.log('info', 'FAQ link created or deleted', { event, messageId: message.id })
 
     const hasAddedMessage = event === Events.MessageCreate
     const hasDeletedMessage = event === Events.MessageDelete
@@ -152,7 +151,7 @@ export class LeaderboardManager {
 
     if (hadOldMessageLinks === hasNewMessageLinks) return
     if (!(await this.isLeaderboardEnabled())) {
-      return this.#log('info', 'FAQ leaderboard is disabled; aborting.')
+      return this.#logger.log('info', 'FAQ leaderboard is disabled; aborting.')
     }
 
     const hasRemovedLinks = hadOldMessageLinks && !hasNewMessageLinks
@@ -170,7 +169,7 @@ export class LeaderboardManager {
   }
 
   bindEvents() {
-    this.#log('info', 'Binding events onto the manager instance')
+    this.#logger.log('info', 'Binding events onto the manager instance')
 
     // Look for FAQ links in any message in order to maintain the FAQ leaderboard.
     this.#client.on(Events.MessageCreate, this.faqLinksOnCreate.bind(this))

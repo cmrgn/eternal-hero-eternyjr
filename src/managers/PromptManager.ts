@@ -2,8 +2,8 @@ import type { Client } from 'discord.js'
 import OpenAI from 'openai'
 import type { LanguageObject } from '../constants/i18n'
 import { getExcerpt } from '../utils/getExcerpt'
-import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
+import { LogManager, type Severity } from './LogManager'
 
 const SYSTEM_PROMPT = `
 Sole purpose:
@@ -32,12 +32,11 @@ export class PromptManager {
   #client: Client
   #openai: OpenAI
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('PromptManager', this.#severityThreshold)
+  #logger: LogManager
 
-  constructor(client: Client, severity: LoggerSeverity = 'info') {
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+  constructor(client: Client, severity: Severity = 'info') {
+    this.#logger = new LogManager('PromptManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
 
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('Missing environment variable OPENAI_API_KEY; aborting.')
@@ -48,7 +47,7 @@ export class PromptManager {
   }
 
   async ensureChatGPTIsEnabled() {
-    this.#log('info', 'Ensuring ChatGPT is enabled')
+    this.#logger.log('info', 'Ensuring ChatGPT is enabled')
 
     const { Flags } = this.#client.managers
     const isEnabled = await Flags.getFeatureFlag('chatgpt', { severity: 'debug' })
@@ -61,7 +60,7 @@ export class PromptManager {
 
     const response = await withRetry(
       attempt => {
-        this.#log('info', 'Prompting ChatGPT', {
+        this.#logger.log('info', 'Prompting ChatGPT', {
           attempt,
           model,
           prompt: getExcerpt(userPrompt),
@@ -75,7 +74,7 @@ export class PromptManager {
           model,
         })
       },
-      { logFn: this.#log }
+      { logger: this.#logger }
     )
 
     return response.choices[0].message?.content?.trim()
@@ -89,7 +88,7 @@ export class PromptManager {
       languageObject: LanguageObject
     }
   ) {
-    this.#log('info', 'Summarizing with ChatGPT', {
+    this.#logger.log('info', 'Summarizing with ChatGPT', {
       threadName: context.question,
       userQuestion,
     })

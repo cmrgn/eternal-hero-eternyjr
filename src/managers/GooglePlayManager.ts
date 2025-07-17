@@ -1,7 +1,7 @@
 import { type androidpublisher_v3, google } from 'googleapis'
 import { LANGUAGE_OBJECTS, type Locale } from '../constants/i18n'
-import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
+import { LogManager, type Severity } from './LogManager'
 
 export type IapLocalizationFields = { title: string; description: string }
 
@@ -29,12 +29,11 @@ export class GooglePlayManager {
     ttl: 15 * 60 * 1000, // 15 minutes
   }
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('GooglePlayManager', this.#severityThreshold)
+  #logger: LogManager
 
-  constructor(severity: LoggerSeverity = 'info') {
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+  constructor(severity: Severity = 'info') {
+    this.#logger = new LogManager('GooglePlayManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
     this.#ap = google.androidpublisher({
       auth: this.generateAuth(),
       version: 'v3',
@@ -61,26 +60,26 @@ export class GooglePlayManager {
   }
 
   async getAllIaps() {
-    this.#log('info', 'Getting all in-app purchases')
+    this.#logger.log('info', 'Getting all in-app purchases')
 
     const now = Date.now()
 
     if (this.#cache.data && now - this.#cache.lastFetchedAt < this.#cache.ttl) {
-      this.#log('info', 'Returning all in-app purchases from the cache')
+      this.#logger.log('info', 'Returning all in-app purchases from the cache')
 
       return this.#cache.data
     }
 
     const response = await withRetry(
       attempt => {
-        this.#log('info', 'Fetching all in-app purchases', { attempt })
+        this.#logger.log('info', 'Fetching all in-app purchases', { attempt })
 
         return this.#ap.inappproducts.list({
           maxResults: 1000, // optional, default is 100
           packageName: this.#packageName,
         })
       },
-      { logFn: this.#log }
+      { logger: this.#logger }
     )
 
     const iaps: InAppPurchase[] =
@@ -92,7 +91,7 @@ export class GooglePlayManager {
       })) ?? []
 
     if (iaps.length > 0) {
-      this.#log('info', 'Caching all in-app purchases', { count: iaps.length })
+      this.#logger.log('info', 'Caching all in-app purchases', { count: iaps.length })
 
       this.#cache.data = iaps
       this.#cache.lastFetchedAt = now
@@ -102,13 +101,13 @@ export class GooglePlayManager {
   }
 
   async updateIapLocalization(iap: InAppPurchase, listings: Listings) {
-    this.#log('info', 'Updating in-app purchase localization', {
+    this.#logger.log('info', 'Updating in-app purchase localization', {
       id: iap.sku,
       listings,
     })
 
     if (!iap.sku) {
-      return this.#log('warn', 'Missing in-app purchase SKU for update; aborting', {
+      return this.#logger.log('warn', 'Missing in-app purchase SKU for update; aborting', {
         id: iap.sku,
         listings,
       })

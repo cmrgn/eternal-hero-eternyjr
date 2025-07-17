@@ -1,5 +1,4 @@
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
-import { logger } from '../utils/logger'
 
 export const scope = 'PUBLIC'
 
@@ -11,9 +10,11 @@ export const data = new SlashCommandBuilder()
   .setDescription('Say something via the bot')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.logCommand(interaction, 'Starting command execution')
+  const { options, client, channel } = interaction
+  const { CommandLogger } = client.managers
 
-  const { options, channel } = interaction
+  CommandLogger.logCommand(interaction, 'Starting command execution')
+
   const message = options.getString('message', true)
 
   if (!channel?.isSendable()) throw new Error('Cannot send a message in channel.')

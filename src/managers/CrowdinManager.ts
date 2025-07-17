@@ -3,10 +3,10 @@ import csvtojson from 'csvtojson'
 import decompress, { type File } from 'decompress'
 import type { Client } from 'discord.js'
 import { type CrowdinCode, LANGUAGE_OBJECTS, type LanguageObject } from '../constants/i18n'
-import { type LoggerSeverity, logger } from '../utils/logger'
 import { request } from '../utils/request'
 import { withRetry } from '../utils/withRetry'
 import type { LocalizationItem } from './LocalizationManager'
+import { LogManager, type Severity } from './LogManager'
 
 export type {
   LanguagesModel,
@@ -37,12 +37,11 @@ export class CrowdinManager {
     ttl: 15 * 60 * 1000, // 15 minutes
   }
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('CrowdinManager', this.#severityThreshold)
+  #logger: LogManager
 
-  constructor(client: Client, severity: LoggerSeverity = 'info') {
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+  constructor(client: Client, severity: Severity = 'info') {
+    this.#logger = new LogManager('CrowdinManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
 
     if (!process.env.CROWDIN_TOKEN) {
       throw new Error('Missing environment variable CROWDIN_TOKEN; aborting.')
@@ -64,33 +63,33 @@ export class CrowdinManager {
   async getProjectProgress(projectId = this.#gameProjectId) {
     const { data: projectProgress } = await withRetry(
       attempt => {
-        this.#log('info', 'Getting project progress', { attempt })
+        this.#logger.log('info', 'Getting project progress', { attempt })
         return this.#crowdin.translationStatusApi.getProjectProgress(projectId)
       },
-      { logFn: this.#log }
+      { logger: this.#logger }
     )
 
     return projectProgress
   }
 
   async buildProject(projectId: number) {
-    this.#log('info', 'Building project', { projectId })
+    this.#logger.log('info', 'Building project', { projectId })
 
     try {
       const {
         data: { id: buildId },
       } = await withRetry(
         attempt => {
-          this.#log('info', 'Building project', { attempt, projectId })
+          this.#logger.log('info', 'Building project', { attempt, projectId })
           return this.#crowdin.translationsApi.buildProject(projectId)
         },
-        { logFn: this.#log }
+        { logger: this.#logger }
       )
       return buildId
     } catch {
       const builds = await withRetry(
         attempt => {
-          this.#log('warn', 'Building project failed, falling back to latest build', {
+          this.#logger.log('warn', 'Building project failed, falling back to latest build', {
             attempt,
             projectId,
           })
@@ -98,7 +97,7 @@ export class CrowdinManager {
             limit: 1,
           })
         },
-        { logFn: this.#log }
+        { logger: this.#logger }
       )
 
       return builds.data[0].data.id
@@ -106,20 +105,20 @@ export class CrowdinManager {
   }
 
   async waitForBuild(buildId: number, projectId: number) {
-    this.#log('info', 'Waiting for build to finish', { buildId, projectId })
+    this.#logger.log('info', 'Waiting for build to finish', { buildId, projectId })
 
     let status = 'inProgress'
     while (status === 'inProgress') {
       const { data } = await withRetry(
         attempt => {
-          this.#log('info', 'Waiting for build to finish', {
+          this.#logger.log('info', 'Waiting for build to finish', {
             attempt,
             buildId,
             projectId,
           })
           return this.#crowdin.translationsApi.checkBuildStatus(projectId, buildId)
         },
-        { logFn: this.#log }
+        { logger: this.#logger }
       )
       status = data.status
       if (status === 'failed') throw new Error('Crowdin build failed')
@@ -128,7 +127,7 @@ export class CrowdinManager {
   }
 
   async downloadBuildArtefact(buildId: number, projectId: number) {
-    this.#log('info', 'Downloading build artefact', {
+    this.#logger.log('info', 'Downloading build artefact', {
       buildId,
       projectId,
     })
@@ -136,11 +135,11 @@ export class CrowdinManager {
     // Retrieve the URL to download the zip file with all CSV translation files
     const { data } = await withRetry(
       () => this.#crowdin.translationsApi.downloadTranslations(projectId, buildId),
-      { logFn: this.#log }
+      { logger: this.#logger }
     )
 
     // Download the archive
-    const zipBuffer = await request(this.#log, data.url, undefined, 'buffer')
+    const zipBuffer = await request(this.#logger, data.url, undefined, 'buffer')
 
     // Unzip the archive
     return decompress(zipBuffer)
@@ -155,7 +154,7 @@ export class CrowdinManager {
         const json = await csvtojson().fromString(content)
         jsons.push(json)
       } catch (error) {
-        this.#log('warn', 'Failed to parse CSV', { error, path: file.path })
+        this.#logger.log('warn', 'Failed to parse CSV', { error, path: file.path })
       }
     }
 
@@ -178,7 +177,7 @@ export class CrowdinManager {
   }
 
   async fetchAllProjectTranslations(forceRefresh = false, projectId = this.#gameProjectId) {
-    this.#log('info', 'Fetching all project files', {
+    this.#logger.log('info', 'Fetching all project files', {
       forceRefresh,
       projectId,
     })
@@ -188,7 +187,7 @@ export class CrowdinManager {
     const lastFetchedAt = this.#cache.lastFetchedAt.get(projectId) ?? 0
 
     if (!forceRefresh && cachedFiles && now - lastFetchedAt < this.#cache.ttl) {
-      this.#log('info', 'Reading all project files from cache', {
+      this.#logger.log('info', 'Reading all project files from cache', {
         age: now - lastFetchedAt,
         projectId,
         ttl: this.#cache.ttl,
@@ -207,7 +206,7 @@ export class CrowdinManager {
   }
 
   async fetchStoreTranslations(forceRefresh = false) {
-    this.#log('info', 'Fetching store translations', { forceRefresh })
+    this.#logger.log('info', 'Fetching store translations', { forceRefresh })
 
     const files = await this.fetchAllProjectTranslations(forceRefresh, this.#storeProjectId)
 

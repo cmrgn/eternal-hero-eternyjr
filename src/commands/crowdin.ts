@@ -2,7 +2,6 @@ import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } f
 import { type CrowdinCode, LANGUAGE_OBJECTS, type LanguageObject } from '../constants/i18n'
 import type { ResponseObject, TranslationStatusModel } from '../managers/CrowdinManager'
 import type { LocalizationItem } from '../managers/LocalizationManager'
-import { logger } from '../utils/logger'
 
 export const scope = 'OFFICIAL'
 
@@ -49,15 +48,16 @@ export const data = new SlashCommandBuilder()
   .setDescription('Interact with Crowdin')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+  const { CommandLogger } = interaction.client.managers
   const subCommand = interaction.options.getSubcommand()
-  logger.logCommand(interaction, 'Starting command execution', { subCommand })
+  CommandLogger.logCommand(interaction, 'Starting command execution')
   if (subCommand === 'progress') return commandProgress(interaction)
   if (subCommand === 'term') return commandTerm(interaction)
 }
 
 async function commandProgress(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
-  const { Crowdin } = client.managers
+  const { Crowdin, CommandLogger } = client.managers
   const crowdinCode = options.getString('language') as CrowdinCode | undefined
   const visible = options.getBoolean('visible') ?? false
   const flags = visible ? undefined : MessageFlags.Ephemeral
@@ -72,7 +72,7 @@ async function commandProgress(interaction: ChatInputCommandInteraction) {
     const languageData = projectProgress.find(({ data }) => data.languageId === crowdinCode)
 
     if (!languageData) {
-      logger.logCommand(interaction, 'Missing language object', { locale: crowdinCode })
+      CommandLogger.logCommand(interaction, 'Missing language object', { locale: crowdinCode })
 
       return interaction.reply({
         content: `Could not find language object for \`${crowdinCode}\`.`,
@@ -100,7 +100,7 @@ function formatLanguageProgress({
 
 async function commandTerm(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
-  const { Crowdin } = client.managers
+  const { Crowdin, CommandLogger } = client.managers
   const key = options.getString('key', true)
   const crowdinCode = options.getString('language') as CrowdinCode | undefined
   const visible = options.getBoolean('visible') ?? false
@@ -113,7 +113,7 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
   const string = translations.find(translation => translation.key === key)
 
   if (!string) {
-    logger.logCommand(interaction, 'Missing string object', { key })
+    CommandLogger.logCommand(interaction, 'Missing string object', { key })
     return interaction.editReply({
       content: `Could not find translation object for \`${key}\`.`,
     })
@@ -125,7 +125,7 @@ async function commandTerm(interaction: ChatInputCommandInteraction) {
     const languageObject = languageObjects.find(object => object.crowdinCode === crowdinCode)
 
     if (!languageObject) {
-      logger.logCommand(interaction, 'Missing language object', {
+      CommandLogger.logCommand(interaction, 'Missing language object', {
         locale: crowdinCode,
       })
       const error = `Could not find language object for \`${crowdinCode}\`.`

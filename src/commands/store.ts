@@ -36,7 +36,9 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   const { client, options } = interaction
-  const { Store, Crowdin, Discord } = client.managers
+  const { Store, Crowdin, Discord, CommandLogger } = client.managers
+
+  CommandLogger.logCommand(interaction, 'Starting command execution')
 
   const iapId = options.getString('iap')
   const platform = options.getString('platform') ?? 'BOTH'

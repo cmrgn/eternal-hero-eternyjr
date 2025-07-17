@@ -8,7 +8,6 @@ import {
   type SlashCommandStringOption,
 } from 'discord.js'
 import ms, { type StringValue } from 'ms'
-import { logger } from '../utils/logger'
 
 export const scope = 'PUBLIC'
 
@@ -107,20 +106,20 @@ function ensureLegitimacy(interaction: ChatInputCommandInteraction) {
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+  const { client, options, channel } = interaction
+  const { Giveaways, CommandLogger } = client.managers
+  const subcommand = options.getSubcommand()
+  const isStart = subcommand === 'start'
+  const messageId = options.getString('message_id', !isStart) ?? ''
+
+  CommandLogger.logCommand(interaction, 'Starting command execution')
+
   try {
-    logger.logCommand(interaction, 'Starting command execution')
-
-    const { client, options, channel } = interaction
-    const { Giveaways } = client.managers
-    const subcommand = options.getSubcommand()
-    const isStart = subcommand === 'start'
-    const messageId = options.getString('message_id', !isStart) ?? ''
-
     if (!isStart) ensureLegitimacy(interaction)
 
     switch (subcommand) {
       case 'start': {
-        logger.logCommand(interaction, 'Starting giveaway')
+        CommandLogger.logCommand(interaction, 'Starting giveaway')
 
         if (channel?.type !== ChannelType.GuildText) {
           return interaction.reply({ content: 'Cannot start giveaway in this channel.' })
@@ -137,7 +136,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         break
       }
       case 'reroll': {
-        logger.logCommand(interaction, 'Rerolling giveaway')
+        CommandLogger.logCommand(interaction, 'Rerolling giveaway')
 
         await Giveaways.reroll(messageId, {
           winnerCount: options.getInteger('new_winner_count') ?? undefined,
@@ -148,7 +147,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }
       case 'edit': {
         const extraDuration = options.getString('extra_duration')
-        logger.logCommand(interaction, 'Editing giveaway')
+        CommandLogger.logCommand(interaction, 'Editing giveaway')
 
         await Giveaways.edit(messageId, {
           addTime: extraDuration ? ms(extraDuration as StringValue) : undefined,
@@ -160,7 +159,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         break
       }
       case 'delete': {
-        logger.logCommand(interaction, 'Deleting giveaway')
+        CommandLogger.logCommand(interaction, 'Deleting giveaway')
 
         await Giveaways.delete(messageId)
         await interaction.reply(initiatorAnswer(messageId, 'deleted'))
@@ -168,7 +167,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         break
       }
       case 'end': {
-        logger.logCommand(interaction, 'Ending giveaway')
+        CommandLogger.logCommand(interaction, 'Ending giveaway')
 
         await Giveaways.end(messageId)
         await interaction.reply(initiatorAnswer(messageId, 'ended'))
@@ -177,7 +176,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }
     }
   } catch (error) {
-    logger.logCommand(interaction, 'Command execution', { error })
+    CommandLogger.logCommand(interaction, 'Command execution', { error })
     await interaction.reply(initiatorError())
   }
 }

@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken'
 import removeAccents from 'remove-accents'
 import type { LanguageObject } from '../constants/i18n'
-import { type LoggerSeverity, logger } from '../utils/logger'
 import { request } from '../utils/request'
+import { LogManager, type Severity } from './LogManager'
 
 export type IapLocalizationFields = { name: string; description: string }
 
@@ -50,12 +50,11 @@ export class AppleStoreManager {
     ttl: 15 * 60 * 1000, // 15 minutes
   }
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('AppleStoreManager', this.#severityThreshold)
+  #logger: LogManager
 
-  constructor(severity: LoggerSeverity = 'info') {
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+  constructor(severity: Severity = 'info') {
+    this.#logger = new LogManager('AppleStoreManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
     this.#jwt = this.generateJwt()
   }
 
@@ -114,12 +113,12 @@ export class AppleStoreManager {
     const context = { body, method, path }
     const headers = this.headers
 
-    this.#log('info', 'Calling Apple Store API', context)
-    return request(this.#log, path, { body, headers, method })
+    this.#logger.log('info', 'Calling Apple Store API', context)
+    return request(this.#logger, path, { body, headers, method })
   }
 
   async getAllIaps() {
-    this.#log('info', 'Fetching all in-app purchases')
+    this.#logger.log('info', 'Fetching all in-app purchases')
 
     const getAllPages = async (initialUrl: string) => {
       let results: InAppPurchase[] = []
@@ -150,7 +149,7 @@ export class AppleStoreManager {
   }
 
   async getIapInfo(data: InAppPurchase): Promise<LocalizedIap> {
-    this.#log('info', 'Getting in-app purchase info', {
+    this.#logger.log('info', 'Getting in-app purchase info', {
       id: data.id,
       slug: data.attributes.productId,
     })
@@ -168,7 +167,7 @@ export class AppleStoreManager {
   }
 
   async getIapLocalization(locale: string, relatedUrl: string) {
-    this.#log('info', 'Getting in-app purchase localization', {
+    this.#logger.log('info', 'Getting in-app purchase localization', {
       locale,
       relatedUrl,
     })
@@ -195,7 +194,7 @@ export class AppleStoreManager {
     const locale = languageObject.appleStoreLocale
 
     if (!translations || !locale) {
-      return this.#log('warn', 'Missing context to localize in-app purchase; aborting', {
+      return this.#logger.log('warn', 'Missing context to localize in-app purchase; aborting', {
         id: iap.attributes.productId,
         locale,
         translations,
@@ -204,7 +203,7 @@ export class AppleStoreManager {
 
     const { name, description } = translations
 
-    this.#log('info', 'Updating in-app purchase localization', {
+    this.#logger.log('info', 'Updating in-app purchase localization', {
       id: iap.attributes.productId,
       locale,
       translations,
@@ -212,7 +211,7 @@ export class AppleStoreManager {
 
     // If the name is too long for Apple Store, skip the request altogether since it won’t work
     if (name.length > 30) {
-      return this.#log('warn', 'In-app purchase name too long for Apple Store; aborting', {
+      return this.#logger.log('warn', 'In-app purchase name too long for Apple Store; aborting', {
         id: iap.attributes.productId,
         length: name.length,
         locale,
@@ -221,11 +220,15 @@ export class AppleStoreManager {
 
     // If the desc is too long for Apple Store, skip the request altogether since it won’t work
     if (description.length > 45) {
-      return this.#log('warn', 'In-app purchase description too long for Apple Store; aborting', {
-        id: iap.attributes.productId,
-        length: description.length,
-        locale,
-      })
+      return this.#logger.log(
+        'warn',
+        'In-app purchase description too long for Apple Store; aborting',
+        {
+          id: iap.attributes.productId,
+          length: description.length,
+          locale,
+        }
+      )
     }
 
     // Unfortunately, Apple Store rejects when the name contains _some_ Unicode characters (they’re
@@ -240,7 +243,7 @@ export class AppleStoreManager {
       const state = existingIap.attributes?.state
 
       if (state === 'APPROVED' || state === 'ACTIVE') {
-        return this.#log('info', 'In-app purchase already active; aborting', {
+        return this.#logger.log('info', 'In-app purchase already active; aborting', {
           id: existingIap.id,
           locale,
           state,

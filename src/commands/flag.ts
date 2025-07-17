@@ -5,7 +5,6 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js'
-import { logger } from '../utils/logger'
 
 export const scope = 'OFFICIAL'
 
@@ -60,10 +59,10 @@ export const data = new SlashCommandBuilder()
   .setContexts(InteractionContextType.Guild)
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.logCommand(interaction, 'Starting command execution')
-
   const { options, client } = interaction
-  const { Flags, Discord } = client.managers
+  const { Flags, Discord, CommandLogger } = client.managers
+
+  CommandLogger.logCommand(interaction, 'Starting command execution')
 
   const subCommand = options.getSubcommand()
 

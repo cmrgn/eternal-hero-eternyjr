@@ -3,7 +3,6 @@ import pMap from 'p-map'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { DiscordManager } from '../managers/DiscordManager'
 import { IndexManager } from '../managers/IndexManager'
-import { logger } from '../utils/logger'
 
 export const scope = 'OFFICIAL'
 
@@ -56,11 +55,11 @@ export const data = new SlashCommandBuilder()
   .setDescription('Index the FAQ in Pinecone')
 
 async function fetchFAQContent(interaction: ChatInputCommandInteraction) {
-  logger.logCommand(interaction, 'Fetching FAQ content')
-
   const { client, options } = interaction
-  const { Faq } = client.managers
+  const { Faq, CommandLogger } = client.managers
   const threadId = options.getString('thread_id')
+
+  CommandLogger.logCommand(interaction, 'Fetching FAQ content')
 
   if (threadId) {
     await interaction.editReply(`Fetching thread with ID \`${threadId}\`…`)
@@ -73,7 +72,9 @@ async function fetchFAQContent(interaction: ChatInputCommandInteraction) {
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.logCommand(interaction, 'Starting command execution')
+  const { CommandLogger } = interaction.client.managers
+
+  CommandLogger.logCommand(interaction, 'Starting command execution')
 
   // This command can take a long time, so it needs to be handled asynchronously
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
@@ -155,7 +156,7 @@ async function commandThread(interaction: ChatInputCommandInteraction) {
 
 async function commandLanguage(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
-  const { Index } = client.managers
+  const { Index, CommandLogger } = client.managers
 
   const crowdinCode = options.getString('language', true)
   const languageObject = LANGUAGE_OBJECTS.find(
@@ -200,7 +201,7 @@ async function commandLanguage(interaction: ChatInputCommandInteraction) {
   // Iterate over all threads with the given concurrency, and for each thread, translate it if the
   // expected language is not English, and upsert it into the relevant Pinecone namespace
   else {
-    logger.logCommand(interaction, 'Processing all threads')
+    CommandLogger.logCommand(interaction, 'Processing all threads')
 
     await interaction.editReply('Indexing all FAQ threads…')
     await pMap(

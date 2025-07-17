@@ -1,7 +1,6 @@
 import type { File } from 'decompress'
 import type { Client } from 'discord.js'
 import { type CrowdinCode, LANGUAGE_OBJECTS, type Locale } from '../constants/i18n'
-import { type LoggerSeverity, logger } from '../utils/logger'
 import {
   type IapLocalizationFields as AppleStoreIapLocalizationFields,
   AppleStoreManager,
@@ -10,6 +9,7 @@ import {
   type IapLocalizationFields as GooglePlayIapLocalizationFields,
   GooglePlayManager,
 } from './GooglePlayManager'
+import { LogManager, type Severity } from './LogManager'
 
 export type IapLocalizationFields = AppleStoreIapLocalizationFields &
   GooglePlayIapLocalizationFields
@@ -19,20 +19,18 @@ export class StoreManager {
   appleStore: AppleStoreManager
   googlePlay: GooglePlayManager
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('StoreManager', this.#severityThreshold)
+  #logger: LogManager
 
-  constructor(client: Client, severity: LoggerSeverity = 'info') {
+  constructor(client: Client, severity: Severity = 'info') {
     this.#client = client
     this.appleStore = new AppleStoreManager()
     this.googlePlay = new GooglePlayManager()
-
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+    this.#logger = new LogManager('GooglePlayManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
   }
 
   async getStoreTranslations(crowdinCode: CrowdinCode) {
-    this.#log('info', 'Getting in-app purchases translations', { crowdinCode })
+    this.#logger.log('info', 'Getting in-app purchases translations', { crowdinCode })
 
     const { Crowdin } = this.#client.managers
     const files = await Crowdin.fetchStoreTranslations()
@@ -42,20 +40,20 @@ export class StoreManager {
   }
 
   parseFileData(file: File) {
-    this.#log('info', 'Parsing file data', { file })
+    this.#logger.log('info', 'Parsing file data', { file })
 
     const json = file.data.toString('utf-8')
     const data: Record<string, { name: string; description: string }> = JSON.parse(json)
 
     if (!data || typeof data !== 'object') {
-      this.#log('warn', 'Invalid JSON in Crowdin file', { path: file.path })
+      this.#logger.log('warn', 'Invalid JSON in Crowdin file', { path: file.path })
     }
 
     return data
   }
 
   formatStoreTranslations(files: File[]) {
-    this.#log('info', 'Formatting store translations', { files: files.length })
+    this.#logger.log('info', 'Formatting store translations', { files: files.length })
 
     const iapMap = new Map<string, Record<Locale, IapLocalizationFields>>()
 

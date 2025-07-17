@@ -1,18 +1,18 @@
-import type { LogFunction } from './logger'
+import type { LogManager } from '../managers/LogManager'
 import { withRetry } from './withRetry'
 
 export async function request(
-  logFn: LogFunction,
+  logger: LogManager,
   url: string,
   options?: RequestInit,
   handler: 'json' | 'buffer' = 'json'
 ) {
   const response = await withRetry(
     attempt => {
-      logFn('info', 'Executing HTTP query', { attempt, options, url })
+      logger.log('info', 'Executing HTTP query', { attempt, options, url })
       return fetch(url, options)
     },
-    { logFn }
+    { logger }
   )
 
   const data =
@@ -23,7 +23,7 @@ export async function request(
         : await response.text()
 
   if (!response.ok) {
-    logFn('error', 'HTTP query failed', { data, status: response.status })
+    logger.log('error', 'HTTP query failed', { data, status: response.status })
     throw new Error(`HTTP query failed (${response.status}): ${JSON.stringify(data)}`)
   }
 

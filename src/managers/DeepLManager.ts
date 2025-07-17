@@ -3,23 +3,22 @@ import { GlossaryEntries } from 'deepl-node'
 import type { Client } from 'discord.js'
 import type { CrowdinCode } from '../constants/i18n'
 import { getExcerpt } from '../utils/getExcerpt'
-import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 import type { LocalizationItem } from './LocalizationManager'
+import { LogManager, type Severity } from './LogManager'
 
 export class DeepLManager {
   #client: Client
   #deepl: deepl.DeepLClient
   #deepLGlossaryId = 'b88f1891-8a05-4d87-965f-67de6b825693'
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('DeepLManager', this.#severityThreshold)
+  #logger: LogManager
 
   COST_PER_CHAR = 20 / 1_000_000
 
-  constructor(client: Client, severity: LoggerSeverity = 'info') {
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+  constructor(client: Client, severity: Severity = 'info') {
+    this.#logger = new LogManager('DeepLManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
 
     if (!process.env.DEEPL_API_KEY) {
       throw new Error('Missing environment variable DEEPL_API_KEY; aborting.')
@@ -30,7 +29,7 @@ export class DeepLManager {
   }
 
   async ensureDeepLIsEnabled() {
-    this.#log('info', 'Ensuring DeepL is enabled')
+    this.#logger.log('info', 'Ensuring DeepL is enabled')
 
     const { Flags } = this.#client.managers
     const isEnabled = await Flags.getFeatureFlag('deepl', { severity: 'debug' })
@@ -39,7 +38,7 @@ export class DeepLManager {
   }
 
   async translate(input: string, targetLangCode: deepl.TargetLanguageCode) {
-    this.#log('info', 'Translating content with DeepL', {
+    this.#logger.log('info', 'Translating content with DeepL', {
       input: getExcerpt(input),
       targetLang: targetLangCode,
     })
@@ -62,14 +61,14 @@ export class DeepLManager {
           preserveFormatting: true,
           splitSentences: 'off',
         }),
-      { logFn: this.#log }
+      { logger: this.#logger }
     )
 
     return response.map(chunk => chunk.text).join('\n')
   }
 
   async updateDeepLGlossary(translations: LocalizationItem[], targetLangCode: string) {
-    this.#log('info', 'Updating the DeepL glossary', {
+    this.#logger.log('info', 'Updating the DeepL glossary', {
       count: translations.length,
       targetLang: targetLangCode,
     })
@@ -88,17 +87,17 @@ export class DeepLManager {
           sourceLangCode: 'en',
           targetLangCode,
         }),
-      { logFn: this.#log }
+      { logger: this.#logger }
     )
   }
 
   async getUsage() {
     const usage = await withRetry(
       attempt => {
-        this.#log('info', 'Getting DeepL usage data', { attempt })
+        this.#logger.log('info', 'Getting DeepL usage data', { attempt })
         return this.#deepl.getUsage()
       },
-      { logFn: this.#log }
+      { logger: this.#logger }
     )
 
     return { character: usage?.character?.count ?? 0 }
@@ -138,7 +137,7 @@ export class DeepLManager {
       .filter(([src, tgt]) => src && tgt)
 
     if (errors.length) {
-      this.#log('warn', 'Some glossary pairs were skipped', { errors, targetLangCode })
+      this.#logger.log('warn', 'Some glossary pairs were skipped', { errors, targetLangCode })
     }
 
     return pairs

@@ -10,6 +10,7 @@ import { initGiveawayManager } from './managers/GiveawayManager'
 import { IndexManager } from './managers/IndexManager'
 import { LeaderboardManager } from './managers/LeaderboardManager'
 import { LocalizationManager } from './managers/LocalizationManager'
+import { LogManager } from './managers/LogManager'
 import { PromptManager } from './managers/PromptManager'
 import { SearchManager } from './managers/SearchManager'
 import { StoreManager } from './managers/StoreManager'
@@ -45,3 +46,4 @@ client.managers.Index = new IndexManager(client).bindEvents()
 client.managers.Prompt = new PromptManager(client)
 client.managers.Localization = new LocalizationManager(client)
 client.managers.Store = new StoreManager(client)
+client.managers.CommandLogger = new LogManager('CommandManager')

@@ -12,8 +12,8 @@ import {
   type PartialMessage,
 } from 'discord.js'
 
-import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
+import { LogManager, type Severity } from './LogManager'
 
 export type ResolvedThread = {
   isResolved: true
@@ -68,12 +68,11 @@ export class FAQManager {
     ThreadNameUpdated: [],
   }
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('FAQManager', this.#severityThreshold)
+  #logger: LogManager
 
-  constructor(client: Client, severity: LoggerSeverity = 'info') {
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+  constructor(client: Client, severity: Severity = 'info') {
+    this.#logger = new LogManager('FAQManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
 
     this.#client = client
     this.#threads = []
@@ -129,7 +128,7 @@ export class FAQManager {
   }
 
   async cacheThreads() {
-    this.#log('info', 'Caching threads on the manager instance')
+    this.#logger.log('info', 'Caching threads on the manager instance')
     this.#threads = await this.fetchThreads()
     this.#links = [
       ...this.#threads.map(thread => thread.url),
@@ -138,7 +137,7 @@ export class FAQManager {
   }
 
   async fetchThreads() {
-    this.#log('info', 'Fetching all FAQ threads', { guildId: this.guildId })
+    this.#logger.log('info', 'Fetching all FAQ threads', { guildId: this.guildId })
 
     const { Discord } = this.#client.managers
     const guild = await Discord.getGuild(this.#client, this.guildId)
@@ -147,17 +146,17 @@ export class FAQManager {
     const [activeThreadRes, archivedThreadRes] = await Promise.all([
       withRetry(
         attempt => {
-          this.#log('info', 'Fetching active threads', { attempt, forumId: faq.id })
+          this.#logger.log('info', 'Fetching active threads', { attempt, forumId: faq.id })
           return faq.threads.fetchActive()
         },
-        { logFn: this.#log }
+        { logger: this.#logger }
       ),
       withRetry(
         attempt => {
-          this.#log('info', 'Fetching inactive threads', { attempt, forumId: faq.id })
+          this.#logger.log('info', 'Fetching inactive threads', { attempt, forumId: faq.id })
           return faq.threads.fetchArchived()
         },
-        { logFn: this.#log }
+        { logger: this.#logger }
       ),
     ])
 
@@ -169,7 +168,7 @@ export class FAQManager {
     const archivedThreads = Array.from(archivedThreadRes.threads.values())
     const threads = [...activeThreads, ...archivedThreads]
 
-    this.#log('info', 'Fetched all FAQ threads', {
+    this.#logger.log('info', 'Fetched all FAQ threads', {
       active: activeThreads.length,
       archived: archivedThreads.length,
       total: threads.length,
@@ -184,7 +183,7 @@ export class FAQManager {
 
   getFaqForum(guild: Guild) {
     if (this.#faqForum) {
-      this.#log('info', 'Returning FAQ forum from cache', {
+      this.#logger.log('info', 'Returning FAQ forum from cache', {
         channelId: this.#faqForum.id,
         guildId: guild.id,
       })
@@ -192,7 +191,10 @@ export class FAQManager {
       return this.#faqForum
     }
 
-    this.#log('info', 'Retrieving FAQ forum', { channelId: this.faqForumId, guildId: guild.id })
+    this.#logger.log('info', 'Retrieving FAQ forum', {
+      channelId: this.faqForumId,
+      guildId: guild.id,
+    })
 
     const faq = guild.channels.cache.find(({ id }) => id === this.faqForumId)
 
@@ -215,7 +217,7 @@ export class FAQManager {
     if (Discord.shouldIgnoreInteraction(thread)) return
     if (!this.isWithinFAQ(thread)) return
 
-    this.#log('info', 'Responding to thread creation', { id: thread.id })
+    this.#logger.log('info', 'Responding to thread creation', { id: thread.id })
     this.cacheThreads() // Note: this could be optimized
 
     const resolvedThread = await this.#resolveThread(thread)
@@ -228,7 +230,7 @@ export class FAQManager {
     if (Discord.shouldIgnoreInteraction(thread)) return
     if (!this.isWithinFAQ(thread)) return
 
-    this.#log('info', 'Responding to thread deletion', { id: thread.id })
+    this.#logger.log('info', 'Responding to thread deletion', { id: thread.id })
     this.cacheThreads() // Note: this could be optimized
 
     for (const listener of this.#listeners.ThreadDeleted) listener(thread.id)
@@ -242,7 +244,7 @@ export class FAQManager {
     if (prev.name === next.name) return
     if (next.id === this.#specialThreads.TABLE_OF_CONTENTS) return
 
-    this.#log('info', 'Responding to thread name update', { id: next.id })
+    this.#logger.log('info', 'Responding to thread name update', { id: next.id })
     // Update the cache without refetching all threads; just update this one
     this.#threads = this.#threads.map(t => (t.id === next.id ? next : t))
 
@@ -258,7 +260,7 @@ export class FAQManager {
 
     if (Discord.shouldIgnoreInteraction(newMessage)) return
     if (newMessage.partial)
-      newMessage = await withRetry(() => newMessage.fetch(), { logFn: this.#log })
+      newMessage = await withRetry(() => newMessage.fetch(), { logger: this.#logger })
 
     const { channel } = newMessage
 
@@ -268,7 +270,7 @@ export class FAQManager {
     // If the thread is the FAQ, do nothing
     if (channel.id === this.#specialThreads.TABLE_OF_CONTENTS) return
 
-    this.#log('info', 'Responding to thread content update', { id: channel.id })
+    this.#logger.log('info', 'Responding to thread content update', { id: channel.id })
 
     // If the old content is accessible in the Discord cache and strictly equal to the new content
     // after normalization, do nothing since the edit is essentially moot
@@ -276,7 +278,9 @@ export class FAQManager {
       FAQManager.cleanUpThreadContent(oldMessage.content) ===
       FAQManager.cleanUpThreadContent(newMessage.content)
     ) {
-      return this.#log('info', 'Content unchanged; ignoring thread update', { id: channel.id })
+      return this.#logger.log('info', 'Content unchanged; ignoring thread update', {
+        id: channel.id,
+      })
     }
 
     const resolvedThread = await this.#resolveThread(channel)
@@ -286,7 +290,7 @@ export class FAQManager {
 
   async #resolveThreadMessage(thread: ForumThreadChannel) {
     const firstMessage = await withRetry(() => thread.fetchStarterMessage(), {
-      logFn: this.#log,
+      logger: this.#logger,
     })
 
     return {
@@ -296,7 +300,7 @@ export class FAQManager {
   }
 
   async #resolveThreadMessages(thread: ForumThreadChannel, { skipFirst }: { skipFirst: boolean }) {
-    const messages = await withRetry(() => thread.messages.fetch(), { logFn: this.#log })
+    const messages = await withRetry(() => thread.messages.fetch(), { logger: this.#logger })
 
     return (
       Array.from(messages.values())
@@ -313,7 +317,7 @@ export class FAQManager {
   }
 
   async #resolveThread(thread: FAQForumThreadChannel): Promise<ResolvedThread> {
-    this.#log('info', 'Resolving thread', { id: thread.id })
+    this.#logger.log('info', 'Resolving thread', { id: thread.id })
 
     const { MULTI_POSTS_WITHOUT_TOC, MULTI_POSTS_WITH_TOC } = this.#specialThreads
     const hasMultiplePosts =
@@ -372,7 +376,7 @@ export class FAQManager {
   }
 
   bindEvents() {
-    this.#log('info', 'Binding events onto the manager instance')
+    this.#logger.log('info', 'Binding events onto the manager instance')
 
     this.#client.once(Events.ClientReady, this.cacheThreads.bind(this))
     this.#client.on(Events.ThreadCreate, this.onThreadCreate.bind(this))

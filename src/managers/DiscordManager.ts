@@ -18,10 +18,10 @@ import {
 } from 'discord.js'
 import { commands } from '../commands'
 import type { LanguageObject } from '../constants/i18n'
-import { type LoggerSeverity, logger } from '../utils/logger'
 import { stripIndent } from '../utils/stripIndent'
 import { withRetry } from '../utils/withRetry'
 import type { ResolvedThread } from './FAQManager'
+import { LogManager, type Severity } from './LogManager'
 
 export class DiscordManager {
   #clientId: string
@@ -33,14 +33,13 @@ export class DiscordManager {
   KITTY_USER_ID = '368097495605182483'
   static BOT_COLOR = '#ac61ff' as ColorResolvable
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('DiscordManager', this.#severityThreshold)
+  #logger: LogManager
 
   // This is the only manager that doesn’t expect a client because it is also used outside of the
   // runtime of the bot, such as for scripts
-  constructor(severity: LoggerSeverity = 'info') {
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+  constructor(severity: Severity = 'info') {
+    this.#logger = new LogManager('DiscordManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
 
     if (!process.env.DISCORD_CLIENT_ID) {
       throw new Error('Missing environment variable DISCORD_CLIENT_ID; aborting.')
@@ -71,7 +70,7 @@ export class DiscordManager {
   }
 
   onBotReady(client: Client<true>) {
-    this.#log('info', 'Discord bot is ready and logged in', {
+    this.#logger.log('info', 'Discord bot is ready and logged in', {
       tag: client.user.tag,
     })
   }
@@ -85,17 +84,17 @@ export class DiscordManager {
   }
 
   async getGuild(client: Client, guildId: string) {
-    this.#log('info', 'Getting guild object', { guildId })
+    this.#logger.log('info', 'Getting guild object', { guildId })
 
     const cachedGuild = client.guilds.cache.get(guildId)
     if (cachedGuild) return cachedGuild
 
     const fetchedGuild = await withRetry(
       attempt => {
-        this.#log('info', 'Fetching guild', { attempt, guildId })
+        this.#logger.log('info', 'Fetching guild', { attempt, guildId })
         return client.guilds.fetch(guildId)
       },
-      { logFn: this.#log }
+      { logger: this.#logger }
     )
 
     return fetchedGuild
@@ -107,7 +106,7 @@ export class DiscordManager {
     message: Message<boolean>,
     oldMessage: Message<boolean> | PartialMessage
   ) {
-    this.#log('info', 'Asking for translation confirmation', {
+    this.#logger.log('info', 'Asking for translation confirmation', {
       id: thread.id,
     })
 
@@ -181,7 +180,7 @@ export class DiscordManager {
     if (cachedChannelFromClient) return cachedChannelFromClient
 
     const fetchedChannel = await withRetry(() => client.channels.fetch(this.#alertChannelId), {
-      logFn: this.#log,
+      logger: this.#logger,
     })
     return fetchedChannel
   }
@@ -195,7 +194,7 @@ export class DiscordManager {
     )
     if (!channel?.isSendable()) return
     if (interaction.guildId === this.TEST_SERVER_ID)
-      return this.#log('error', message.replace(/```/g, ''))
+      return this.#logger.log('error', message.replace(/```/g, ''))
 
     try {
       return await channel.send(
@@ -209,12 +208,12 @@ export class DiscordManager {
     `)
       )
     } catch (error) {
-      logger.logtail.error('Sending alert failed', { error })
+      this.#logger.log('error', 'Sending alert failed', { error })
     }
   }
 
   deployCommands(guildId: string) {
-    this.#log('info', 'Deploying bot commands', { guildId })
+    this.#logger.log('info', 'Deploying bot commands', { guildId })
     const endpoint = Routes.applicationGuildCommands(this.#clientId, guildId)
     const body = Object.values(commands)
       .filter(
@@ -229,7 +228,7 @@ export class DiscordManager {
   }
 
   deployCommand(guildId: string, commandName: string) {
-    this.#log('info', 'Deploying bot command', { commandName, guildId })
+    this.#logger.log('info', 'Deploying bot command', { commandName, guildId })
     const endpoint = Routes.applicationGuildCommands(this.#clientId, guildId)
     const [body] = Object.values(commands)
       .filter(command => command.data.name === commandName)
@@ -238,13 +237,13 @@ export class DiscordManager {
   }
 
   deleteCommands(guildId: string) {
-    this.#log('info', 'Deleting bot commands for guild', { guildId })
+    this.#logger.log('info', 'Deleting bot commands for guild', { guildId })
     const endpoint = Routes.applicationGuildCommands(this.#clientId, guildId)
     return this.#rest.put(endpoint, { body: [] })
   }
 
   deleteCommand(guildId: string, commandId: string) {
-    this.#log('info', 'Deleting bot command for guild', {
+    this.#logger.log('info', 'Deleting bot command for guild', {
       commandId,
       guildId,
     })

@@ -1,14 +1,13 @@
 import type { Client } from 'discord.js'
 import { type Giveaway, type GiveawayData, GiveawaysManager } from 'discord-giveaways'
-import { logger } from '../utils/logger'
 import { DiscordManager } from './DiscordManager'
+import { LogManager } from './LogManager'
 
-const severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-const log = logger.log('GiveawayManager', severityThreshold)
+const logger = new LogManager('GiveawayManager')
 
 export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
   async getAllGiveaways() {
-    log('info', 'Fetching all giveaways from the database')
+    logger.log('info', 'Fetching all giveaways from the database')
 
     const { Database, Discord } = this.client.managers
     const environment = Discord.IS_DEV ? 'DEV' : 'PROD'
@@ -27,7 +26,7 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
   }
 
   async saveGiveaway(messageId: string, giveawayData: GiveawayData) {
-    log('info', 'Saving a giveaway in the database', {
+    logger.log('info', 'Saving a giveaway in the database', {
       channelId: giveawayData.channelId,
       guildId: giveawayData.guildId,
       messageId,
@@ -45,7 +44,7 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
   }
 
   async editGiveaway(messageId: string, giveawayData: GiveawayData) {
-    log('info', 'Editing a giveaway from the database', {
+    logger.log('info', 'Editing a giveaway from the database', {
       giveawayData,
       messageId,
     })
@@ -62,7 +61,7 @@ export const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
   }
 
   async deleteGiveaway(messageId: string) {
-    log('info', 'Deleting a giveaway from the database', { messageId })
+    logger.log('info', 'Deleting a giveaway from the database', { messageId })
 
     const { Database } = this.client.managers
 
@@ -97,7 +96,7 @@ export const initGiveawayManager = (client: Client) => {
   manager.on('giveawayReactionAdded', (giveaway, member) => {
     if (Discord.shouldIgnoreInteraction(giveaway)) return
 
-    log('info', 'User entered giveaway', {
+    logger.log('info', 'User entered giveaway', {
       messageId: giveaway.messageId,
       userId: member.user.id,
     })
@@ -106,7 +105,7 @@ export const initGiveawayManager = (client: Client) => {
   manager.on('giveawayReactionRemoved', (giveaway, member) => {
     if (Discord.shouldIgnoreInteraction(giveaway)) return
 
-    log('info', 'User left giveaway', {
+    logger.log('info', 'User left giveaway', {
       messageId: giveaway.messageId,
       userId: member.user.id,
     })
@@ -115,7 +114,7 @@ export const initGiveawayManager = (client: Client) => {
   manager.on('giveawayRerolled', (giveaway, winners) => {
     if (Discord.shouldIgnoreInteraction(giveaway)) return
 
-    log('info', 'Giveaway rerolled', {
+    logger.log('info', 'Giveaway rerolled', {
       messageId: giveaway.messageId,
       winners: winners.map(winner => winner.id),
     })
@@ -124,7 +123,7 @@ export const initGiveawayManager = (client: Client) => {
   manager.on('giveawayEnded', (giveaway, winners) => {
     if (Discord.shouldIgnoreInteraction(giveaway)) return
 
-    log('info', 'Giveaway ended', {
+    logger.log('info', 'Giveaway ended', {
       messageId: giveaway.messageId,
       winners: winners.map(winner => winner.id),
     })
@@ -133,7 +132,7 @@ export const initGiveawayManager = (client: Client) => {
   manager.on('giveawayDeleted', giveaway => {
     if (Discord.shouldIgnoreInteraction(giveaway)) return
 
-    log('info', 'Giveaway deleted', {
+    logger.log('info', 'Giveaway deleted', {
       messageId: giveaway.messageId,
     })
   })

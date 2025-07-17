@@ -1,6 +1,5 @@
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
 import { DiscordManager } from '../managers/DiscordManager'
-import { logger } from '../utils/logger'
 
 export const scope = 'PUBLIC'
 
@@ -47,9 +46,10 @@ export const data = new SlashCommandBuilder()
   .setDescription('Estimate the amount of dust you have across resources')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.logCommand(interaction, 'Starting command execution')
+  const { options, client } = interaction
+  const { CommandLogger } = client.managers
 
-  const { options } = interaction
+  CommandLogger.logCommand(interaction, 'Starting command execution')
 
   const rareKeys = options.getInteger('rare_keys') ?? 0
   const epicKeys = options.getInteger('epic_keys') ?? 0

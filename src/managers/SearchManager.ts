@@ -1,10 +1,10 @@
 import type { SearchRecordsResponse } from '@pinecone-database/pinecone'
 import type { Client } from 'discord.js'
 import Fuse, { type FuseResult } from 'fuse.js'
-import { type LoggerSeverity, logger } from '../utils/logger'
 import { withRetry } from '../utils/withRetry'
 import type { FAQForumThreadChannel } from './FAQManager'
 import type { PineconeMetadata, PineconeNamespace } from './IndexManager'
+import { LogManager, type Severity } from './LogManager'
 
 type Hit = SearchRecordsResponse['result']['hits'][number]
 type SearchResultVector = Hit & { fields: PineconeMetadata }
@@ -24,12 +24,11 @@ export class SearchManager {
   #client: Client
   #altFuse: Fuse<{ from: string; to: string }>
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('SearchManager', this.#severityThreshold)
+  #logger: LogManager
 
-  constructor(client: Client, severity: LoggerSeverity = 'info') {
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+  constructor(client: Client, severity: Severity = 'info') {
+    this.#logger = new LogManager('SearchManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
 
     this.#client = client
     this.#altFuse = new Fuse(
@@ -55,7 +54,7 @@ export class SearchManager {
     namespaceName: PineconeNamespace,
     limit = 1
   ): Promise<{ query: string; results: SearchResult[] }> {
-    this.#log('info', 'Performing search', {
+    this.#logger.log('info', 'Performing search', {
       limit,
       namespaceName,
       query,
@@ -69,7 +68,7 @@ export class SearchManager {
 
         return { query, results }
       } catch (error) {
-        this.#log('warn', 'Vector search failed; falling back to fuzzy search.', { error })
+        this.#logger.log('warn', 'Vector search failed; falling back to fuzzy search.', { error })
 
         return this.search(query, 'FUZZY', namespaceName, limit)
       }
@@ -90,7 +89,7 @@ export class SearchManager {
 
   // Perform a vector search with Pinecone, with immediate reranking for better results.
   async searchVector(query: string, namespaceName: PineconeNamespace, limit = 1) {
-    this.#log('info', 'Performing vector search', { limit, namespaceName, query })
+    this.#logger.log('info', 'Performing vector search', { limit, namespaceName, query })
 
     const { Index } = this.#client.managers
     // We query and rerank more entries than the amount of results we want in order to improve
@@ -107,7 +106,7 @@ export class SearchManager {
             topN: Math.max(5, limit),
           },
         }),
-      { logFn: this.#log }
+      { logger: this.#logger }
     )
 
     return response.result.hits.slice(0, limit) as SearchResultVector[]
@@ -117,7 +116,7 @@ export class SearchManager {
   // the alt fuse to find a manually indexed keyword. If it finds one, it will redo the original
   // search with the new keyword. This helps padding some obvious gaps in search results.
   searchFuzzy(keyword: string) {
-    this.#log('info', 'Performing fuzzy search', { keyword })
+    this.#logger.log('info', 'Performing fuzzy search', { keyword })
 
     const { Faq } = this.#client.managers
     const primaryFuse = new Fuse(Faq.threads, {

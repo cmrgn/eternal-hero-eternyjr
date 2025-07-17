@@ -1,17 +1,16 @@
 import type { GiveawayData } from 'discord-giveaways'
 import { Kysely, type LogEvent, PostgresDialect } from 'kysely'
 import { Pool } from 'pg'
-import { type LoggerSeverity, logger } from '../utils/logger'
+import { LogManager, type Severity } from './LogManager'
 
 export class DatabaseManager {
   db: Kysely<DB>
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('DatabaseManager', this.#severityThreshold)
+  #logger: LogManager
 
-  constructor(severity: LoggerSeverity = 'info') {
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+  constructor(severity: Severity = 'info') {
+    this.#logger = new LogManager('DatabaseManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
 
     if (!process.env.DATABASE_URL) {
       throw new Error('Missing environment variable DATABASE_URL; aborting.')
@@ -28,14 +27,14 @@ export class DatabaseManager {
 
   logEvent(event: LogEvent) {
     if (event.level === 'error') {
-      this.#log('error', 'Query failed', {
+      this.#logger.log('error', 'Query failed', {
         durationMs: event.queryDurationMillis,
         error: event.error,
         params: event.query.parameters,
         sql: event.query.sql,
       })
     } else {
-      this.#log('info', 'Query executed', {
+      this.#logger.log('info', 'Query executed', {
         durationMs: event.queryDurationMillis,
         params: event.query.parameters,
         sql: event.query.sql,

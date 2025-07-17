@@ -5,7 +5,6 @@ import {
   SlashCommandBuilder,
   userMention,
 } from 'discord.js'
-import { logger } from '../utils/logger'
 
 export const scope = 'OFFICIAL'
 
@@ -52,10 +51,13 @@ export const data = new SlashCommandBuilder()
   .setContexts(InteractionContextType.Guild)
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.logCommand(interaction, 'Starting command execution')
+  const { client, options } = interaction
+  const { CommandLogger } = client.managers
 
-  const rule = interaction.options.getString('rule', true)
-  const user = interaction.options.getUser('user')
+  CommandLogger.logCommand(interaction, 'Starting command execution')
+
+  const rule = options.getString('rule', true)
+  const user = options.getUser('user')
   const number = rule.split(': ')[0]
   const message = RULES[rule as keyof typeof RULES]
 

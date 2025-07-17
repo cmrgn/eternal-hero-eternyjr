@@ -1,7 +1,6 @@
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
 import { LANGUAGE_OBJECTS } from '../constants/i18n'
 import { DiscordManager } from '../managers/DiscordManager'
-import { logger } from '../utils/logger'
 
 export const scope = 'OFFICIAL'
 
@@ -23,10 +22,10 @@ export const data = new SlashCommandBuilder()
   .setDescription('Ask the FAQ')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.logCommand(interaction, 'Starting command execution')
-
   const { options, client } = interaction
-  const { Search, Localization, Prompt } = client.managers
+  const { Search, Localization, Prompt, CommandLogger } = client.managers
+
+  CommandLogger.logCommand(interaction, 'Starting command execution')
 
   const query = options.getString('question', true)
   // @TODO: bring back the visibility option after the beta phase
@@ -41,7 +40,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const languageObject = LANGUAGE_OBJECTS.find(({ crowdinCode }) => crowdinCode === guessedLanguage)
 
   if (!languageObject) {
-    logger.logCommand(interaction, 'Aborting due to lack of guessed language')
+    CommandLogger.logCommand(interaction, 'Aborting due to lack of guessed language')
     const errorMessage =
       'Unfortunately, the language could not be guessed from your query, or it is not currently supported.'
     return interaction.editReply({ embeds: [embed.setDescription(errorMessage)] })
@@ -52,7 +51,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const [result] = results
 
   if (!result) {
-    logger.logCommand(interaction, 'Returning a lack of results', { crowdinCode })
+    CommandLogger.logCommand(interaction, 'Returning a lack of results', { crowdinCode })
     return interaction.editReply({ embeds: [embed.setDescription(messages.no_results)] })
   }
 
@@ -69,11 +68,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   )
 
   if (raw) {
-    logger.logCommand(interaction, 'Returning a raw answer', { crowdinCode })
+    CommandLogger.logCommand(interaction, 'Returning a raw answer', { crowdinCode })
     return interaction.editReply({ embeds: [embed.setDescription(answer)] })
   }
 
-  logger.logCommand(interaction, 'Summarizing the answer', { crowdinCode, question })
+  CommandLogger.logCommand(interaction, 'Summarizing the answer', { crowdinCode, question })
   const localizedAnswer = await Prompt.summarize(query, { answer, languageObject, question })
   const message = await interaction.editReply({
     embeds: [embed.setDescription(localizedAnswer ?? answer)],

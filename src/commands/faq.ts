@@ -6,7 +6,6 @@ import {
 } from 'discord.js'
 import { DiscordManager } from '../managers/DiscordManager'
 import type { SearchType } from '../managers/SearchManager'
-import { logger } from '../utils/logger'
 
 export const scope = 'PUBLIC'
 
@@ -28,17 +27,16 @@ export const data = new SlashCommandBuilder()
   .setDescription('Search the FAQ')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  logger.logCommand(interaction, 'Starting command execution')
-
   const { client, guildId, channelId, member, options } = interaction
-  const { Search, Leaderboard, Discord } = client.managers
+  const { Search, Leaderboard, Discord, CommandLogger } = client.managers
   const visible = options.getBoolean('visible') ?? false
   const user = options.getUser('user')
   const keyword = options.getString('keyword', true)
   const method = (options.getString('method') ?? 'FUZZY') as SearchType
   const embed = DiscordManager.createEmbed().setTitle(`FAQ search: “${keyword}”`)
 
-  logger.logCommand(interaction, 'Performing search')
+  CommandLogger.logCommand(interaction, 'Starting command execution')
+
   const { query, results } = await Search.search(keyword, method, 'en', 5)
 
   if (results.length > 0) {
@@ -55,7 +53,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }))
     )
 
-    logger.logCommand(interaction, 'Reporting search results', {
+    CommandLogger.logCommand(interaction, 'Reporting search results', {
       results: results.map(result => ({
         name: result.fields.entry_question,
         score: result._score,
@@ -64,12 +62,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     if (visible && member && guildId) {
       const userId = member.user.id
-      logger.logCommand(interaction, 'Recording contribution')
+      CommandLogger.logCommand(interaction, 'Recording contribution')
       await Leaderboard.register({ channelId, guildId, userId })
     }
   } else {
     const message = `A ${method.toLowerCase()} search for _“${keyword}”_ yielded no results.`
-    logger.logCommand(interaction, 'Sending empty search alert')
+    CommandLogger.logCommand(interaction, 'Sending empty search alert')
     await Discord.sendInteractionAlert(
       interaction,
       method === 'VECTOR'

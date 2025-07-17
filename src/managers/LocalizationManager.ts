@@ -2,8 +2,8 @@ import { type LanguageIdentifier, loadModule } from 'cld3-asm'
 import type { Client } from 'discord.js'
 import { CROWDIN_CODES, type CrowdinCode, type LanguageObject } from '../constants/i18n'
 import { getExcerpt } from '../utils/getExcerpt'
-import { type LoggerSeverity, logger } from '../utils/logger'
 import type { ResolvedThread } from './FAQManager'
+import { LogManager, type Severity } from './LogManager'
 
 export type LocalizationItem = {
   key: string
@@ -15,19 +15,18 @@ export class LocalizationManager {
 
   #languageIdentifier: LanguageIdentifier | undefined
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('LocalizationManager', this.#severityThreshold)
+  #logger: LogManager
 
-  constructor(client: Client, severity: LoggerSeverity = 'info') {
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+  constructor(client: Client, severity: Severity = 'info') {
+    this.#logger = new LogManager('LocalizationManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
 
     this.#client = client
     this.loadLanguageIdentifier()
   }
 
   async loadLanguageIdentifier() {
-    this.#log('info', 'Loading language identifier')
+    this.#logger.log('info', 'Loading language identifier')
     this.#languageIdentifier = (await loadModule()).create(40)
   }
 
@@ -36,7 +35,7 @@ export class LocalizationManager {
   }
 
   guessLanguageWithCld3(userInput: string) {
-    this.#log('debug', 'Guessing language with cld3', { userInput: getExcerpt(userInput) })
+    this.#logger.log('debug', 'Guessing language with cld3', { userInput: getExcerpt(userInput) })
 
     if (!this.#languageIdentifier) return null
     const guess = this.#languageIdentifier.findLanguage(userInput)
@@ -53,7 +52,7 @@ export class LocalizationManager {
   }
 
   async guessLanguageWithChatGPT(userInput: string) {
-    this.#log('info', 'Guessing language with ChatGPT', { userInput })
+    this.#logger.log('info', 'Guessing language with ChatGPT', { userInput })
 
     const { Prompt } = this.#client.managers
     const response = await Prompt.callChatCompletion(
@@ -69,17 +68,17 @@ export class LocalizationManager {
     const context = { guess: response, userInput }
 
     if (!response) {
-      this.#log('warn', 'ChatGPT could not guess the locale', context)
+      this.#logger.log('warn', 'ChatGPT could not guess the locale', context)
       return null
     }
 
     if (response === 'UNSUPPORTED') {
-      this.#log('warn', 'ChatGPT could not get a supported locale', context)
+      this.#logger.log('warn', 'ChatGPT could not get a supported locale', context)
       return null
     }
 
     if (!LocalizationManager.isLanguageSupported(response)) {
-      this.#log('warn', 'ChatGPT returned an unsupported locale', context)
+      this.#logger.log('warn', 'ChatGPT returned an unsupported locale', context)
       return null
     }
 
@@ -87,7 +86,7 @@ export class LocalizationManager {
   }
 
   async guessCrowdinLanguage(userInput: string): Promise<CrowdinCode | null> {
-    this.#log('info', 'Guessing Crowdin language', { userInput: getExcerpt(userInput) })
+    this.#logger.log('info', 'Guessing Crowdin language', { userInput: getExcerpt(userInput) })
 
     const cldGuess = this.guessLanguageWithCld3(userInput)
     if (cldGuess) return cldGuess
@@ -102,7 +101,7 @@ export class LocalizationManager {
     const { DeepL } = this.#client.managers
     const targetLangCode = languageObject.deepLCode
 
-    this.#log('info', 'Translating thread with DeepL', {
+    this.#logger.log('info', 'Translating thread with DeepL', {
       targetLang: targetLangCode,
       threadId: thread.id,
     })

@@ -1,22 +1,21 @@
 import type { Client } from 'discord.js'
 import { sql } from 'kysely'
-import { type LoggerSeverity, logger } from '../utils/logger'
+import { LogManager, type Severity } from './LogManager'
 
 export class FlagsManager {
   #client: Client
 
-  #severityThreshold = logger.LOG_SEVERITIES.indexOf('info')
-  #log = logger.log('FlagsManager', this.#severityThreshold)
+  #logger: LogManager
 
-  constructor(client: Client, severity: LoggerSeverity = 'info') {
-    this.#severityThreshold = logger.LOG_SEVERITIES.indexOf(severity)
-    this.#log('info', 'Instantiating manager')
+  constructor(client: Client, severity: Severity = 'info') {
+    this.#logger = new LogManager('FlagsManager', severity)
+    this.#logger.log('info', 'Instantiating manager')
 
     this.#client = client
   }
 
   async hasFeatureFlag(key: string) {
-    this.#log('info', 'Checking if feature flag exists', { key })
+    this.#logger.log('info', 'Checking if feature flag exists', { key })
 
     const { Database } = this.#client.managers
     const exists = await Database.db
@@ -28,8 +27,8 @@ export class FlagsManager {
     return !!exists
   }
 
-  async getFeatureFlag(key: string, options?: { severity: LoggerSeverity }) {
-    this.#log(options?.severity ?? 'info', 'Reading feature flag', { key })
+  async getFeatureFlag(key: string, options?: { severity: Severity }) {
+    this.#logger.log(options?.severity ?? 'info', 'Reading feature flag', { key })
 
     const { Database } = this.#client.managers
     const response = await Database.db
@@ -42,7 +41,7 @@ export class FlagsManager {
   }
 
   async deleteFeatureFlag(key: string) {
-    this.#log('info', 'Delete feature flag', { key })
+    this.#logger.log('info', 'Delete feature flag', { key })
 
     const { Database } = this.#client.managers
     const response = await Database.db.deleteFrom('feature_flags').where('key', '=', key).execute()
@@ -51,7 +50,7 @@ export class FlagsManager {
   }
 
   async getFeatureFlags() {
-    this.#log('info', 'Reading all feature flags')
+    this.#logger.log('info', 'Reading all feature flags')
 
     const { Database } = this.#client.managers
     const flags = await Database.db.selectFrom('feature_flags').select(['key', 'value']).execute()
@@ -60,7 +59,7 @@ export class FlagsManager {
   }
 
   async setFeatureFlag(key: string, value: boolean) {
-    this.#log('info', 'Setting feature flag', { key, value })
+    this.#logger.log('info', 'Setting feature flag', { key, value })
 
     const { Database } = this.#client.managers
 
