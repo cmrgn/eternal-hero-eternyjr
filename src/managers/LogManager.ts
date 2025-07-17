@@ -64,7 +64,7 @@ export class LogManager {
   log(severity: Severity, message: string, context?: Context) {
     if (SEVERITY_LEVELS.indexOf(severity) >= this.#severityThreshold) {
       if (this.isLogtailEnabled) {
-        this.#logtail.log(severity, message, { ...context, scope: this.#scope })
+        this.#logtail.log(message, severity, { ...context, scope: this.#scope })
       } else {
         context
           ? console[severity](`[${this.#scope}]`, message, context)
