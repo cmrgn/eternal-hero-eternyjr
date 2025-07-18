@@ -6,8 +6,8 @@ import * as faqleaderboard from './faqleaderboard'
 import * as flag from './flag'
 import * as giveaway from './giveaway'
 import * as indexfaq from './indexfaq'
+import * as localizeiap from './localizeiap'
 import * as rule from './rule'
-import * as store from './store'
 import * as talk from './talk'
 import * as timeout from './timeout'
 
@@ -20,8 +20,8 @@ export const commands = {
   flag,
   giveaway,
   indexfaq,
+  localizeiap,
   rule,
-  store,
   talk,
   timeout,
 }

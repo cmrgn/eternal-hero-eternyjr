@@ -2,44 +2,73 @@ import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } f
 import pMap from 'p-map'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { DiscordManager } from '../managers/DiscordManager'
+import type { InAppPurchase } from '../managers/GooglePlayManager'
 
 export const scope = 'OFFICIAL'
 
 export const data = new SlashCommandBuilder()
-  .setName('store')
-  .addStringOption(option =>
-    option
-      .setName('language')
-      .setDescription('Translation language')
-      .setChoices(
-        Object.values(LANGUAGE_OBJECTS)
-          .filter(languageObject => languageObject.isOnCrowdin)
-          .map(languageObject => ({
-            name: languageObject.languageName,
-            value: languageObject.crowdinCode,
-          }))
+  .setName('localizeiap')
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('content')
+      .setDescription('Localize in-app purchases content')
+      .addStringOption(option =>
+        option
+          .setName('language')
+          .setDescription('Translation language')
+          .setChoices(
+            Object.values(LANGUAGE_OBJECTS)
+              .filter(languageObject => languageObject.isOnCrowdin)
+              .map(languageObject => ({
+                name: languageObject.languageName,
+                value: languageObject.crowdinCode,
+              }))
+          )
+          .setRequired(true)
       )
-      .setRequired(true)
-  )
-  .addStringOption(option =>
-    option
-      .setName('platform')
-      .setDescription('Platform')
-      .addChoices(
-        { name: 'Both', value: 'BOTH' },
-        { name: 'Apple Store', value: 'APPLE_STORE' },
-        { name: 'Google Play', value: 'GOOGLE_PLAY' }
+      .addStringOption(option =>
+        option
+          .setName('platform')
+          .setDescription('Platform')
+          .addChoices(
+            { name: 'Both', value: 'BOTH' },
+            { name: 'Apple Store', value: 'APPLE_STORE' },
+            { name: 'Google Play', value: 'GOOGLE_PLAY' }
+          )
       )
+      .addStringOption(option => option.setName('iap').setDescription('In-app purchase identifier'))
   )
-  .addStringOption(option => option.setName('iap').setDescription('In-app purchase identifier'))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('price')
+      .setDescription('Localize in-app purchases prices')
+      .addStringOption(option =>
+        option.setName('platform').setDescription('Platform').addChoices(
+          // { name: 'Both', value: 'BOTH' },
+          // { name: 'Apple Store', value: 'APPLE_STORE' },
+          { name: 'Google Play', value: 'GOOGLE_PLAY' }
+        )
+      )
+      .addStringOption(option => option.setName('iap').setDescription('In-app purchase identifier'))
+  )
+
   .setDescription('Localize the store in-app purchases')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const { client, options } = interaction
-  const { Store, Crowdin, Discord, CommandLogger } = client.managers
+  const { CommandLogger } = interaction.client.managers
+  const subcommand = interaction.options.getSubcommand()
 
   CommandLogger.logCommand(interaction, 'Starting command execution')
 
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+
+  if (subcommand === 'content') await commandContent(interaction)
+  if (subcommand === 'price') await commandPrice(interaction)
+}
+
+async function commandContent(interaction: ChatInputCommandInteraction) {
+  const { options, client } = interaction
+  const { Crowdin, Discord, Store } = client.managers
   const iapId = options.getString('iap')
   const platform = options.getString('platform') ?? 'BOTH'
   const crowdinCode = options.getString('language', true) as CrowdinCode
@@ -52,7 +81,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     throw new Error(`Could not retrieve language object for \`${crowdinCode}\`.`)
   }
 
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral })
   await interaction.editReply({ content: 'Fetching store translations…' })
   const translations = await Store.getStoreTranslations(crowdinCode)
 
@@ -188,9 +216,83 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
   }
 
-  await interaction.editReply({
+  return interaction.editReply({
     content: iapId
       ? `Successfully updated translations in \`${crowdinCode}\` for \`${iapId}\`.`
       : `Successfully updated translations in \`${crowdinCode}\`.`,
   })
+}
+
+async function commandPrice(interaction: ChatInputCommandInteraction) {
+  const { client, options } = interaction
+  const { Store, CommandLogger } = client.managers
+  const iapId = options.getString('iap')
+  const platform = options.getString('platform') ?? 'BOTH'
+
+  if (iapId) {
+    if (platform === 'GOOGLE_PLAY') {
+      let iap: InAppPurchase
+
+      try {
+        iap = await Store.googlePlay.getIap(iapId)
+      } catch (error) {
+        CommandLogger.log('error', 'No valid IAP found.', { error, iapId })
+        return interaction.editReply({
+          content: `Could not retrieve a valid in-app purchase named \`${iapId}\`.`,
+        })
+      }
+
+      const response = await Store.googlePlay.localizeIapPrices(iap)
+
+      return interaction.editReply({
+        content: response
+          ? `Successfully localized prices for in-app purchase \`${iapId}\` on Google Play:\n` +
+            formatOutcome(response.currentPrices, response.updatedPrices)
+          : `Failed to localize prices for in-app purchase \`${iapId}\` on Google Play.`,
+      })
+    }
+  } else {
+    if (platform === 'GOOGLE_PLAY') {
+      const iaps = await Store.googlePlay.getAllIaps()
+      const total = iaps.length
+      const discordEditLimiter = DiscordManager.getDiscordEditLimiter()
+      const notify = discordEditLimiter.wrap((iap: (typeof iaps)[number], index: number) =>
+        interaction.editReply({
+          content: [
+            'Price localization in progress…',
+            `- Platform: Google Play`,
+            `- Progress: ${Math.round(((index + 1) / total) * 100)}%`,
+            `- Current: _“${iap.sku}”_`,
+          ].join('\n'),
+        })
+      )
+
+      await pMap(
+        iaps.entries(),
+        async ([index, iap]) => {
+          await notify(iap, index)
+          await Store.googlePlay.localizeIapPrices(iap)
+        },
+        { concurrency: 5 }
+      )
+    }
+  }
+}
+
+function formatOutcome(
+  currentPrices: Record<string, { currency: string; priceMicros: string }>,
+  updatedPrices: Record<string, { currency: string; priceMicros: string }>
+) {
+  return Object.entries(updatedPrices)
+    .map(([region, { currency, priceMicros }]) => {
+      const cf = new Intl.NumberFormat('en-US', {
+        currency: currency,
+        currencyDisplay: 'narrowSymbol',
+        style: 'currency',
+      })
+      const prevPrice = currentPrices[region].priceMicros
+      const f = (priceMicros: string) => cf.format(+priceMicros / 1_000_000)
+      return `- ${region}: ~~${f(prevPrice)}~~ **${f(priceMicros)}**`
+    })
+    .join('\n')
 }

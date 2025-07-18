@@ -21,6 +21,30 @@ export class StoreManager {
 
   #logger: LogManager
 
+  static regionalPriceMap = {
+    BD: 0.5, // Bangladesh
+    BR: 0.6, // Brazil
+    CL: 0.7, // Chile
+    CO: 0.7, // Colombia
+    EG: 0.55, // Egypt
+    ID: 0.55, // Indonesia
+    IN: 0.5, // India
+    KE: 0.55, // Kenya
+    KR: 0.9, // Korea
+    MX: 0.7, // Mexico
+    NG: 0.5, // Nigeria
+    PE: 0.65, // Peru
+    PH: 0.5, // Philippines
+    PK: 0.5, // Pakistan
+    PL: 0.75, // Poland
+    RU: 0.6, // Russia
+    TH: 0.6, // Thailand
+    TR: 0.6, // Türkie
+    UA: 0.6, // Ukraine
+    VN: 0.5, // Vietnam
+    ZA: 0.6, // South Africa
+  }
+
   constructor(client: Client, severity: Severity = 'info') {
     this.#client = client
     this.appleStore = new AppleStoreManager()

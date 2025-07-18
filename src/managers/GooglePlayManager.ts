@@ -5,6 +5,7 @@ import pMap from 'p-map'
 import { LANGUAGE_OBJECTS, type Locale } from '../constants/i18n'
 import { withRetry } from '../utils/withRetry'
 import { LogManager, type Severity } from './LogManager'
+import { StoreManager } from './StoreManager'
 
 export type IapLocalizationFields = { title: string; description: string }
 
@@ -25,30 +26,6 @@ export class GooglePlayManager {
     data: null,
     lastFetchedAt: 0,
     ttl: 15 * 60 * 1000, // 15 minutes
-  }
-
-  static regionalPriceMap = {
-    BD: 0.5, // Bangladesh
-    BR: 0.6, // Brazil
-    CL: 0.7, // Chile
-    CO: 0.7, // Colombia
-    EG: 0.55, // Egypt
-    ID: 0.55, // Indonesia
-    IN: 0.5, // India
-    KE: 0.55, // Kenya
-    KR: 0.9, // Korea
-    MX: 0.7, // Mexico
-    NG: 0.5, // Nigeria
-    PE: 0.65, // Peru
-    PH: 0.5, // Philippines
-    PK: 0.5, // Pakistan
-    PL: 0.75, // Poland
-    RU: 0.6, // Russia
-    TH: 0.6, // Thailand
-    TR: 0.6, // Türkie
-    UA: 0.6, // Ukraine
-    VN: 0.5, // Vietnam
-    ZA: 0.6, // South Africa
   }
 
   #logger: LogManager
@@ -202,9 +179,9 @@ export class GooglePlayManager {
     const currentPrices: Record<string, { currency: string; priceMicros: string }> = {}
 
     await Promise.all(
-      Object.entries(GooglePlayManager.regionalPriceMap).map(async ([region, multiplier]) => {
+      Object.entries(StoreManager.regionalPriceMap).map(async ([region, coefficient]) => {
         this.#logger.log('debug', 'Localizing in-app purchase price', {
-          multiplier,
+          coefficient,
           region,
           sku: iap.sku,
         })
@@ -213,7 +190,7 @@ export class GooglePlayManager {
           return this.#logger.log(
             'warn',
             'Could not retrieve regional currency for in-app purchase; skipping',
-            { multiplier, region, sku: iap.sku }
+            { coefficient, region, sku: iap.sku }
           )
         }
 
@@ -223,7 +200,7 @@ export class GooglePlayManager {
 
         // The new price is the localized default price times the mulitiplier
         const localizedAdjustedPrice =
-          Math.round((localizedDefaultPrice * multiplier) / 1_000_000) * 1_000_000
+          Math.round((localizedDefaultPrice * coefficient) / 1_000_000) * 1_000_000
 
         currentPrices[region] = {
           currency: toCurrency,
@@ -243,12 +220,14 @@ export class GooglePlayManager {
       updatedPrices,
     })
 
-    return this.#ap.inappproducts.patch({
+    await this.#ap.inappproducts.patch({
       autoConvertMissingPrices: true,
       packageName: this.#packageName,
       requestBody: { packageName: this.#packageName, prices: updatedPrices, sku: iap.sku },
       sku: iap.sku,
     })
+
+    return { currentPrices, updatedPrices }
   }
 
   async getIap(sku: string) {
