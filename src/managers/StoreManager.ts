@@ -22,27 +22,27 @@ export class StoreManager {
   #logger: LogManager
 
   static regionalPriceMap = {
-    BD: 0.5, // Bangladesh
-    BR: 0.6, // Brazil
-    CL: 0.7, // Chile
-    CO: 0.7, // Colombia
-    EG: 0.55, // Egypt
-    ID: 0.55, // Indonesia
-    IN: 0.5, // India
-    KE: 0.55, // Kenya
-    KR: 0.9, // Korea
-    MX: 0.7, // Mexico
-    NG: 0.5, // Nigeria
-    PE: 0.65, // Peru
-    PH: 0.5, // Philippines
-    PK: 0.5, // Pakistan
-    PL: 0.75, // Poland
-    RU: 0.6, // Russia
-    TH: 0.6, // Thailand
-    TR: 0.6, // Türkie
-    UA: 0.6, // Ukraine
-    VN: 0.5, // Vietnam
-    ZA: 0.6, // South Africa
+    BD: { coefficient: 0.5, currency: 'BDT', iso3: 'BAN' }, // Bangladesh
+    BR: { coefficient: 0.6, currency: 'BRL', iso3: 'BRA' }, // Brazil
+    CL: { coefficient: 0.7, currency: 'CLP', iso3: 'CHL' }, // Chile
+    CO: { coefficient: 0.7, currency: 'COP', iso3: 'COL' }, // Colombia
+    EG: { coefficient: 0.55, currency: 'EGP', iso3: 'EGY' }, // Egypt
+    ID: { coefficient: 0.55, currency: 'IDR', iso3: 'IDN' }, // Indonesia
+    IN: { coefficient: 0.5, currency: 'INR', iso3: 'IND' }, // India
+    KE: { coefficient: 0.55, currency: 'KES', iso3: 'KEN' }, // Kenya
+    KR: { coefficient: 0.9, currency: 'KRW', iso3: 'KOR' }, // Korea, Republic of
+    MX: { coefficient: 0.7, currency: 'MXN', iso3: 'MEX' }, // Mexico
+    NG: { coefficient: 0.5, currency: 'NGN', iso3: 'NGA' }, // Nigeria
+    PE: { coefficient: 0.65, currency: 'PEN', iso3: 'PER' }, // Peru
+    PH: { coefficient: 0.5, currency: 'PHP', iso3: 'PHL' }, // Philippines
+    PK: { coefficient: 0.5, currency: 'PKR', iso3: 'PAK' }, // Pakistan
+    PL: { coefficient: 0.75, currency: 'PLN', iso3: 'POL' }, // Poland
+    RU: { coefficient: 0.6, currency: 'RUB', iso3: 'RUS' }, // Russia
+    TH: { coefficient: 0.6, currency: 'THB', iso3: 'THA' }, // Thailand
+    TR: { coefficient: 0.6, currency: 'TRY', iso3: 'TUR' }, // Türkiye
+    UA: { coefficient: 0.6, currency: 'UAH', iso3: 'UKR' }, // Ukraine
+    VN: { coefficient: 0.5, currency: 'VND', iso3: 'VNM' }, // Vietnam
+    ZA: { coefficient: 0.6, currency: 'ZAR', iso3: 'ZAF' }, // South Africa
   }
 
   constructor(client: Client, severity: Severity = 'info') {

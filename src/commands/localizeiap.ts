@@ -45,7 +45,7 @@ export const data = new SlashCommandBuilder()
       .addStringOption(option =>
         option.setName('platform').setDescription('Platform').addChoices(
           // { name: 'Both', value: 'BOTH' },
-          // { name: 'Apple Store', value: 'APPLE_STORE' },
+          { name: 'Apple Store', value: 'APPLE_STORE' },
           { name: 'Google Play', value: 'GOOGLE_PLAY' }
         )
       )
@@ -53,6 +53,9 @@ export const data = new SlashCommandBuilder()
   )
 
   .setDescription('Localize the store in-app purchases')
+
+type StorePlatform = 'GOOGLE_PLAY' | 'APPLE_STORE'
+type StorePlatformOptions = StorePlatform | 'BOTH'
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   const { CommandLogger } = interaction.client.managers
@@ -70,7 +73,7 @@ async function commandContent(interaction: ChatInputCommandInteraction) {
   const { options, client } = interaction
   const { Crowdin, Discord, Store } = client.managers
   const iapId = options.getString('iap')
-  const platform = options.getString('platform') ?? 'BOTH'
+  const platform = (options.getString('platform') ?? 'BOTH') as StorePlatformOptions
   const crowdinCode = options.getString('language', true) as CrowdinCode
 
   const languageObject = Crowdin.getLanguages({ withEnglish: false }).find(
@@ -102,7 +105,7 @@ async function commandContent(interaction: ChatInputCommandInteraction) {
       }
 
       await interaction.editReply({
-        content: `Updating localization for \`${iapId}\` in \`${crowdinCode}\` on Google Play…`,
+        content: `Localizing content for \`${iapId}\` in \`${crowdinCode}\` on Google Play…`,
       })
       await Store.googlePlay.updateIapLocalization(googlePlayIap, {
         [languageObject.locale]: iapTranslations[languageObject.locale],
@@ -118,7 +121,7 @@ async function commandContent(interaction: ChatInputCommandInteraction) {
         })
       }
       await interaction.editReply({
-        content: `Updating localization for \`${iapId}\` in \`${crowdinCode}\` on Apple Store…`,
+        content: `Localizing content for \`${iapId}\` in \`${crowdinCode}\` on Apple Store…`,
       })
       await Store.appleStore.updateIapLocalization(
         languageObject,
@@ -129,22 +132,17 @@ async function commandContent(interaction: ChatInputCommandInteraction) {
   } else {
     if (platform === 'BOTH' || platform === 'GOOGLE_PLAY') {
       await interaction.editReply({
-        content: `Updating localization in \`${crowdinCode}\` on Google Play…`,
+        content: `Localizing content in \`${crowdinCode}\` on Google Play…`,
       })
 
       const googlePlayIaps = await Store.googlePlay.getAllIaps()
-      const googlePlayEditLimiter = DiscordManager.getDiscordEditLimiter()
-      const notifyGooglePlay = googlePlayEditLimiter.wrap(
-        (iap: (typeof googlePlayIaps)[number], index: number) =>
-          interaction.editReply({
-            content: [
-              'Updating localization in progress…',
-              '- Platform: Google Play',
-              `- Language: \`${crowdinCode}\``,
-              `- Progress: ${Math.round(((index + 1) / googlePlayIaps.length) * 100)}%`,
-              `- Current: \`${iap.sku}\``,
-            ].join('\n'),
-          })
+      const notifyGooglePlay = getDiscordNotifier(
+        interaction,
+        'Localizing content in progress…',
+        'GOOGLE_PLAY',
+        googlePlayIaps,
+        iap => iap.sku,
+        crowdinCode
       )
 
       await pMap(
@@ -172,22 +170,17 @@ async function commandContent(interaction: ChatInputCommandInteraction) {
 
     if (platform === 'BOTH' || platform === 'APPLE_STORE') {
       await interaction.editReply({
-        content: `Updating localization in \`${crowdinCode}\` on Apple Store…`,
+        content: `Localizing content in \`${crowdinCode}\` on Apple Store…`,
       })
 
       const appleStoreIaps = await Store.appleStore.getAllIaps()
-      const appleStoreEditLimiter = DiscordManager.getDiscordEditLimiter()
-      const notifyAppleStore = appleStoreEditLimiter.wrap(
-        (iap: (typeof appleStoreIaps)[number], index: number) =>
-          interaction.editReply({
-            content: [
-              'Updating localization in progress…',
-              '- Platform: Apple Store',
-              `- Language: \`${crowdinCode}\``,
-              `- Progress: ${Math.round(((index + 1) / appleStoreIaps.length) * 100)}%`,
-              `- Current: \`${iap.attributes.productId}\``,
-            ].join('\n'),
-          })
+      const notifyAppleStore = getDiscordNotifier(
+        interaction,
+        'Localizing content in progress…',
+        'APPLE_STORE',
+        appleStoreIaps,
+        iap => iap.attributes.productId,
+        crowdinCode
       )
 
       await pMap(
@@ -227,11 +220,15 @@ async function commandPrice(interaction: ChatInputCommandInteraction) {
   const { client, options } = interaction
   const { Store, CommandLogger } = client.managers
   const iapId = options.getString('iap')
-  const platform = options.getString('platform') ?? 'BOTH'
+  const platform = (options.getString('platform') ?? 'BOTH') as StorePlatformOptions
 
   if (iapId) {
-    if (platform === 'GOOGLE_PLAY') {
+    if (platform === 'BOTH' || platform === 'GOOGLE_PLAY') {
       let iap: InAppPurchase
+
+      await interaction.editReply({
+        content: `Localizing prices for \`${iapId}\` on Google Play…`,
+      })
 
       try {
         iap = await Store.googlePlay.getIap(iapId)
@@ -244,27 +241,50 @@ async function commandPrice(interaction: ChatInputCommandInteraction) {
 
       const response = await Store.googlePlay.localizeIapPrices(iap)
 
-      return interaction.editReply({
+      await interaction.editReply({
         content: response
           ? `Successfully localized prices for in-app purchase \`${iapId}\` on Google Play:\n` +
             formatOutcome(response.currentPrices, response.updatedPrices)
           : `Failed to localize prices for in-app purchase \`${iapId}\` on Google Play.`,
       })
     }
-  } else {
-    if (platform === 'GOOGLE_PLAY') {
-      const iaps = await Store.googlePlay.getAllIaps()
-      const total = iaps.length
-      const discordEditLimiter = DiscordManager.getDiscordEditLimiter()
-      const notify = discordEditLimiter.wrap((iap: (typeof iaps)[number], index: number) =>
-        interaction.editReply({
-          content: [
-            'Price localization in progress…',
-            `- Platform: Google Play`,
-            `- Progress: ${Math.round(((index + 1) / total) * 100)}%`,
-            `- Current: _“${iap.sku}”_`,
-          ].join('\n'),
+
+    if (platform === 'BOTH' || platform === 'APPLE_STORE') {
+      await interaction.editReply({
+        content: `Localizing prices for \`${iapId}\` on Apple Store…`,
+      })
+
+      const iaps = await Store.appleStore.getAllIaps()
+      const iap = iaps.find(iap => iap.attributes.productId === iapId)
+
+      if (!iap) {
+        return interaction.editReply({
+          content: `Could not retrieve a valid in-app purchase named \`${iapId}\`.`,
         })
+      }
+
+      const response = await Store.appleStore.localizeIapPrices(iap.id)
+
+      return interaction.editReply({
+        content: response
+          ? `Successfully localized prices for in-app purchase \`${iapId}\` on Apple Store:\n` +
+            formatOutcome(response.currentPrices, response.updatedPrices)
+          : `Failed to localize prices for in-app purchase \`${iapId}\` on Apple Store.`,
+      })
+    }
+  } else {
+    if (platform === 'BOTH' || platform === 'GOOGLE_PLAY') {
+      await interaction.editReply({
+        content: `Localizing prices on Google Play…`,
+      })
+
+      const iaps = await Store.googlePlay.getAllIaps()
+      const notify = getDiscordNotifier(
+        interaction,
+        'Price localization in progress…',
+        'GOOGLE_PLAY',
+        iaps,
+        iap => iap.sku
       )
 
       await pMap(
@@ -272,6 +292,30 @@ async function commandPrice(interaction: ChatInputCommandInteraction) {
         async ([index, iap]) => {
           await notify(iap, index)
           await Store.googlePlay.localizeIapPrices(iap)
+        },
+        { concurrency: 5 }
+      )
+    }
+
+    if (platform === 'BOTH' || platform === 'APPLE_STORE') {
+      await interaction.editReply({
+        content: `Localizing prices on Apple Store…`,
+      })
+
+      const iaps = await Store.appleStore.getAllIaps()
+      const notify = getDiscordNotifier(
+        interaction,
+        'Price localization in progress…',
+        'APPLE_STORE',
+        iaps,
+        iap => iap.attributes.productId
+      )
+
+      await pMap(
+        iaps.entries(),
+        async ([index, iap]) => {
+          await notify(iap, index)
+          await Store.appleStore.localizeIapPrices(iap.id)
         },
         { concurrency: 5 }
       )
@@ -290,9 +334,39 @@ function formatOutcome(
         currencyDisplay: 'narrowSymbol',
         style: 'currency',
       })
-      const prevPrice = currentPrices[region].priceMicros
+      const prevPrice = currentPrices[region]?.priceMicros ?? '0'
       const f = (priceMicros: string) => cf.format(+priceMicros / 1_000_000)
       return `- ${region}: ~~${f(prevPrice)}~~ **${f(priceMicros)}**`
     })
     .join('\n')
+}
+
+function getDiscordNotifier<T>(
+  interaction: ChatInputCommandInteraction,
+  label: string,
+  platform: StorePlatform,
+  entries: T[],
+  getMainKey: (t: T) => string | null | undefined,
+  language?: CrowdinCode
+) {
+  const discordEditLimiter = DiscordManager.getDiscordEditLimiter()
+  const platformNames = {
+    APPLE_STORE: 'Apple Store',
+    GOOGLE_PLAY: 'Google Play',
+  }
+  const notify = discordEditLimiter.wrap((entry: T, index: number) =>
+    interaction.editReply({
+      content: [
+        label,
+        `- Platform: ${platformNames[platform] ?? 'unknown'}`,
+        language ? `- Language: \`${language}\`` : '',
+        `- Progress: ${Math.round(((index + 1) / entries.length) * 100)}%`,
+        `- Current: _“${getMainKey(entry) ?? 'unknown'}”_`,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    })
+  )
+
+  return notify
 }

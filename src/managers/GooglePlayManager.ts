@@ -179,7 +179,7 @@ export class GooglePlayManager {
     const currentPrices: Record<string, { currency: string; priceMicros: string }> = {}
 
     await Promise.all(
-      Object.entries(StoreManager.regionalPriceMap).map(async ([region, coefficient]) => {
+      Object.entries(StoreManager.regionalPriceMap).map(async ([region, { coefficient }]) => {
         this.#logger.log('debug', 'Localizing in-app purchase price', {
           coefficient,
           region,
