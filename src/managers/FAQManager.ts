@@ -85,13 +85,13 @@ export class FAQManager {
 
   get guildId() {
     const { Discord } = this.#client.managers
-    if (Discord.IS_DEV && Discord.TEST_SERVER_ID) return Discord.TEST_SERVER_ID
+    if (Discord.IS_DEV) return Discord.TEST_SERVER_ID
     return Discord.DISCORD_SERVER_ID
   }
 
   get faqForumId() {
     const { Discord } = this.#client.managers
-    if (Discord.IS_DEV && Discord.TEST_SERVER_ID) return FAQ_FORUM_ID_DEV
+    if (Discord.IS_DEV) return FAQ_FORUM_ID_DEV
     return FAQ_FORUM_ID_PROD
   }
 

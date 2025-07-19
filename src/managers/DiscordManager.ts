@@ -30,6 +30,7 @@ export class DiscordManager {
   #alertChannelId = '1381174240660951160'
   BOT_TEST_CHANNEL_ID = '1373605591766925412'
   DISCORD_SERVER_ID = '1239215561649426453'
+  TEST_SERVER_ID = '714858253531742208'
   KITTY_USER_ID = '368097495605182483'
   static BOT_COLOR = '#ac61ff' as ColorResolvable
 
@@ -55,10 +56,6 @@ export class DiscordManager {
     }
 
     return process.env.DISCORD_TOKEN
-  }
-
-  get TEST_SERVER_ID() {
-    return process.env.TEST_SERVER_ID
   }
 
   get IS_DEV() {

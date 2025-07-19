@@ -13,9 +13,6 @@ NODE_ENV=development
 DISCORD_CLIENT_ID=
 DISCORD_TOKEN=
 
-# This is test Discord server, that can be used to try things out locally
-TEST_SERVER_ID=
-
 # See: ./docs/DATABASE.md
 DATABASE_URL=
 
