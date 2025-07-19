@@ -1,15 +1,12 @@
+import fs from 'node:fs/promises'
 import jwt from 'jsonwebtoken'
 import removeAccents from 'remove-accents'
 import type { LanguageObject } from '../constants/i18n'
 import { request } from '../utils/request'
 import { LogManager, type Severity } from './LogManager'
+import { StoreManager } from './StoreManager'
 
 export type IapLocalizationFields = { name: string; description: string }
-
-type LocalizedIap = IapLocalizationFields & {
-  id: string
-  slug: string
-}
 
 type RelationshipLink = {
   links: { self: string; related: string; next?: string }
@@ -27,6 +24,13 @@ export type InAppPurchase = RelationshipLink & {
   relationships: { inAppPurchaseLocalizations: RelationshipLink }
 }
 
+type InAppPurchasePrices = RelationshipLink & {
+  type: 'inAppPurchasePrices'
+  id: string
+  attributes: { startDate: string | null; endDate: string | null; manual: boolean }
+  relationships: { inAppPurchasePricePoint: { data: { id: string } } }
+}
+
 type AppleApiResponse<T> = {
   data: T[]
   links?: { next?: string }
@@ -39,6 +43,8 @@ export class AppleStoreManager {
 
   #apiUrl = 'https://api.appstoreconnect.apple.com/v1'
   #appId = '6503089848'
+
+  #priceMatrix: Record<string, Record<string, number>> | null = null
 
   #cache: {
     data: InAppPurchase[] | null
@@ -56,6 +62,7 @@ export class AppleStoreManager {
     this.#logger = new LogManager('AppleStoreManager', severity)
     this.#logger.log('info', 'Instantiating manager')
     this.#jwt = this.generateJwt()
+    this.loadPriceMatrix()
   }
 
   get headers() {
@@ -71,6 +78,20 @@ export class AppleStoreManager {
       Authorization: `Bearer ${this.#jwt}`,
       'Content-Type': 'application/json',
     }
+  }
+
+  async loadPriceMatrix() {
+    const content = await fs.readFile('./matrix.json', 'utf-8')
+    const data = JSON.parse(content)
+    this.#priceMatrix = data
+  }
+
+  get priceMatrix() {
+    if (!this.#priceMatrix) {
+      throw new Error('Attempting to access price matrix before it gets initialized.')
+    }
+
+    return this.#priceMatrix
   }
 
   generateJwt() {
@@ -146,24 +167,6 @@ export class AppleStoreManager {
     }
 
     return data
-  }
-
-  async getIapInfo(data: InAppPurchase): Promise<LocalizedIap> {
-    this.#logger.log('info', 'Getting in-app purchase info', {
-      id: data.id,
-      slug: data.attributes.productId,
-    })
-
-    const { related } = data.relationships.inAppPurchaseLocalizations.links
-    const response: AppleApiResponse<InAppPurchase> = await this.callApi(related)
-    const en = response.data.find(loc => loc.attributes.locale === 'en-US')
-
-    return {
-      description: en?.attributes.description ?? '',
-      id: data.id,
-      name: en?.attributes.name ?? '',
-      slug: data.attributes.productId,
-    }
   }
 
   async getIapLocalization(locale: string, relatedUrl: string) {
@@ -275,5 +278,76 @@ export class AppleStoreManager {
       }
       await this.callApi(`${this.#apiUrl}/inAppPurchaseLocalizations`, 'POST', payload)
     }
+  }
+
+  findClosestTier(region: string, targetPrice: number): string | null {
+    let closestTier: string | null = null
+    let smallestDiff = Infinity
+
+    for (const [tierId, regionPrices] of Object.entries(this.priceMatrix)) {
+      const price = regionPrices[region]
+      if (!price) continue
+
+      const diff = Math.abs(price - targetPrice)
+      if (diff < smallestDiff) {
+        smallestDiff = diff
+        closestTier = tierId
+      }
+    }
+
+    return closestTier
+  }
+
+  decodeIapId(iapId: string): {
+    s: string
+    t: string
+    p: string
+  } {
+    return JSON.parse(Buffer.from(iapId, 'base64').toString('utf-8'))
+  }
+
+  async localizeIapPrices(iapId: string) {
+    const iap = await this.callApi<InAppPurchasePrices>(
+      `${this.#apiUrl}/inAppPurchasePriceSchedules/${iapId}/manualPrices?filter[territory]=USA&include=inAppPurchasePricePoint`
+    )
+
+    const [entry] = iap.data
+    const { p: tierId } = this.decodeIapId(entry?.relationships.inAppPurchasePricePoint.data.id)
+    const updatedPrices: Record<string, { currency: string; priceMicros: string }> = {}
+    const currentPrices: Record<string, { currency: string; priceMicros: string }> = {}
+
+    await Promise.all(
+      Object.entries(StoreManager.regionalPriceMap).map(
+        async ([region, { iso3, currency: toCurrency, coefficient }]) => {
+          const regionalPrice = this.priceMatrix[tierId][iso3]
+          const updatedRegionalPrice = regionalPrice * coefficient
+          const newTier = this.findClosestTier(iso3, updatedRegionalPrice)
+          const payload = {
+            data: {
+              attributes: { start: '2025-07-25T00:00:00Z' },
+              relationships: {
+                inAppPurchase: { data: { id: iapId, type: 'inAppPurchases' } },
+                priceTier: { data: { id: newTier, type: 'priceTiers' } },
+                territory: { data: { id: region, type: 'territories' } },
+              },
+              type: 'inAppPurchasePrices',
+            },
+          }
+
+          await this.callApi(`${this.#apiUrl}/inAppPurchasePrices`, 'POST', payload)
+
+          currentPrices[region] = {
+            currency: toCurrency,
+            priceMicros: String(regionalPrice * 1_000_000),
+          }
+          updatedPrices[region] = {
+            currency: toCurrency,
+            priceMicros: String(updatedRegionalPrice * 1_000_000),
+          }
+        }
+      )
+    )
+
+    return { currentPrices, updatedPrices }
   }
 }

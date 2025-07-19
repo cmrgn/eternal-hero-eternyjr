@@ -1,18 +1,17 @@
+import { Convert } from 'easy-currencies'
 import { type androidpublisher_v3, google } from 'googleapis'
+import type { androidpublisher_v3 as AndroidPublisher } from 'googleapis/build/src/apis/androidpublisher/v3'
+import pMap from 'p-map'
 import { LANGUAGE_OBJECTS, type Locale } from '../constants/i18n'
 import { withRetry } from '../utils/withRetry'
 import { LogManager, type Severity } from './LogManager'
+import { StoreManager } from './StoreManager'
 
 export type IapLocalizationFields = { title: string; description: string }
 
 type Listing = IapLocalizationFields
 type Listings = Partial<Record<Locale, Listing>>
-export type InAppPurchase = {
-  sku?: string | null
-  status?: string | null
-  defaultLanguage?: string | null
-  listings?: Listings | null
-}
+export type InAppPurchase = AndroidPublisher.Schema$InAppProduct
 
 export class GooglePlayManager {
   #ap: androidpublisher_v3.Androidpublisher
@@ -146,5 +145,98 @@ export class GooglePlayManager {
     }
 
     return merged
+  }
+
+  async localizeIapPrices(iap: InAppPurchase) {
+    if (!iap.sku) {
+      return this.#logger.log('warn', 'Could not retrieve SKU for in-app purchase; skipping', {
+        sku: iap.sku,
+      })
+    }
+
+    if (!iap.defaultPrice?.priceMicros) {
+      return this.#logger.log(
+        'warn',
+        'Could not retrieve default price for in-app purchase; skipping',
+        { sku: iap.sku }
+      )
+    }
+
+    if (!iap.defaultPrice.currency) {
+      return this.#logger.log(
+        'warn',
+        'Could not retrieve default currency for in-app purchase; skipping',
+        { sku: iap.sku }
+      )
+    }
+
+    // Start from the default price (which is *designed* in dollars, but *expressed* in Turkish
+    // liras because the Google Play Store account is Turkish), and convert it to the regional
+    // currency
+    const defaultPrice = +iap.defaultPrice.priceMicros
+    const fromCurrency = iap.defaultPrice.currency
+    const updatedPrices: Record<string, { currency: string; priceMicros: string }> = {}
+    const currentPrices: Record<string, { currency: string; priceMicros: string }> = {}
+
+    await Promise.all(
+      Object.entries(StoreManager.regionalPriceMap).map(async ([region, { coefficient }]) => {
+        this.#logger.log('debug', 'Localizing in-app purchase price', {
+          coefficient,
+          region,
+          sku: iap.sku,
+        })
+
+        if (!iap.prices?.[region]?.currency) {
+          return this.#logger.log(
+            'warn',
+            'Could not retrieve regional currency for in-app purchase; skipping',
+            { coefficient, region, sku: iap.sku }
+          )
+        }
+
+        // Retrieve the currency associated to the given region
+        const toCurrency = iap.prices[region].currency
+        const localizedDefaultPrice = await Convert(defaultPrice).from(fromCurrency).to(toCurrency)
+
+        // The new price is the localized default price times the mulitiplier
+        const localizedAdjustedPrice =
+          Math.round((localizedDefaultPrice * coefficient) / 1_000_000) * 1_000_000
+
+        currentPrices[region] = {
+          currency: toCurrency,
+          priceMicros: iap.prices[region].priceMicros ?? 'undefined',
+        }
+
+        updatedPrices[region] = {
+          currency: toCurrency,
+          priceMicros: String(localizedAdjustedPrice),
+        }
+      })
+    )
+
+    this.#logger.log('info', 'Updating in-app purchase price', {
+      currentPrices,
+      sku: iap.sku,
+      updatedPrices,
+    })
+
+    await this.#ap.inappproducts.patch({
+      autoConvertMissingPrices: true,
+      packageName: this.#packageName,
+      requestBody: { packageName: this.#packageName, prices: updatedPrices, sku: iap.sku },
+      sku: iap.sku,
+    })
+
+    return { currentPrices, updatedPrices }
+  }
+
+  async getIap(sku: string) {
+    const response = await this.#ap.inappproducts.get({ packageName: this.#packageName, sku })
+    return response.data
+  }
+
+  async localizeAllPrices(concurrency = 5) {
+    const iaps = await this.getAllIaps()
+    return pMap(iaps, iap => this.localizeIapPrices(iap), { concurrency })
   }
 }
