@@ -44,7 +44,7 @@ export class AppleStoreManager {
   #apiUrl = 'https://api.appstoreconnect.apple.com/v1'
   #appId = '6503089848'
 
-  #priceMatrix: Record<string, Record<string, number>> | null = null
+  #tierMatrix: Record<string, Record<string, number>> | null = null
 
   #cache: {
     data: InAppPurchase[] | null
@@ -62,7 +62,7 @@ export class AppleStoreManager {
     this.#logger = new LogManager('AppleStoreManager', severity)
     this.#logger.log('info', 'Instantiating manager')
     this.#jwt = this.generateJwt()
-    this.loadPriceMatrix()
+    this.loadTierMatrix()
   }
 
   get headers() {
@@ -80,18 +80,18 @@ export class AppleStoreManager {
     }
   }
 
-  async loadPriceMatrix() {
-    const content = await fs.readFile('./matrix.json', 'utf-8')
+  async loadTierMatrix() {
+    const content = await fs.readFile('./apple-tier-matrix.json', 'utf-8')
     const data = JSON.parse(content)
-    this.#priceMatrix = data
+    this.#tierMatrix = data
   }
 
-  get priceMatrix() {
-    if (!this.#priceMatrix) {
+  get tierMatrix() {
+    if (!this.#tierMatrix) {
       throw new Error('Attempting to access price matrix before it gets initialized.')
     }
 
-    return this.#priceMatrix
+    return this.#tierMatrix
   }
 
   generateJwt() {
@@ -284,7 +284,7 @@ export class AppleStoreManager {
     let closestTier: string | null = null
     let smallestDiff = Infinity
 
-    for (const [tierId, regionPrices] of Object.entries(this.priceMatrix)) {
+    for (const [tierId, regionPrices] of Object.entries(this.tierMatrix)) {
       const price = regionPrices[region]
       if (!price) continue
 
@@ -319,7 +319,7 @@ export class AppleStoreManager {
     await Promise.all(
       Object.entries(StoreManager.regionalPriceMap).map(
         async ([region, { iso3, currency: toCurrency, coefficient }]) => {
-          const regionalPrice = this.priceMatrix[tierId][iso3]
+          const regionalPrice = this.tierMatrix[tierId][iso3]
           const updatedRegionalPrice = regionalPrice * coefficient
           const newTier = this.findClosestTier(iso3, updatedRegionalPrice)
           const payload = {
