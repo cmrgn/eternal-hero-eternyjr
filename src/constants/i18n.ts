@@ -307,6 +307,9 @@ export const LANGUAGE_OBJECTS = [
     twoLettersCode: 'zh' as const,
   },
 ]
+
 export const LOCALES = LANGUAGE_OBJECTS.map(object => object.locale)
 export const LANGUAGES = LANGUAGE_OBJECTS.map(object => object.twoLettersCode)
-export const CROWDIN_CODES = LANGUAGE_OBJECTS.map(object => object.crowdinCode)
+export const CROWDIN_CODES = LANGUAGE_OBJECTS.filter(
+  object => object.isOnCrowdin || object.crowdinCode === 'en'
+).map(object => object.crowdinCode)

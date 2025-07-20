@@ -36,18 +36,21 @@ export async function languageDetection(
     (Discord.IS_DEV && DEV_INCLUDED_CATEGORY_IDS.includes(channel.parentId))
   if (!isTestChannel && !isInRelevantCategory) return
 
-  const crowdinCode = Localization.guessLanguageWithCld3(content)
+  const guessedLanguage = Localization.guessLanguageWithCld3(content)
 
   // If the guessed language is not unknown or unreliable, return early as it’s better to have a
   // false negative than a false positive. If the guessed language is English, return early as there
   // is nothing to do.
-  if (!crowdinCode || crowdinCode === 'en') return
+  if (!guessedLanguage || guessedLanguage === 'en') return
 
   // If the guessed language is not a language we have an international channel for, return the
   // generic English response about rule 3.1.
-  const languageObject = LANGUAGE_OBJECTS.find(
-    languageObject => languageObject.crowdinCode === crowdinCode
-  )
+  const languageObject = LANGUAGE_OBJECTS.find(languageObject => {
+    // If the guessed language is a language we support or a regional variant of one of them (for
+    // instance Portuguese instead of Brazilian Portuguese or non-simplified Chinese), return the
+    // similar variant.
+    return languageObject.locale.startsWith(guessedLanguage)
+  })
   const inEnglish = ENGLISH_LANGUAGE_OBJECT.messages.internationalization
   if (!languageObject) return interaction.reply(inEnglish)
 

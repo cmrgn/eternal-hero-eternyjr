@@ -30,21 +30,21 @@ export class LocalizationManager {
     this.#languageIdentifier = (await loadModule()).create(40)
   }
 
-  static isLanguageSupported(language: string): language is CrowdinCode {
+  static isOnCrowdin(language: string): language is CrowdinCode {
     return CROWDIN_CODES.includes(language as CrowdinCode)
   }
 
   guessLanguageWithCld3(userInput: string) {
-    this.#logger.log('debug', 'Guessing language with cld3', { userInput: getExcerpt(userInput) })
-
     if (!this.#languageIdentifier) return null
+
     const guess = this.#languageIdentifier.findLanguage(userInput)
 
-    if (
-      guess.probability >= 0.9 &&
-      guess.language !== 'und' &&
-      LocalizationManager.isLanguageSupported(guess.language)
-    ) {
+    this.#logger.log('debug', 'Guessing language with cld3', {
+      guess,
+      userInput: getExcerpt(userInput),
+    })
+
+    if (guess.probability >= 0.9 && guess.language !== 'und') {
       return guess.language
     }
 
@@ -77,7 +77,7 @@ export class LocalizationManager {
       return null
     }
 
-    if (!LocalizationManager.isLanguageSupported(response)) {
+    if (!LocalizationManager.isOnCrowdin(response)) {
       this.#logger.log('warn', 'ChatGPT returned an unsupported locale', context)
       return null
     }
@@ -89,7 +89,7 @@ export class LocalizationManager {
     this.#logger.log('info', 'Guessing Crowdin language', { userInput: getExcerpt(userInput) })
 
     const cldGuess = this.guessLanguageWithCld3(userInput)
-    if (cldGuess) return cldGuess
+    if (cldGuess && LocalizationManager.isOnCrowdin(cldGuess)) return cldGuess
 
     const gptGuess = await this.guessLanguageWithChatGPT(userInput)
     if (gptGuess) return gptGuess
