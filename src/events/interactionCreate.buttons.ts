@@ -9,10 +9,6 @@ export async function handleButtons(interaction: ButtonInteraction) {
   // Translation
   if (action === 'confirm-retranslate') {
     const resolvedThread = await Faq.resolveThreadFromChannel(interaction, id)
-    await interaction.update({
-      components: [],
-      content: `Retranslation of thread \`${id}\` started…`,
-    })
     await Index.translateAndIndexThreadInAllLanguages(resolvedThread)
     await interaction.update({
       components: [],
