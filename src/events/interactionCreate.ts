@@ -12,7 +12,16 @@ export async function onInteractionCreate(interaction: Interaction) {
   // Check whether the interaction should be processed before proceeding.
   if (Discord.shouldIgnoreInteraction(interaction)) return
 
-  if (interaction.isButton()) return handleButtons(interaction)
+  if (interaction.isButton()) {
+    try {
+      await handleButtons(interaction)
+    } catch (error) {
+      const message = 'There was an error while handling this button.'
+      CommandLogger.logButton(interaction, message, { error })
+      await Discord.sendInteractionAlert(interaction, `${message}\n\`\`\`${error}\`\`\``)
+    }
+  }
+
   if (interaction.isAutocomplete()) return handleAutocomplete(interaction)
   if (!interaction.isChatInputCommand()) return
 
@@ -21,10 +30,7 @@ export async function onInteractionCreate(interaction: Interaction) {
     if (command) await command.execute(interaction)
   } catch (error) {
     const message = 'There was an error while executing this command.'
-
-    CommandLogger.logCommand(interaction, 'There was an error while executing this command.', {
-      error,
-    })
+    CommandLogger.logCommand(interaction, message, { error })
     await Discord.sendInteractionAlert(interaction, `${message}\n\`\`\`${error}\`\`\``)
 
     if (interaction.replied || interaction.deferred)

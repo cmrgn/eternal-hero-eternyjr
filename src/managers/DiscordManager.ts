@@ -4,12 +4,12 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  type ChatInputCommandInteraction,
   type Client,
   type ColorResolvable,
   channelMention,
   EmbedBuilder,
   type Guild,
+  type Interaction,
   type Message,
   type PartialMessage,
   REST,
@@ -182,7 +182,7 @@ export class DiscordManager {
     return fetchedChannel
   }
 
-  async sendInteractionAlert(interaction: ChatInputCommandInteraction, message: string) {
+  async sendInteractionAlert(interaction: Interaction, message: string) {
     const userId = interaction.user?.id
     const channel = await this.getChannelById(
       interaction.client,

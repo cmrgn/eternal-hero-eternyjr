@@ -1,6 +1,6 @@
 import { Logtail } from '@logtail/node'
 import type { Context } from '@logtail/types'
-import type { ChatInputCommandInteraction } from 'discord.js'
+import type { ButtonInteraction, ChatInputCommandInteraction } from 'discord.js'
 
 let logtailInstance: Logtail | null = null
 
@@ -58,6 +58,26 @@ export class LogManager {
       this.#logtail.log(message, 'info', { ...extraContext, scope: `/${interaction.commandName}` })
     } else {
       console.log(`[${this.#scope}]`, `/${interaction.commandName}`, message, extraContext)
+    }
+  }
+
+  logButton(interaction: ButtonInteraction, message: string, context?: Context) {
+    const guild = interaction.guild
+    const channel = guild?.channels.cache.find(channel => channel.id === interaction.channelId)
+    const commandInfo = {
+      channelId: channel?.id,
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+    }
+    const extraContext = {
+      ...context,
+      ...commandInfo,
+    }
+
+    if (this.isLogtailEnabled) {
+      this.#logtail.log(message, 'info', { ...extraContext, scope: interaction.component.id })
+    } else {
+      console.log(`[${this.#scope}]`, interaction.component.id, message, extraContext)
     }
   }
 
