@@ -18,7 +18,6 @@ import {
 } from 'discord.js'
 import { commands } from '../commands'
 import type { LanguageObject } from '../constants/i18n'
-import { stripIndent } from '../utils/stripIndent'
 import { withRetry } from '../utils/withRetry'
 import type { ResolvedThread } from './FAQManager'
 import { LogManager, type Severity } from './LogManager'
@@ -194,16 +193,12 @@ export class DiscordManager {
       return this.#logger.log('error', message.replace(/```/g, ''))
 
     try {
-      return await channel.send(
-        stripIndent(`
-      ${message}
+      return await channel.send(`${message}
 
-      **Context:**
-      - Server: ${interaction.guild?.name ?? interaction.guildId}
-      - Channel: ${interaction.channelId ? channelMention(interaction.channelId) : 'unknown'}
-      - User: ${userId ? userMention(userId) : 'unknown'}
-    `)
-      )
+**Context:**
+- Server: ${interaction.guild?.name ?? interaction.guildId}
+- Channel: ${interaction.channelId ? channelMention(interaction.channelId) : 'unknown'}
+- User: ${userId ? userMention(userId) : 'unknown'}`)
     } catch (error) {
       this.#logger.log('error', 'Sending alert failed', { error })
     }
