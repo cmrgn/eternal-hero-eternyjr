@@ -23,7 +23,7 @@ export async function request(
         : await response.text()
 
   if (!response.ok) {
-    logger.log('error', 'HTTP query failed', { data, status: response.status })
+    logger.log('error', 'HTTP query failed', { errors: data.errors, status: response.status })
     throw new Error(`HTTP query failed (${response.status}): ${JSON.stringify(data)}`)
   }
 
