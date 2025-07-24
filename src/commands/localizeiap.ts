@@ -3,6 +3,7 @@ import pMap from 'p-map'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { DiscordManager } from '../managers/DiscordManager'
 import type { InAppPurchase } from '../managers/GooglePlayManager'
+import { StoreManager } from '../managers/StoreManager'
 
 export const scope = 'OFFICIAL'
 
@@ -334,9 +335,11 @@ function formatOutcome(
         currencyDisplay: 'narrowSymbol',
         style: 'currency',
       })
+      const config =
+        StoreManager.regionalPriceMap[region as keyof typeof StoreManager.regionalPriceMap]
       const prevPrice = currentPrices[region]?.priceMicros ?? '0'
       const f = (priceMicros: string) => cf.format(+priceMicros / 1_000_000)
-      return `- ${region}: ~~${f(prevPrice)}~~ **${f(priceMicros)}**`
+      return `- ${config.name} (${region}): ~~${f(prevPrice)}~~ **${f(priceMicros)}** (×${config.coefficient})`
     })
     .join('\n')
 }
