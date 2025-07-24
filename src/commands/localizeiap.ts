@@ -1,4 +1,4 @@
-import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
+import { type ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js'
 import pMap from 'p-map'
 import { type CrowdinCode, LANGUAGE_OBJECTS } from '../constants/i18n'
 import { DiscordManager } from '../managers/DiscordManager'
@@ -63,7 +63,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   CommandLogger.logCommand(interaction, 'Starting command execution')
 
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+  await interaction.deferReply()
 
   if (subcommand === 'content') await commandContent(interaction)
   if (subcommand === 'price') await commandPrice(interaction)
