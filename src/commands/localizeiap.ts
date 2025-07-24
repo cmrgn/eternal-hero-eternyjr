@@ -291,8 +291,10 @@ async function commandPrice(interaction: ChatInputCommandInteraction) {
       await pMap(
         iaps.entries(),
         async ([index, iap]) => {
+          if (!iap.sku) return
           await notify(iap, index)
-          await Store.googlePlay.localizeIapPrices(iap)
+          const fullIap = await Store.googlePlay.getIap(iap.sku)
+          await Store.googlePlay.localizeIapPrices(fullIap)
         },
         { concurrency: 5 }
       )
@@ -321,6 +323,8 @@ async function commandPrice(interaction: ChatInputCommandInteraction) {
         { concurrency: 5 }
       )
     }
+
+    return interaction.editReply({ content: 'Successfully localized prices.' })
   }
 }
 
@@ -364,7 +368,7 @@ function getDiscordNotifier<T>(
         `- Platform: ${platformNames[platform] ?? 'unknown'}`,
         language ? `- Language: \`${language}\`` : '',
         `- Progress: ${Math.round(((index + 1) / entries.length) * 100)}%`,
-        `- Current: _“${getMainKey(entry) ?? 'unknown'}”_`,
+        `- Current: *“${getMainKey(entry) ?? 'unknown'}”*`,
       ]
         .filter(Boolean)
         .join('\n'),
