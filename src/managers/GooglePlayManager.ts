@@ -202,14 +202,25 @@ export class GooglePlayManager {
         const localizedAdjustedPrice =
           Math.round((localizedDefaultPrice * coefficient) / 1_000_000) * 1_000_000
 
-        currentPrices[region] = {
-          currency: toCurrency,
-          priceMicros: iap.prices[region].priceMicros ?? 'undefined',
-        }
+        if (
+          iap.prices[region].priceMicros &&
+          localizedAdjustedPrice > +iap.prices[region].priceMicros
+        ) {
+          this.#logger.log(
+            'warn',
+            'New regional prince more expensive than current price; skipping',
+            { coefficient, region, sku: iap.sku }
+          )
+        } else {
+          currentPrices[region] = {
+            currency: toCurrency,
+            priceMicros: iap.prices[region].priceMicros ?? 'undefined',
+          }
 
-        updatedPrices[region] = {
-          currency: toCurrency,
-          priceMicros: String(localizedAdjustedPrice),
+          updatedPrices[region] = {
+            currency: toCurrency,
+            priceMicros: String(localizedAdjustedPrice),
+          }
         }
       })
     )
