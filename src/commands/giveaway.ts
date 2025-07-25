@@ -121,7 +121,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       case 'start': {
         CommandLogger.logCommand(interaction, 'Starting giveaway')
 
-        if (channel?.type !== ChannelType.GuildText) {
+        if (channel?.type !== ChannelType.GuildText && channel?.type !== ChannelType.PublicThread) {
           return interaction.reply({ content: 'Cannot start giveaway in this channel.' })
         }
 
