@@ -9,4 +9,7 @@ export function onClientReady(client: Client<true>) {
   // to the test server (given as an environment variable) every time the server gets started (such
   // as when saving a file that gets bundled).
   if (Discord.IS_DEV) Discord.deployCommands(Discord.TEST_SERVER_ID)
+
+  // In production, regularly send update to Better Uptime for the status page.
+  if (Discord.IS_PROD) Discord.startHeartbeat()
 }

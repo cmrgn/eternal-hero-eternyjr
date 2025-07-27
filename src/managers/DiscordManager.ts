@@ -34,6 +34,7 @@ export class DiscordManager {
   static BOT_COLOR = '#ac61ff' as ColorResolvable
 
   #logger: LogManager
+  #heartbeat: ReturnType<typeof setInterval> | undefined
 
   // This is the only manager that doesn’t expect a client because it is also used outside of the
   // runtime of the bot, such as for scripts
@@ -69,6 +70,24 @@ export class DiscordManager {
     this.#logger.log('info', 'Discord bot is ready and logged in', {
       tag: client.user.tag,
     })
+  }
+
+  startHeartbeat() {
+    this.#heartbeat = setInterval(
+      () => {
+        if (!process.env.HEARTBEAT_URL) {
+          return this.#logger.log(
+            'warn',
+            'Missing environment variable HEARTBEAT_URL; skipping heartbeat.'
+          )
+        }
+
+        fetch(process.env.HEARTBEAT_URL, { method: 'HEAD' })
+          .then(() => this.#logger.log('info', 'Sent heartbeat'))
+          .catch(err => this.#logger.log('error', 'Failed to send heartbeat', err))
+      },
+      60 * 1000 * 3 // Every 3 minutes
+    )
   }
 
   static getDiscordEditLimiter() {
