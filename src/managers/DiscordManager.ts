@@ -73,21 +73,24 @@ export class DiscordManager {
   }
 
   startHeartbeat() {
+    this.sendBeat() // Send immediate beat
     this.#heartbeat = setInterval(
-      () => {
-        if (!process.env.HEARTBEAT_URL) {
-          return this.#logger.log(
-            'warn',
-            'Missing environment variable HEARTBEAT_URL; skipping heartbeat.'
-          )
-        }
-
-        fetch(process.env.HEARTBEAT_URL, { method: 'HEAD' })
-          .then(() => this.#logger.log('info', 'Sent heartbeat'))
-          .catch(err => this.#logger.log('error', 'Failed to send heartbeat', err))
-      },
-      60 * 1000 * 3 // Every 3 minutes
+      this.sendBeat.bind(this),
+      60 * 1000 * 3 // Every 3 minutes after that
     )
+  }
+
+  sendBeat() {
+    if (!process.env.HEARTBEAT_URL) {
+      return this.#logger.log(
+        'warn',
+        'Missing environment variable HEARTBEAT_URL; skipping heartbeat.'
+      )
+    }
+
+    fetch(process.env.HEARTBEAT_URL, { method: 'HEAD' })
+      .then(() => this.#logger.log('info', 'Sent heartbeat'))
+      .catch(err => this.#logger.log('error', 'Failed to send heartbeat', err))
   }
 
   static getDiscordEditLimiter() {
