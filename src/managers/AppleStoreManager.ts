@@ -1,4 +1,3 @@
-import fs from 'node:fs/promises'
 import jwt from 'jsonwebtoken'
 import removeAccents from 'remove-accents'
 import type { LanguageObject } from '../constants/i18n'
@@ -79,7 +78,6 @@ export class AppleStoreManager {
     this.#logger = new LogManager('AppleStoreManager', severity)
     this.#logger.log('info', 'Instantiating manager')
     this.#jwt = this.generateJwt()
-    this.loadTierMatrix()
   }
 
   get headers() {
@@ -95,12 +93,6 @@ export class AppleStoreManager {
       Authorization: `Bearer ${this.#jwt}`,
       'Content-Type': 'application/json',
     }
-  }
-
-  async loadTierMatrix() {
-    const content = await fs.readFile('./apple-tier-matrix.json', 'utf-8')
-    const data = JSON.parse(content)
-    this.#tierMatrix = data
   }
 
   get tierMatrix() {
