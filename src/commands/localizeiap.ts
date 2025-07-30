@@ -244,7 +244,7 @@ async function commandPrice(interaction: ChatInputCommandInteraction) {
 
       await interaction.editReply({
         content: response
-          ? `Successfully localized prices for in-app purchase \`${iapId}\` on Google Play:\n` +
+          ? `Successfully localized prices for in-app purchase \`${iapId}\` on Google Play in ${Object.keys(response.updatedPrices).length} regions:\n` +
             formatOutcome(response.currentPrices, response.updatedPrices)
           : `Failed to localize prices for in-app purchase \`${iapId}\` on Google Play.`,
       })
@@ -268,7 +268,7 @@ async function commandPrice(interaction: ChatInputCommandInteraction) {
 
       return interaction.editReply({
         content: response
-          ? `Successfully localized prices for in-app purchase \`${iapId}\` on Apple Store:\n` +
+          ? `Successfully localized prices for in-app purchase \`${iapId}\` on Apple Store in ${Object.keys(response.updatedPrices).length} regions:\n` +
             formatOutcome(response.currentPrices, response.updatedPrices)
           : `Failed to localize prices for in-app purchase \`${iapId}\` on Apple Store.`,
       })
@@ -342,8 +342,13 @@ function formatOutcome(
       const config =
         StoreManager.regionalPriceMap[region as keyof typeof StoreManager.regionalPriceMap]
       const prevPrice = currentPrices[region]?.priceMicros ?? '0'
+      const actualCoefficient = +priceMicros / +prevPrice
+      const sameCoefficient = +actualCoefficient.toPrecision(2) === config.coefficient
+      const coefficient = sameCoefficient
+        ? `(× ${config.coefficient})`
+        : `(× ~~${config.coefficient}~~ ${actualCoefficient.toPrecision(2)})`
       const f = (priceMicros: string) => cf.format(+priceMicros / 1_000_000)
-      return `- ${config.name} (${region}): ~~${f(prevPrice)}~~ **${f(priceMicros)}** (×${config.coefficient})`
+      return `- ${config.name} (${region}): ~~${f(prevPrice)}~~ **${f(priceMicros)}** ${coefficient}`
     })
     .join('\n')
 }
