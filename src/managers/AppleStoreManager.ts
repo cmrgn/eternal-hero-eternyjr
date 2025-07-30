@@ -8,10 +8,8 @@ import { StoreManager } from './StoreManager'
 
 export type IapLocalizationFields = { name: string; description: string }
 
-type RelationshipLink = {
+export type InAppPurchase = {
   links: { self: string; related: string; next?: string }
-}
-export type InAppPurchase = RelationshipLink & {
   type: 'inAppPurchases'
   id: string
   attributes: {
@@ -21,19 +19,38 @@ export type InAppPurchase = RelationshipLink & {
     productId: string
     locale: string
   }
-  relationships: { inAppPurchaseLocalizations: RelationshipLink }
+  relationships: {
+    inAppPurchaseLocalizations: { links: { self: string; related: string; next?: string } }
+  }
 }
 
-type InAppPurchasePrices = RelationshipLink & {
-  type: 'inAppPurchasePrices'
+type ManualPrice = { id: string; type: 'inAppPurchasePrices' }
+
+type InAppPurchasePrice = {
+  attributes: { endDate: null; startDate: null | string; manual?: boolean }
   id: string
-  attributes: { startDate: string | null; endDate: string | null; manual: boolean }
-  relationships: { inAppPurchasePricePoint: { data: { id: string } } }
+  relationships: {
+    inAppPurchasePricePoint: { data: { id: string; type: 'inAppPurchasePricePoints' } }
+  }
+  type: 'inAppPurchasePrices'
 }
 
-type AppleApiResponse<T> = {
-  data: T[]
-  links?: { next?: string }
+type InAppPurchasePricePoint = {
+  type: 'inAppPurchasePricePoints'
+  id: string
+  attributes: { customerPrice: string }
+  relationships: {
+    territory: { data: { type: 'territories'; id: string } }
+    equalizations: { links: { self: string; related: string } }
+  }
+  links: { self: string }
+}
+
+type InAppPurchasePricesWithPricePoints = {
+  data: InAppPurchasePrice[]
+  included: InAppPurchasePricePoint[]
+  links: { self: string }
+  meta: { paging: { total: number }; limit: number }
 }
 
 export class AppleStoreManager {
@@ -129,7 +146,7 @@ export class AppleStoreManager {
     return token
   }
 
-  callApi<T>(path: string, method = 'GET', payload?: unknown): Promise<AppleApiResponse<T>> {
+  callApi<T>(path: string, method = 'GET', payload?: unknown): Promise<T> {
     const body = JSON.stringify(payload)
     const context = { body, method, path }
     const headers = this.headers
@@ -138,28 +155,30 @@ export class AppleStoreManager {
     return request(this.#logger, path, { body, headers, method })
   }
 
+  async callApiWithPagination<T>(initialUrl: string) {
+    let results: T[] = []
+    let nextUrl: string | null = initialUrl
+
+    while (nextUrl) {
+      const response: { data: T[]; links?: { next: string } } = await this.callApi(nextUrl)
+      results = results.concat(...response.data)
+      nextUrl = response.links?.next ?? null
+    }
+
+    return results
+  }
+
   async getAllIaps() {
     this.#logger.log('info', 'Fetching all in-app purchases')
-
-    const getAllPages = async (initialUrl: string) => {
-      let results: InAppPurchase[] = []
-      let nextUrl: string | null = initialUrl
-
-      while (nextUrl) {
-        const response: AppleApiResponse<InAppPurchase> = await this.callApi(nextUrl)
-        results = results.concat(...response.data)
-        nextUrl = response.links?.next ?? null
-      }
-
-      return results
-    }
 
     const now = Date.now()
     if (this.#cache.data && now - this.#cache.lastFetchedAt < this.#cache.ttl) {
       return this.#cache.data
     }
 
-    const data = await getAllPages(`${this.#apiUrl}/apps/${this.#appId}/inAppPurchasesV2`)
+    const data = await this.callApiWithPagination<InAppPurchase>(
+      `${this.#apiUrl}/apps/${this.#appId}/inAppPurchasesV2`
+    )
 
     if (data.length > 0) {
       this.#cache.data = data
@@ -176,7 +195,7 @@ export class AppleStoreManager {
     })
 
     try {
-      const response: AppleApiResponse<InAppPurchase> = await this.callApi(relatedUrl)
+      const response: { data: InAppPurchase[] } = await this.callApi(relatedUrl)
       const match = response.data.find(loc => loc.attributes.locale === locale)
       return match
     } catch {
@@ -280,73 +299,211 @@ export class AppleStoreManager {
     }
   }
 
-  findClosestTier(region: string, targetPrice: number): string | null {
-    let closestTier: string | null = null
+  findClosestPricePoint(
+    targetPrice: number,
+    pricePoints: InAppPurchasePricePoint[]
+  ): InAppPurchasePricePoint | null {
+    let closestPricePoint: InAppPurchasePricePoint | null = null
     let smallestDiff = Infinity
 
-    for (const [tierId, regionPrices] of Object.entries(this.tierMatrix)) {
-      const price = regionPrices[region]
+    for (const pricePoint of pricePoints) {
+      const price = +pricePoint.attributes.customerPrice
       if (!price) continue
 
       const diff = Math.abs(price - targetPrice)
       if (diff < smallestDiff) {
         smallestDiff = diff
-        closestTier = tierId
+        closestPricePoint = pricePoint
       }
     }
 
-    return closestTier
+    return closestPricePoint
   }
 
-  decodeIapId(iapId: string): {
-    s: string
-    t: string
-    p: string
-  } {
-    return JSON.parse(Buffer.from(iapId, 'base64').toString('utf-8'))
+  getIapIdDecoder() {
+    const cache = new Map()
+
+    return (
+      iapId: string
+    ): {
+      s: string // price point internal Apple ID
+      t: string // ISO-3 region
+      p: string // price point ID
+    } => {
+      if (cache.has(iapId)) return cache.get(iapId)
+      const decoded = Buffer.from(iapId, 'base64').toString('utf-8')
+      const parsed = JSON.parse(decoded)
+      cache.set(iapId, parsed)
+      return parsed
+    }
   }
 
   async localizeIapPrices(iapId: string) {
-    const iap = await this.callApi<InAppPurchasePrices>(
-      `${this.#apiUrl}/inAppPurchasePriceSchedules/${iapId}/manualPrices?filter[territory]=USA&include=inAppPurchasePricePoint`
-    )
+    const baseTerritory = 'USA'
+    const territories = Object.values(StoreManager.regionalPriceMap)
+      .map(config => config.iso3)
+      .join(',')
 
-    const [entry] = iap.data
-    const { p: tierId } = this.decodeIapId(entry?.relationships.inAppPurchasePricePoint.data.id)
+    // These objects are solely maintained for return and logging perspectives, matching the outcome
+    // of the Google API for simplicity. They have no bearing on the actual logic.
     const updatedPrices: Record<string, { currency: string; priceMicros: string }> = {}
     const currentPrices: Record<string, { currency: string; priceMicros: string }> = {}
+
+    // The first step is to retrieve the current price in the USA region which is the default region
+    // including its price point (a price point is also known as a price *tier*). Note that there
+    // doesn’t appear to be documentation for that endpoint, which is very concerning.
+    const iapPriceWithPricePoints: InAppPurchasePricesWithPricePoints = await this.callApi(
+      `${this.#apiUrl}/inAppPurchasePriceSchedules/${iapId}/manualPrices?filter[territory]=${baseTerritory}&include=inAppPurchasePricePoint`
+    )
+
+    // Retrieve the IAP price point ID. It’s a base64 encoded JSON blob with 3 keys:
+    // - s: the current IAP ID (same as the argument to this method).
+    // - t: the region expressed as an ISO 3166-1 alpha-3 (e.g. USA).
+    // - p: the ID of the current price point (i.e. price tier).
+    const iapppId = iapPriceWithPricePoints.data[0].relationships.inAppPurchasePricePoint.data.id
+
+    // Then, we need to retrieve the price points for *all* the regions in the world. Technically,
+    // we only need the 2 dozens regions we want to localize prices for, but it’s easier to just get
+    // them all. Note that:
+    // - We specify the maximum limit for the endpoint (although there are only ~175 regions).
+    // - We include the territory data to have access to region directly, otherwise we would have to
+    //   parse it from the encoded ID like we’ve done for the USA one.
+    // - We specify the fields we need to ignore the rest, for simplicity perspective.
+    // - That endpoint is *not* the same as `/relationships/equalizations`. This is the one we use:
+    //   https://developer.apple.com/documentation/appstoreconnectapi/get-v1-inapppurchasepricepoints-_id_-equalizations
+    const nextUrl = iapPriceWithPricePoints.included[0].relationships.equalizations.links.related
+    const { data: inAppPurchasePricePoints }: { data: InAppPurchasePricePoint[] } =
+      await this.callApi(
+        nextUrl +
+          `?include=territory&limit=8000&fields[inAppPurchasePricePoints]=customerPrice,territory,equalizations&filter[territory]=${territories}`
+      )
+
+    // The IDs are weird but it’s not a mistake. Each entry in the array of manual prices is mapped
+    // to a corresponding entry in the array of IAP prices by a unique ID. I assume this ID could be
+    // anything at all, but the UI-flow on the Apple website uses strings like `${newprice-0}`, so I
+    // thought I’d use a similar thing, only with region codes instead of indiceS.
+    const baseTerritoryIappId = `\${newprice-${baseTerritory}}`
+
+    // The first entry in the collection of manual prices is the current price tier in the default
+    // region, which is USA. I’m not super sure why we have to send it since we don’t modify it, but
+    // when setting up a regional price via the UI, Apple sends it like this so here goes.
+    const iapDefinitions: ManualPrice[] = [{ id: baseTerritoryIappId, type: 'inAppPurchasePrices' }]
+    const iapPrices: InAppPurchasePrice[] = [
+      {
+        attributes: { endDate: null, startDate: null },
+        id: baseTerritoryIappId,
+        relationships: {
+          inAppPurchasePricePoint: { data: { id: iapppId, type: 'inAppPurchasePricePoints' } },
+        },
+        type: 'inAppPurchasePrices',
+      },
+    ]
+
+    // To avoid having to query the regional price points for each region individually, we query all
+    // of them upfront, and then filter the relevant one for each region. This reduces the amount of
+    // HTTP requests against the Apple API and speeds things up a bit.
+    const allPricePoints: InAppPurchasePricePoint[] = await this.callApiWithPagination(
+      `https://api.appstoreconnect.apple.com/v2/inAppPurchases/${iapId}/pricePoints?limit=8000&fields[inAppPurchasePricePoints]=customerPrice,territory&fields[territories]=currency&filter[territory]=${territories}`
+    )
+    const decode = this.getIapIdDecoder()
 
     await Promise.all(
       Object.entries(StoreManager.regionalPriceMap).map(
         async ([region, { iso3, currency: toCurrency, coefficient }]) => {
-          const regionalPrice = this.tierMatrix[tierId][iso3]
-          const updatedRegionalPrice = regionalPrice * coefficient
-          const newTier = this.findClosestTier(iso3, updatedRegionalPrice)
-          const payload = {
-            data: {
-              attributes: { start: '2025-07-25T00:00:00Z' },
-              relationships: {
-                inAppPurchase: { data: { id: iapId, type: 'inAppPurchases' } },
-                priceTier: { data: { id: newTier, type: 'priceTiers' } },
-                territory: { data: { id: region, type: 'territories' } },
-              },
-              type: 'inAppPurchasePrices',
-            },
+          // Retrieve the IAP price point for the current region
+          const inAppPurchasePricePoint = inAppPurchasePricePoints.find(
+            iappp => iappp.relationships.territory.data.id === iso3
+          )
+
+          // If we couldn’t find one, skip that region. Note, this shouldn’t happen unless we use
+          // ISO-3 region codes which Apple do not handle.
+          if (!inAppPurchasePricePoint) {
+            return this.#logger.log(
+              'warn',
+              'Could not retrieve regional IAP price point; skipping.',
+              { iapId, iso3 }
+            )
           }
 
-          await this.callApi(`${this.#apiUrl}/inAppPurchasePrices`, 'POST', payload)
+          // Apply the coefficient to the current regional price to get the target price. However,
+          // Apple does not allow setting up a price yourself — you need to set a price point (i.e.
+          // price tier) instead.
+          const currentPrice = +inAppPurchasePricePoint.attributes.customerPrice
+          const targetPrice = currentPrice * coefficient
+
+          // This code was commented because we instead fetch all price points across all relevant
+          // regions for the current IAP, and then just filter for the current region. This comment
+          // and code is left here for posterity:
+          // > Then, retrieve all the possible price points (i.e. price tiers) for the current region.
+          // > - This endpoint only exists on the v2 API.
+          // > - We specify the maximum limit for safety, but there should be “only” ~700 price points
+          // >   for a given region — varies depending on the region.
+          // > - We include only the customer price as a field, since that and the ID is all we need.
+          // > See: https://developer.apple.com/documentation/appstoreconnectapi/get-v2-inapppurchases-_id_-pricepoints
+          // const { data: regionalPricePoints }: { data: InAppPurchasePricePoint[] } =
+          //   await this.callApi(`https://api.appstoreconnect.apple.com/v2/inAppPurchases/${iapId}/pricePoints?limit=8000&filter[territory]=${iso3}&fields[inAppPurchasePricePoints]=customerPrice`
+          // )
+
+          // Unfortunately, the price points do not include the territory name as ISO-3 code, so we
+          // need to retrieve it from the base64 encoded ID where `t` is the region. It’s not great
+          // because we need to JSON parse + base64 decode thousands of strings, but it is what it
+          // is.
+          const regionalPricePoints = allPricePoints.filter(
+            pricePoint => decode(pricePoint.id).t === iso3
+          )
+
+          // Then, we look for the price point that is the closest to our target price. It can be
+          // slightly more or slightly less expensive that our intended target price — that’s what
+          // happens with price tiers. It’s okay.
+          const newPricePoint = this.findClosestPricePoint(targetPrice, regionalPricePoints)
+
+          // If we cannot find a price point for some reason, then do not change the price for that
+          // region. This can happen for very cheap items that are already on the lowest price point
+          // for instance.
+          if (!newPricePoint) {
+            return this.#logger.log('warn', 'Could not find a new price point; skipping.', {
+              iapId,
+              region,
+            })
+          }
+
+          const startDate = '2025-08-01'
+          const iappId = `\${newprice-${iso3}}`
+          const newIapPricePoint = {
+            data: { id: newPricePoint.id, type: 'inAppPurchasePricePoints' as const },
+          }
+
+          iapDefinitions.push({ id: iappId, type: 'inAppPurchasePrices' })
+          iapPrices.push({
+            attributes: { endDate: null, startDate },
+            id: iappId,
+            relationships: { inAppPurchasePricePoint: newIapPricePoint },
+            type: 'inAppPurchasePrices',
+          })
 
           currentPrices[region] = {
             currency: toCurrency,
-            priceMicros: String(regionalPrice * 1_000_000),
+            priceMicros: String(currentPrice * 1_000_000),
           }
           updatedPrices[region] = {
             currency: toCurrency,
-            priceMicros: String(updatedRegionalPrice * 1_000_000),
+            priceMicros: String(+newPricePoint.attributes.customerPrice * 1_000_000),
           }
         }
       )
     )
+
+    await this.callApi(`${this.#apiUrl}/inAppPurchasePriceSchedules`, 'POST', {
+      data: {
+        relationships: {
+          baseTerritory: { data: { id: baseTerritory, type: 'territories' } },
+          inAppPurchase: { data: { id: iapId, type: 'inAppPurchases' } },
+          manualPrices: { data: iapDefinitions },
+        },
+        type: 'inAppPurchasePriceSchedules',
+      },
+      included: iapPrices,
+    })
 
     return { currentPrices, updatedPrices }
   }
