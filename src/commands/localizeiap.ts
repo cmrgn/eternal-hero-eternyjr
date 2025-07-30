@@ -350,6 +350,7 @@ function formatOutcome(
       const f = (priceMicros: string) => cf.format(+priceMicros / 1_000_000)
       return `- ${config.name} (${region}): ~~${f(prevPrice)}~~ **${f(priceMicros)}** ${coefficient}`
     })
+    .sort()
     .join('\n')
 }
 
