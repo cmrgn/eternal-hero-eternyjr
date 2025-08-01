@@ -353,7 +353,7 @@ export class FAQManager {
     }
 
     if (channel.parentId !== this.faqForumId) {
-      throw new Error(`Thread with \`${id}\` does not belong to the FAQ.`)
+      throw new Error(`Thread with ID \`${id}\` does not belong to the FAQ.`)
     }
 
     return this.#resolveThread(channel as FAQForumThreadChannel)
