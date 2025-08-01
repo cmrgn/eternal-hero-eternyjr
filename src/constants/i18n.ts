@@ -28,6 +28,26 @@ export const ENGLISH_LANGUAGE_OBJECT = {
 
 export const LANGUAGE_OBJECTS = [
   {
+    appleStoreLocale: 'ar-EG' as const,
+    channel: 'ar-العربية',
+    crowdinCode: 'ar' as const,
+    deepLCode: 'ar' as TargetLanguageCode,
+    googlePlayLocale: null,
+    isOnCrowdin: false,
+    languageName: 'العربية',
+    locale: 'ar-EG' as const,
+    messages: {
+      discord_linking:
+        'يبدو أنك تحاول ربط حساب اللعبة الخاص بك بحساب Discord الخاص بك. ومع ذلك، يبدو أنك قمت بلصق معرف اللعبة الخاص بك بدلاً من أمر الربط. يرجى اتباع التعليمات الواردة في %s بعناية.',
+      internationalization:
+        'خادم Discord الخاص بنا هو للغة الإنجليزية فقط (القاعدة 3.1). يرجى الالتزام باستخدام اللغة الإنجليزية أو التفكير في الانضمام إلى قنواتنا الدولية.',
+      no_results:
+        'للأسف، لم يتم العثور على محتوى ذي صلة بسؤالك. يرجى إعادة صياغة السؤال أو طرح سؤال آخر.',
+    },
+    role: 'ar | العربية',
+    twoLettersCode: 'ar' as const,
+  },
+  {
     appleStoreLocale: 'de-DE' as const,
     channel: 'de-deutsch',
     crowdinCode: 'de' as const,
