@@ -3,6 +3,7 @@ import * as crowdin from './crowdin'
 import * as dust from './dust'
 import * as faq from './faq'
 import * as faqleaderboard from './faqleaderboard'
+import * as faqping from './faqping'
 import * as flag from './flag'
 import * as giveaway from './giveaway'
 import * as indexfaq from './indexfaq'
@@ -17,6 +18,7 @@ export const commands = {
   dust,
   faq,
   faqleaderboard,
+  faqping,
   flag,
   giveaway,
   indexfaq,
