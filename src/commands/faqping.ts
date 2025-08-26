@@ -35,6 +35,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         await thread.setArchived(false)
         return { success: true, thread }
       } catch (error) {
+        CommandLogger.logCommand(interaction, 'Could not reopen thread', { error })
         return { error, success: false, thread }
       }
     },
