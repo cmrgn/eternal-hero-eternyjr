@@ -49,7 +49,7 @@ export class LocalizationManager {
     })
 
     if (guess.probability >= 0.95 && guess.language !== 'und') {
-      return guess.language
+      return guess
     }
 
     return null
@@ -100,7 +100,7 @@ export class LocalizationManager {
     this.#logger.log('info', 'Guessing Crowdin language', { userInput: getExcerpt(userInput) })
 
     const cldGuess = this.guessLanguageWithCld3(userInput)
-    if (cldGuess && LocalizationManager.isOnCrowdin(cldGuess)) return cldGuess
+    if (cldGuess && LocalizationManager.isOnCrowdin(cldGuess.language)) return cldGuess.language
 
     const gptGuess = await this.guessLanguageWithChatGPT(userInput)
     if (gptGuess) return gptGuess
