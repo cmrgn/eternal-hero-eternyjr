@@ -44,7 +44,7 @@ export class LocalizationManager {
       userInput: getExcerpt(userInput),
     })
 
-    if (guess.probability >= 0.9 && guess.language !== 'und') {
+    if (guess.probability >= 0.95 && guess.language !== 'und') {
       return guess.language
     }
 
