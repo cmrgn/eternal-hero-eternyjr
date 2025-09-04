@@ -38,10 +38,18 @@ export async function languageDetection(
 
   const guessedLanguage = Localization.guessLanguageWithCld3(content)
 
-  // If the guessed language is not unknown or unreliable, return early as it’s better to have a
-  // false negative than a false positive. If the guessed language is English, return early as there
-  // is nothing to do.
+  // If the guessed language is unknown or unreliable, return early as it’s better to have a false
+  // negative than a false positive. If the guessed language is English, return early as there is
+  // nothing to do.
   if (!guessedLanguage || guessedLanguage === 'en') return
+
+  // Log when we flag a message as being in an incorrect language.
+  Localization.logger.log('info', 'Flagging non-English usage', {
+    channelId: channel.id,
+    content,
+    guessedLanguage,
+    messageId: interaction.id,
+  })
 
   // If the guessed language is not a language we have an international channel for, return the
   // generic English response about rule 3.1.

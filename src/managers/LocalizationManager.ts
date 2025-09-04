@@ -1,4 +1,4 @@
-import { type LanguageIdentifier, loadModule } from 'cld3-asm'
+import { type LanguageIdentifier, type LanguageResult, loadModule } from 'cld3-asm'
 import type { Client } from 'discord.js'
 import { CROWDIN_CODES, type CrowdinCode, type LanguageObject } from '../constants/i18n'
 import { getExcerpt } from '../utils/getExcerpt'
@@ -25,6 +25,10 @@ export class LocalizationManager {
     this.loadLanguageIdentifier()
   }
 
+  get logger() {
+    return this.#logger
+  }
+
   async loadLanguageIdentifier() {
     this.#logger.log('info', 'Loading language identifier')
     this.#languageIdentifier = (await loadModule()).create(40)
@@ -49,6 +53,13 @@ export class LocalizationManager {
     }
 
     return null
+  }
+
+  logLanguageFlagging(content: string, value: LanguageResult['language']) {
+    this.#logger.log('info', 'Flagging non-English usage', {
+      content,
+      value,
+    })
   }
 
   async guessLanguageWithChatGPT(userInput: string) {
