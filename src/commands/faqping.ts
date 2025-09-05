@@ -20,7 +20,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
   const guild = await Discord.getGuild(client, guildId)
-  const faqForum = Faq.getFaqForum(guild)
+  const faqForum = await Faq.getFaqForum(guild)
   const archivedThreadsRes = await faqForum.threads.fetchArchived()
   const archivedThreads = Array.from(archivedThreadsRes.threads.values())
 

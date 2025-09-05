@@ -141,7 +141,7 @@ export class FAQManager {
 
     const { Discord } = this.#client.managers
     const guild = await Discord.getGuild(this.#client, this.guildId)
-    const faq = this.getFaqForum(guild)
+    const faq = await this.getFaqForum(guild)
 
     const [activeThreadRes, archivedThreadRes] = await Promise.all([
       withRetry(
@@ -181,7 +181,7 @@ export class FAQManager {
     return Promise.all(this.#threads.map(thread => this.#resolveThread(thread)))
   }
 
-  getFaqForum(guild: Guild) {
+  async getFaqForum(guild: Guild) {
     if (this.#faqForum) {
       this.#logger.log('info', 'Returning FAQ forum from cache', {
         channelId: this.#faqForum.id,
@@ -196,7 +196,11 @@ export class FAQManager {
       guildId: guild.id,
     })
 
-    const faq = guild.channels.cache.find(({ id }) => id === this.faqForumId)
+    const faq = await this.#client.managers.Discord.getChannelById(
+      this.#client,
+      guild,
+      this.faqForumId
+    )
 
     if (faq?.type !== ChannelType.GuildForum) {
       throw new Error(`Could not find a valid FAQ forum.`)
