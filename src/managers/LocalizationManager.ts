@@ -48,11 +48,16 @@ export class LocalizationManager {
       userInput: getExcerpt(userInput),
     })
 
-    if (guess.probability >= 0.95 && guess.language !== 'und') {
-      return guess
-    }
+    if (guess.language === 'und') return null
 
-    return null
+    const length = userInput.length
+    let requiredProbability: number
+    if (length < 40) requiredProbability = 0.99
+    else if (length < 70) requiredProbability = 0.98
+    else if (length < 100) requiredProbability = 0.97
+    else requiredProbability = 0.95
+
+    return guess.probability >= requiredProbability ? guess : null
   }
 
   logLanguageFlagging(content: string, value: LanguageResult['language']) {
