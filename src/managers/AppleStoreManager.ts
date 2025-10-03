@@ -459,7 +459,8 @@ export class AppleStoreManager {
             })
           }
 
-          const startDate = '2025-08-01'
+          // Format as YYYY-MM-DD
+          const startDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
           const iappId = `\${newprice-${iso3}}`
           const newIapPricePoint = {
             data: { id: newPricePoint.id, type: 'inAppPurchasePricePoints' as const },
