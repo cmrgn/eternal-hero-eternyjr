@@ -147,21 +147,54 @@ export class DiscordManager {
           })
           .join('')
       : ''
-    const content = [
+
+    const baseContent = [
       'You have edited a FAQ thread. Do you want to automatically translate it in all supported languages and reindex it?',
       `- Thread: _“${thread.name}”_`,
       `- Language count: ${numberFormatter.format(languageCount)} (w/o English)`,
       `- Character count: ${numberFormatter.format(char)}`,
       `- **Total cost:** ${currencyFormatter.format((20 / 1_000_000) * char * languageCount)}`,
-      contentDiff.replace(/\n/g, '\n> '),
     ].join('\n')
+
+    const diffContent = contentDiff.replace(/\n/g, '\n> ')
+    const fullContent = `${baseContent}\n${diffContent}`
+
+    // Discord has a 2000 character limit for message content
+    const maxContentLength = 2000
+    const content = fullContent.length > maxContentLength ? baseContent : fullContent
 
     const row = this.confirmationComponent(
       { id: `confirm-retranslate:${thread.id}`, label: 'Yes, retranslate' },
       { id: `skip-retranslate:${thread.id}`, label: 'No, skip' }
     )
 
-    await message.author.send({ components: [row], content })
+    try {
+      const messageOptions: {
+        components: ActionRowBuilder<ButtonBuilder>[]
+        content: string
+        files?: Array<{ attachment: Buffer; name: string }>
+      } = { components: [row], content }
+
+      // If content is too long, send the full diff as an attachment
+      if (fullContent.length > maxContentLength) {
+        const attachment = {
+          attachment: Buffer.from(fullContent, 'utf8'),
+          name: `thread-${thread.id}-changes.txt`,
+        }
+        messageOptions.files = [attachment]
+        messageOptions.content = `${content}\n\n📎 Full changes attached as file.`
+      }
+
+      await message.author.send(messageOptions)
+    } catch (error) {
+      this.#logger.log('error', 'Failed to send translation confirmation DM', {
+        contentLength: content.length,
+        error: error instanceof Error ? error.message : String(error),
+        threadId: thread.id,
+        userId: message.author.id,
+      })
+      throw error
+    }
   }
 
   static createEmbed(withThumbnail = true) {
